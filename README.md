@@ -27,6 +27,9 @@ contains:
 - a case-scoped OpenMC nuclear-data inspector and preflight that bind table
   hashes and reject missing temperatures, energy coverage, reactions, heating,
   or photon data;
+- a Rust nuclear-data acquisition path with HTTPS redirect confinement, exact
+  byte-range resume, explicit large-transfer confirmation, publisher-digest
+  checks when available, and content-addressed receipts;
 - a byte-stable OpenMC 0.16 input-deck generator that verifies content
   bindings and selected nuclear-data files before emitting the complete tally
   ledger;
@@ -100,6 +103,7 @@ crates/nctforge-cli/        headless entry point
 crates/nctforge-gui/        native egui application shell
 bindings/python/            future scientific extension surface
 benchmarks/synthetic/       public, non-patient validation corpus
+profiles/                   reviewed external-data acquisition profiles
 schemas/                    versioned interchange schemas
 docs/                       architecture, decisions, and qualification records
 ```
@@ -139,6 +143,23 @@ scripts/validate-dicom-iod.sh /tmp/nf-bnct-001
 The gate rejects validator warnings as well as errors. Passing these tools is
 useful interoperability evidence, not a DICOM certification or a guarantee of
 clinical fitness.
+
+### Nuclear-data acquisition
+
+NCTForge will not download multi-gigabyte nuclear data as a hidden build step.
+First make a one-byte probe of the frozen official OpenMC profile:
+
+```text
+cargo run --bin nctforge -- openmc data probe \
+  --profile profiles/openmc/openmc-endfb81-official-library.json
+```
+
+Acquisition requires the exact reported byte count and an existing output
+directory. It writes a resumable `.part` file and a JSON receipt without
+overwriting completed output. The official processed archive currently has no
+published digest, so its receipt deliberately remains `acquisition_only`; a
+locally calculated SHA-256 is byte identity, not scientific qualification. See
+[ADR 0010](docs/adr/0010-verifiable-nuclear-data-acquisition.md).
 
 ## License and use boundary
 

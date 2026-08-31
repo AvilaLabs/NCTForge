@@ -1,0 +1,36 @@
+{
+  "schema_version": "nctforge.data-acquisition-profile/0.1.0",
+  "id": "endfb81-neutron-evaluations-openmc-recipe-66cfe45",
+  "artifact_role": "endfb_incident_neutron_evaluations",
+  "publication": {
+    "publisher": "National Nuclear Data Center",
+    "release_page_uri": "https://www.nndc.bnl.gov/endf-releases/?sublibrary=neutrons&version=B-VIII.1",
+    "source_uri": "https://www.nndc.bnl.gov/endf-releases/releases/B-VIII.1/neutrons/neutrons-version.VIII.1.tar.gz",
+    "allowed_https_host_suffixes": [
+      "www.nndc.bnl.gov"
+    ]
+  },
+  "artifact": {
+    "filename": "neutrons-version.VIII.1.tar.gz",
+    "media_type": "application/gzip",
+    "expected_size_bytes": 343724780,
+    "expected_content_disposition_filename": null,
+    "publisher_digest": {
+      "algorithm": "md5",
+      "value": "dc622c0f1c3c4477433e698266e0fc80",
+      "evidence": "openmc-dev/data generate_endf.py at commit 66cfe45ff7a3aa47a4d7805b92b3d5ab6ee018b6"
+    }
+  },
+  "size_evidence": {
+    "method": "https_range_content_range",
+    "observed_on": "2026-08-31"
+  },
+  "upstream_recipe": {
+    "repository_uri": "https://github.com/openmc-dev/data",
+    "commit": "66cfe45ff7a3aa47a4d7805b92b3d5ab6ee018b6",
+    "path": "generate_endf.py",
+    "source_sha256": "b1b0342b35c3fe15f493dd4eafea457a28e441d079ec3ac831ecf7f6c5ac4f9c",
+    "release_argument": "viii.1",
+    "processing_code": "NJOY2016.78"
+  }
+}

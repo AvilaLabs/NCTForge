@@ -13,7 +13,9 @@ The current direct third-party packages are:
 | dicom-dictionary-std | 0.10.0 | MIT OR Apache-2.0 |
 | dicom-object | 0.10.0 | MIT OR Apache-2.0 |
 | eframe | 0.36.1 | MIT OR Apache-2.0 |
+| md-5 | 0.10.6 | MIT OR Apache-2.0 |
 | quick-xml | 0.42.0 | MIT |
+| reqwest | 0.13.4 | MIT OR Apache-2.0 |
 | serde | 1.0.229 | MIT OR Apache-2.0 |
 | serde_json | 1.0.151 | MIT OR Apache-2.0 |
 | sha2 | 0.10.9 | MIT OR Apache-2.0 |
@@ -36,5 +38,6 @@ transitive license and notice bundle. CI must generate and review that bundle
 from `Cargo.lock` before the first binary or archival release.
 
 OpenMC is a planned external transport backend and is not part of NCTForge.
-Users are responsible for obtaining and validating OpenMC and all nuclear-data
-libraries used by their calculations.
+NCTForge's acquisition client does not redistribute OpenMC or nuclear data;
+users remain responsible for obtaining and validating the external engine and
+data libraries used by their calculations.

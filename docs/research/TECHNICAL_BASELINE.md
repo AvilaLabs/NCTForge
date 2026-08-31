@@ -142,7 +142,8 @@ Every run records:
 
 - OpenMC semantic version, source commit when available, build options, and
   executable hash;
-- archive URL and SHA-256 of the nuclear-data distribution;
+- the reviewed acquisition profile and receipt hashes, archive URL, exact byte
+  count, publisher-digest status, and SHA-256 of the nuclear-data distribution;
 - `cross_sections.xml` hash and hashes of every used HDF5 table;
 - evaluated-data release, processing code/version, temperature, and thermal
   scattering tables;
@@ -266,8 +267,14 @@ result exists. Cross-code agreement alone remains `cross_code_research_only`.
 - Complete: inspect and validate a case-scoped OpenMC nuclear-data manifest,
   including exact file hashes, cross-sections mappings, HDF5 format,
   temperatures, selected neutron energy bounds, MT 301, required reaction MTs,
-  photon production, photoatomic data, atomic relaxation, and Compton profiles;
-  pending: run it on and freeze the official ENDF/B-VIII.1 archive selection.
+  photon production, photoatomic data, atomic relaxation, and Compton profiles,
+  and bind the acquisition profile, receipt, source URI, byte count, and archive
+  identity into manifest schema `0.3.0`; pending: run it on and freeze the
+  official ENDF/B-VIII.1 archive selection.
+- Complete: probe and safely acquire official data through a Rust path with
+  HTTPS redirect confinement, exact resumable ranges, no overwrite, explicit
+  size confirmation, publisher-digest verification when available, and an
+  acquisition-only receipt.
 - Complete: generate byte-stable OpenMC 0.16 geometry, material, source,
   settings, response, audit, spectrum, and leakage XML directly in Rust; verify
   all content bindings and selected nuclear-data files; reject incomplete

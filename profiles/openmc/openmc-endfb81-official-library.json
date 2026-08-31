@@ -1,0 +1,34 @@
+{
+  "schema_version": "nctforge.data-acquisition-profile/0.1.0",
+  "id": "openmc-endfb81-official-library-2025-12-18",
+  "artifact_role": "openmc_continuous_energy_library",
+  "publication": {
+    "publisher": "OpenMC development team",
+    "release_page_uri": "https://openmc.org/data/",
+    "source_uri": "https://anl.box.com/shared/static/6qr7jezzihkj9p9esl5jn19qgpujyjyz.xz",
+    "allowed_https_host_suffixes": [
+      "anl.box.com",
+      "anl.app.box.com",
+      "public.boxcloud.com"
+    ]
+  },
+  "artifact": {
+    "filename": "endfb81.tar.xz",
+    "media_type": "application/x-xz",
+    "expected_size_bytes": 9661406540,
+    "expected_content_disposition_filename": "endfb81.tar.xz",
+    "publisher_digest": null
+  },
+  "size_evidence": {
+    "method": "https_range_content_range",
+    "observed_on": "2026-08-31"
+  },
+  "upstream_recipe": {
+    "repository_uri": "https://github.com/openmc-dev/data",
+    "commit": "66cfe45ff7a3aa47a4d7805b92b3d5ab6ee018b6",
+    "path": "generate_endf.py",
+    "source_sha256": "b1b0342b35c3fe15f493dd4eafea457a28e441d079ec3ac831ecf7f6c5ac4f9c",
+    "release_argument": "viii.1",
+    "processing_code": "NJOY2016.78"
+  }
+}

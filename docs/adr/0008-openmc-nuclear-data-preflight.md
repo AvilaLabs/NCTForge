@@ -1,6 +1,6 @@
 # ADR 0008: OpenMC Nuclear-Data Capability Preflight
 
-**Status:** Accepted and implemented; official data manifest pending
+**Status:** Accepted and implemented; official archive inspection pending
 
 **Date:** 2026-08-31
 
@@ -27,6 +27,8 @@ manifest pins:
   `617d35a5063c57796b43428bc401e627d2011046`;
 - ENDF/B-VIII.1 and OpenMC nuclear-data HDF5 format `3.0`;
 - the source distribution URI and archive SHA-256;
+- the exact acquisition-profile ID and SHA-256, archive byte count,
+  acquisition-receipt SHA-256, publisher-digest status, and evidence state;
 - `cross_sections.xml` and every selected HDF5 file by normalized path and
   SHA-256;
 - each neutron table's atomic-weight ratio, temperatures, corresponding
@@ -35,8 +37,10 @@ manifest pins:
 - each photon table's reaction MTs, atomic-relaxation data, and Compton-profile
   data.
 
-`scripts/inspect-openmc-data.py` extracts those facts directly from the HDF5
-structures consumed by OpenMC. Its own SHA-256 and its Python, NumPy, h5py, and
+`scripts/inspect-openmc-data.py` first verifies the acquisition profile,
+receipt, archive size, and archive SHA-256, then extracts table facts directly
+from the HDF5 structures consumed by OpenMC. Its own SHA-256 and its Python,
+NumPy, h5py, and
 HDF5 runtime versions are recorded in the manifest. Rust independently validates
 the manifest, verifies every selected file without permitting symlink escape,
 and cross-checks every table against exactly one matching
@@ -60,6 +64,8 @@ only the monoenergetic source value.
 The manifest is deliberately not hand-authored. The first checked-in manifest
 will be generated from the downloaded archive, mechanically validated, and
 reviewed before it can be referenced by a response set or prepared run.
+The frozen processed archive has no published digest, so its acquisition
+receipt remains `acquisition_only`; see ADR 0010.
 
 ## Consequences
 
@@ -77,6 +83,7 @@ reviewed before it can be referenced by a response set or prepared run.
 ## Primary sources
 
 - [OpenMC official data libraries](https://openmc.org/data/)
+- [OpenMC ENDF/B-VIII.1 generation recipe](https://github.com/openmc-dev/data/blob/66cfe45ff7a3aa47a4d7805b92b3d5ab6ee018b6/generate_endf.py)
 - [OpenMC cross-sections listing format](https://docs.openmc.org/en/v0.16.0/io_formats/cross_sections.html)
 - [OpenMC 0.16.0 incident-neutron HDF5 reader](https://github.com/openmc-dev/openmc/blob/v0.16.0/openmc/data/neutron.py)
 - [OpenMC 0.16.0 photon HDF5 reader](https://github.com/openmc-dev/openmc/blob/v0.16.0/src/photon.cpp)

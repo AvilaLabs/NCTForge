@@ -1,0 +1,2 @@
+# Acquisition profiles are raw-byte trust anchors; checkout must preserve LF.
+/profiles/openmc/*.json text eol=lf

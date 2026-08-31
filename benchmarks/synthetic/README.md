@@ -20,8 +20,9 @@ are source-controlled.
 
 - [`NF-BNCT-001`](nf-bnct-001/SPECIFICATION.md) freezes the first synthetic
   DICOM geometry, macroscopic material, source, dose semantics, uncertainty
-  rules, and preregistered acceptance gates. Geometry and source are ready for
-  implementation; KERMA response tables and reference outputs are intentionally
+  rules, and preregistered acceptance gates. Geometry, material, source,
+  nuclear-data preflight, and deterministic OpenMC deck generation are
+  implemented; KERMA response tables and reference outputs are intentionally
   not yet qualified.
 
 Generate and verify its DICOM geometry inputs with:

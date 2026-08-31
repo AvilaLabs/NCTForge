@@ -10,11 +10,20 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use thiserror::Error;
 
+use crate::acquisition::{AcquisitionEvidenceState, PublisherDigestStatus};
+
 pub const TARGET_OPENMC_VERSION: &str = "0.16.0";
 pub const TARGET_OPENMC_SOURCE_COMMIT: &str = "617d35a5063c57796b43428bc401e627d2011046";
 pub const TARGET_EVALUATED_DATA_RELEASE: &str = "ENDF/B-VIII.1";
 pub const TARGET_DATA_HDF5_VERSION: [u16; 2] = [3, 0];
-pub const TARGET_INSPECTION_METHOD: &str = "nctforge-openmc-data-inspector/0.2.0";
+pub const TARGET_NUCLEAR_DATA_MANIFEST_SCHEMA: &str = "nctforge.openmc-nuclear-data-manifest/0.3.0";
+pub const TARGET_INSPECTION_METHOD: &str = "nctforge-openmc-data-inspector/0.3.0";
+pub const TARGET_ACQUISITION_PROFILE_ID: &str = "openmc-endfb81-official-library-2025-12-18";
+pub const TARGET_ACQUISITION_PROFILE_SHA256: &str =
+    "8a9dea021bf3d72e65e0c150c0cd563508fc77403ac0f1c46688d6aee476536d";
+pub const TARGET_DISTRIBUTION_SOURCE_URI: &str =
+    "https://anl.box.com/shared/static/6qr7jezzihkj9p9esl5jn19qgpujyjyz.xz";
+pub const TARGET_DISTRIBUTION_ARCHIVE_SIZE_BYTES: u64 = 9_661_406_540;
 /// OpenMC rounds HDF5 kT values to integer kelvin when selecting tables.
 pub const TEMPERATURE_TOLERANCE_K: f64 = 0.5;
 
@@ -50,7 +59,13 @@ pub struct DataInspectionIdentity {
 pub struct DataDistributionIdentity {
     pub id: String,
     pub source_uri: String,
+    pub archive_size_bytes: u64,
     pub archive_sha256: String,
+    pub acquisition_profile_id: String,
+    pub acquisition_profile_sha256: String,
+    pub acquisition_receipt_sha256: String,
+    pub publisher_digest_status: PublisherDigestStatus,
+    pub acquisition_evidence_state: AcquisitionEvidenceState,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -92,7 +107,11 @@ pub struct PhotonTableCapability {
 
 impl NuclearDataManifest {
     pub fn validate(&self) -> Result<(), NuclearDataError> {
-        validate_identifier("nuclear_data.schema_version", &self.schema_version)?;
+        if self.schema_version != TARGET_NUCLEAR_DATA_MANIFEST_SCHEMA {
+            return Err(NuclearDataError::UnsupportedManifestSchema(
+                self.schema_version.clone(),
+            ));
+        }
         validate_identifier("nuclear_data.id", &self.id)?;
         if self.openmc_version != TARGET_OPENMC_VERSION {
             return Err(NuclearDataError::UnsupportedOpenMcVersion(
@@ -125,11 +144,37 @@ impl NuclearDataManifest {
         )?;
 
         validate_identifier("distribution.id", &self.distribution.id)?;
-        validate_identifier("distribution.source_uri", &self.distribution.source_uri)?;
+        if self.distribution.source_uri != TARGET_DISTRIBUTION_SOURCE_URI {
+            return Err(NuclearDataError::UnsupportedDistributionUri(
+                self.distribution.source_uri.clone(),
+            ));
+        }
+        if self.distribution.archive_size_bytes != TARGET_DISTRIBUTION_ARCHIVE_SIZE_BYTES {
+            return Err(NuclearDataError::UnsupportedArchiveSize(
+                self.distribution.archive_size_bytes,
+            ));
+        }
         validate_sha256(
             "distribution.archive_sha256",
             &self.distribution.archive_sha256,
         )?;
+        if self.distribution.acquisition_profile_id != TARGET_ACQUISITION_PROFILE_ID {
+            return Err(NuclearDataError::UnsupportedAcquisitionProfileId(
+                self.distribution.acquisition_profile_id.clone(),
+            ));
+        }
+        if self.distribution.acquisition_profile_sha256 != TARGET_ACQUISITION_PROFILE_SHA256 {
+            return Err(NuclearDataError::UnsupportedAcquisitionProfileHash(
+                self.distribution.acquisition_profile_sha256.clone(),
+            ));
+        }
+        validate_sha256(
+            "distribution.acquisition_receipt_sha256",
+            &self.distribution.acquisition_receipt_sha256,
+        )?;
+        if self.distribution.publisher_digest_status != PublisherDigestStatus::Unavailable {
+            return Err(NuclearDataError::UnexpectedPublisherDigestStatus);
+        }
         self.cross_sections.validate("cross_sections")?;
 
         if self.neutron_tables.is_empty() {
@@ -654,6 +699,8 @@ pub enum NuclearDataError {
     EmptyIdentifier(&'static str),
     #[error("{0} must be a canonical lowercase SHA-256 digest")]
     InvalidSha256(&'static str),
+    #[error("nuclear-data manifest schema {0:?} is not supported")]
+    UnsupportedManifestSchema(String),
     #[error("OpenMC version {0:?} is not supported by this adapter profile")]
     UnsupportedOpenMcVersion(String),
     #[error("OpenMC source commit {0:?} is not supported by this adapter profile")]
@@ -662,6 +709,16 @@ pub enum NuclearDataError {
     UnsupportedEvaluatedDataRelease(String),
     #[error("nuclear-data inspection method {0:?} is not supported")]
     UnsupportedInspectionMethod(String),
+    #[error("nuclear-data distribution URI {0:?} is not the frozen official source")]
+    UnsupportedDistributionUri(String),
+    #[error("nuclear-data archive size {0} does not match the frozen distribution")]
+    UnsupportedArchiveSize(u64),
+    #[error("nuclear-data acquisition profile ID {0:?} is unsupported")]
+    UnsupportedAcquisitionProfileId(String),
+    #[error("nuclear-data acquisition profile hash {0:?} is unsupported")]
+    UnsupportedAcquisitionProfileHash(String),
+    #[error("the frozen distribution profile has no publisher digest")]
+    UnexpectedPublisherDigestStatus,
     #[error("artifact path is not normalized and relative: {0:?}")]
     InvalidArtifactPath(String),
     #[error("table {table} uses unsupported OpenMC HDF5 data version {version:?}")]
@@ -827,7 +884,7 @@ mod tests {
             .collect();
 
         NuclearDataManifest {
-            schema_version: "nctforge.openmc-nuclear-data-manifest/0.2.0".into(),
+            schema_version: TARGET_NUCLEAR_DATA_MANIFEST_SCHEMA.into(),
             id: "nctforge.nf-bnct-001.endf-b-viii.1.v1".into(),
             openmc_version: TARGET_OPENMC_VERSION.into(),
             openmc_source_commit: TARGET_OPENMC_SOURCE_COMMIT.into(),
@@ -842,8 +899,14 @@ mod tests {
             },
             distribution: DataDistributionIdentity {
                 id: "openmc-endf-b-viii.1".into(),
-                source_uri: "https://openmc.org/data/".into(),
+                source_uri: TARGET_DISTRIBUTION_SOURCE_URI.into(),
+                archive_size_bytes: TARGET_DISTRIBUTION_ARCHIVE_SIZE_BYTES,
                 archive_sha256: "b".repeat(64),
+                acquisition_profile_id: TARGET_ACQUISITION_PROFILE_ID.into(),
+                acquisition_profile_sha256: TARGET_ACQUISITION_PROFILE_SHA256.into(),
+                acquisition_receipt_sha256: "e".repeat(64),
+                publisher_digest_status: PublisherDigestStatus::Unavailable,
+                acquisition_evidence_state: AcquisitionEvidenceState::AcquisitionOnly,
             },
             cross_sections: artifact("cross_sections.xml"),
             neutron_tables,
@@ -854,6 +917,23 @@ mod tests {
     #[test]
     fn accepts_complete_case_scoped_capability_manifest() {
         assert!(manifest().validate_for_case(&case()).is_ok());
+    }
+
+    #[test]
+    fn rejects_self_asserted_acquisition_provenance() {
+        let mut wrong_hash_manifest = manifest();
+        wrong_hash_manifest.distribution.acquisition_profile_sha256 = "0".repeat(64);
+        assert!(matches!(
+            wrong_hash_manifest.validate(),
+            Err(NuclearDataError::UnsupportedAcquisitionProfileHash(_))
+        ));
+
+        let mut wrong_status_manifest = manifest();
+        wrong_status_manifest.distribution.publisher_digest_status = PublisherDigestStatus::Matched;
+        assert!(matches!(
+            wrong_status_manifest.validate(),
+            Err(NuclearDataError::UnexpectedPublisherDigestStatus)
+        ));
     }
 
     #[test]

@@ -9,7 +9,7 @@ use std::process::ExitCode;
 use clap::{Args, Parser, Subcommand};
 use nctforge_dicom::synthetic::generate_nf_bnct_001;
 use nctforge_dicom::verify_nf_bnct_001;
-use nctforge_openmc::OpenMcBackend;
+use nctforge_openmc::{DataAcquisitionClient, DataAcquisitionProfileDocument, OpenMcBackend};
 use nctforge_transport::TransportBackend;
 
 #[derive(Debug, Parser)]
@@ -29,6 +29,8 @@ enum Command {
     Backends,
     /// Generate or verify frozen public benchmark cases.
     Benchmark(BenchmarkArgs),
+    /// Prepare and audit OpenMC-specific research artifacts.
+    Openmc(OpenMcArgs),
 }
 
 #[derive(Debug, Args)]
@@ -48,6 +50,46 @@ enum BenchmarkCommand {
     Verify {
         /// Directory containing ct/*.dcm and rtstruct.dcm.
         input: PathBuf,
+    },
+}
+
+#[derive(Debug, Args)]
+struct OpenMcArgs {
+    #[command(subcommand)]
+    command: OpenMcCommand,
+}
+
+#[derive(Debug, Subcommand)]
+enum OpenMcCommand {
+    /// Probe or acquire externally published nuclear data.
+    Data(OpenMcDataArgs),
+}
+
+#[derive(Debug, Args)]
+struct OpenMcDataArgs {
+    #[command(subcommand)]
+    command: OpenMcDataCommand,
+}
+
+#[derive(Debug, Subcommand)]
+enum OpenMcDataCommand {
+    /// Make a one-byte range probe and retain no response body.
+    Probe {
+        /// Reviewed NCTForge data-acquisition profile.
+        #[arg(long)]
+        profile: PathBuf,
+    },
+    /// Download or resume an artifact and emit a content-addressed receipt.
+    Acquire {
+        /// Reviewed NCTForge data-acquisition profile.
+        #[arg(long)]
+        profile: PathBuf,
+        /// Existing directory for the artifact, partial file, and receipt.
+        #[arg(long)]
+        output_directory: PathBuf,
+        /// Exact byte count reported by `data probe`; required as a size guard.
+        #[arg(long)]
+        confirm_size_bytes: u64,
     },
 }
 
@@ -101,10 +143,75 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                 }
             }
         },
+        Some(Command::Openmc(args)) => match args.command {
+            OpenMcCommand::Data(args) => match args.command {
+                OpenMcDataCommand::Probe { profile } => {
+                    let document = DataAcquisitionProfileDocument::from_path(&profile)?;
+                    let result = DataAcquisitionClient::new()?.probe(&document)?;
+                    println!("profile: {}", result.profile_id);
+                    println!(
+                        "artifact: {} ({} bytes; {:.2} GiB)",
+                        result.expected_filename,
+                        result.size_bytes,
+                        bytes_to_gib(result.size_bytes)
+                    );
+                    println!("range resume: {}", result.accepts_ranges);
+                    println!("final HTTPS origin: {}", result.final_origin);
+                    if document.profile.artifact.publisher_digest.is_none() {
+                        println!("publisher digest: unavailable; acquisition remains unqualified");
+                    } else {
+                        println!("publisher digest: pinned in profile and checked on acquisition");
+                    }
+                    println!(
+                        "acquisition requires --confirm-size-bytes {}",
+                        result.size_bytes
+                    );
+                }
+                OpenMcDataCommand::Acquire {
+                    profile,
+                    output_directory,
+                    confirm_size_bytes,
+                } => {
+                    let document = DataAcquisitionProfileDocument::from_path(&profile)?;
+                    let client = DataAcquisitionClient::new()?;
+                    let total = document.profile.artifact.expected_size_bytes;
+                    let mut next_report = 0_u64;
+                    let acquired = client.acquire_with_progress(
+                        &document,
+                        &output_directory,
+                        confirm_size_bytes,
+                        |progress| {
+                            if progress.completed_bytes >= next_report
+                                || progress.completed_bytes == progress.total_bytes
+                            {
+                                eprintln!(
+                                    "acquired {} / {} bytes ({:.1}%)",
+                                    progress.completed_bytes,
+                                    progress.total_bytes,
+                                    100.0 * progress.completed_bytes as f64
+                                        / progress.total_bytes as f64
+                                );
+                                next_report = progress
+                                    .completed_bytes
+                                    .saturating_add((total / 100).max(64 * 1024 * 1024));
+                            }
+                        },
+                    )?;
+                    println!("artifact: {}", acquired.artifact_path.display());
+                    println!("SHA-256: {}", acquired.receipt.artifact.sha256);
+                    println!("receipt: {}", acquired.receipt_path.display());
+                    println!("evidence state: acquisition_only");
+                }
+            },
+        },
         None => {
             println!("NCTForge research scaffold");
             println!("Not commissioned or certified for clinical use.");
         }
     }
     Ok(())
+}
+
+fn bytes_to_gib(bytes: u64) -> f64 {
+    bytes as f64 / 1024.0_f64.powi(3)
 }

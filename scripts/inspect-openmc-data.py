@@ -31,7 +31,10 @@ except ModuleNotFoundError:
 OPENMC_VERSION = "0.16.0"
 OPENMC_SOURCE_COMMIT = "617d35a5063c57796b43428bc401e627d2011046"
 EVALUATED_DATA_RELEASE = "ENDF/B-VIII.1"
-INSPECTION_METHOD = "nctforge-openmc-data-inspector/0.2.0"
+MANIFEST_SCHEMA = "nctforge.openmc-nuclear-data-manifest/0.3.0"
+INSPECTION_METHOD = "nctforge-openmc-data-inspector/0.3.0"
+ACQUISITION_PROFILE_SCHEMA = "nctforge.data-acquisition-profile/0.1.0"
+ACQUISITION_RECEIPT_SCHEMA = "nctforge.data-acquisition-receipt/0.1.0"
 HDF5_VERSION = [3, 0]
 K_BOLTZMANN_EV_PER_K = 8.617333262e-5
 NUCLIDE_PATTERN = re.compile(r"^([A-Z][a-z]?)\d+(?:_m\d+)?$")
@@ -52,6 +55,184 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def sha256_bytes(value: bytes) -> str:
+    return hashlib.sha256(value).hexdigest()
+
+
+def exact_keys(document: dict[str, Any], expected: set[str], label: str) -> None:
+    observed = set(document)
+    if observed != expected:
+        missing = sorted(expected - observed)
+        unknown = sorted(observed - expected)
+        raise ValueError(
+            f"{label} fields differ from schema; missing={missing}, unknown={unknown}"
+        )
+
+
+def require_object(value: Any, label: str) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ValueError(f"{label} must be a JSON object")
+    return value
+
+
+def json_object(path: Path, label: str) -> tuple[bytes, dict[str, Any]]:
+    raw = path.read_bytes()
+    document = json.loads(raw)
+    if not isinstance(document, dict):
+        raise ValueError(f"{label} must be a JSON object")
+    return raw, document
+
+
+def validate_acquisition(
+    profile_path: Path, receipt_path: Path, archive: Path
+) -> dict[str, Any]:
+    profile_raw, profile = json_object(profile_path, "acquisition profile")
+    receipt_raw, receipt = json_object(receipt_path, "acquisition receipt")
+    exact_keys(
+        profile,
+        {
+            "schema_version",
+            "id",
+            "artifact_role",
+            "publication",
+            "artifact",
+            "size_evidence",
+            "upstream_recipe",
+        },
+        "acquisition profile",
+    )
+    exact_keys(
+        require_object(profile["publication"], "acquisition profile publication"),
+        {
+            "publisher",
+            "release_page_uri",
+            "source_uri",
+            "allowed_https_host_suffixes",
+        },
+        "acquisition profile publication",
+    )
+    exact_keys(
+        require_object(profile["artifact"], "acquisition profile artifact"),
+        {
+            "filename",
+            "media_type",
+            "expected_size_bytes",
+            "expected_content_disposition_filename",
+            "publisher_digest",
+        },
+        "acquisition profile artifact",
+    )
+    exact_keys(
+        receipt,
+        {
+            "schema_version",
+            "profile_id",
+            "profile_sha256",
+            "artifact_role",
+            "artifact",
+            "transfer",
+            "publisher_digest_status",
+            "evidence_state",
+            "completed_at_unix_seconds",
+        },
+        "acquisition receipt",
+    )
+    exact_keys(
+        require_object(receipt["artifact"], "acquisition receipt artifact"),
+        {"path", "media_type", "size_bytes", "sha256", "publisher_digest"},
+        "acquisition receipt artifact",
+    )
+    exact_keys(
+        require_object(receipt["transfer"], "acquisition receipt transfer"),
+        {
+            "requested_uri",
+            "final_origin",
+            "resumed_from_bytes",
+            "content_disposition_filename",
+            "etag",
+            "last_modified",
+        },
+        "acquisition receipt transfer",
+    )
+
+    if profile["schema_version"] != ACQUISITION_PROFILE_SCHEMA:
+        raise ValueError("unsupported acquisition profile schema")
+    if receipt["schema_version"] != ACQUISITION_RECEIPT_SCHEMA:
+        raise ValueError("unsupported acquisition receipt schema")
+    profile_sha256 = sha256_bytes(profile_raw)
+    if not profile["publication"]["source_uri"].startswith("https://"):
+        raise ValueError("acquisition profile source URI is not HTTPS")
+    if profile["artifact_role"] != "openmc_continuous_energy_library":
+        raise ValueError("acquisition profile has the wrong artifact role")
+    if profile["artifact"]["media_type"] != "application/x-xz":
+        raise ValueError("acquisition profile has the wrong archive media type")
+    expected_size = profile["artifact"]["expected_size_bytes"]
+    if type(expected_size) is not int or expected_size <= 0:
+        raise ValueError("acquisition profile archive size is invalid")
+    expected_digest_status = (
+        "unavailable"
+        if profile["artifact"]["publisher_digest"] is None
+        else "matched"
+    )
+
+    if receipt["profile_id"] != profile["id"]:
+        raise ValueError("acquisition receipt profile ID mismatch")
+    if receipt["profile_sha256"] != profile_sha256:
+        raise ValueError("acquisition receipt profile hash mismatch")
+    if receipt["artifact_role"] != profile["artifact_role"]:
+        raise ValueError("acquisition receipt artifact role mismatch")
+    if receipt["artifact"]["path"] != profile["artifact"]["filename"]:
+        raise ValueError("acquisition receipt artifact filename mismatch")
+    if receipt["artifact"]["media_type"] != profile["artifact"]["media_type"]:
+        raise ValueError("acquisition receipt artifact media type mismatch")
+    if receipt["artifact"]["size_bytes"] != expected_size:
+        raise ValueError("acquisition receipt archive size mismatch")
+    if (
+        receipt["artifact"]["publisher_digest"]
+        != profile["artifact"]["publisher_digest"]
+    ):
+        raise ValueError("acquisition receipt publisher digest mismatch")
+    if receipt["publisher_digest_status"] != expected_digest_status:
+        raise ValueError("acquisition receipt has the wrong publisher-digest status")
+    if receipt["evidence_state"] != "acquisition_only":
+        raise ValueError("acquisition receipt overstates its evidence state")
+    if (
+        receipt["transfer"]["requested_uri"]
+        != profile["publication"]["source_uri"]
+    ):
+        raise ValueError("acquisition receipt requested URI mismatch")
+    if not receipt["transfer"]["final_origin"].startswith("https://"):
+        raise ValueError("acquisition receipt final origin is not HTTPS")
+    if (
+        type(receipt["completed_at_unix_seconds"]) is not int
+        or receipt["completed_at_unix_seconds"] <= 0
+    ):
+        raise ValueError("acquisition receipt completion time is invalid")
+
+    archive_size = archive.stat().st_size
+    if archive.name != profile["artifact"]["filename"]:
+        raise ValueError("archive filename does not match acquisition profile")
+    if archive_size != expected_size:
+        raise ValueError(
+            f"archive size mismatch: expected {expected_size}, "
+            f"observed {archive_size}"
+        )
+    archive_sha256 = sha256_file(archive)
+    if receipt["artifact"]["sha256"] != archive_sha256:
+        raise ValueError("archive SHA-256 does not match acquisition receipt")
+
+    return {
+        "source_uri": profile["publication"]["source_uri"],
+        "archive_size_bytes": archive_size,
+        "archive_sha256": archive_sha256,
+        "acquisition_profile_id": profile["id"],
+        "acquisition_profile_sha256": profile_sha256,
+        "acquisition_receipt_sha256": sha256_bytes(receipt_raw),
+        "publisher_digest_status": receipt["publisher_digest_status"],
+        "acquisition_evidence_state": receipt["evidence_state"],
+    }
 
 
 def decode_text(value: Any) -> str:
@@ -262,7 +443,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--cross-sections", required=True, type=Path)
     parser.add_argument("--material", required=True, type=Path)
     parser.add_argument("--archive", required=True, type=Path)
-    parser.add_argument("--archive-source-uri", required=True)
+    parser.add_argument("--acquisition-profile", required=True, type=Path)
+    parser.add_argument("--acquisition-receipt", required=True, type=Path)
     parser.add_argument("--distribution-id", required=True)
     parser.add_argument("--manifest-id", required=True)
     parser.add_argument("--output", required=True, type=Path)
@@ -274,8 +456,13 @@ def main() -> None:
     data_root = arguments.data_root.resolve(strict=True)
     cross_sections = arguments.cross_sections.resolve(strict=True)
     archive = arguments.archive.resolve(strict=True)
+    acquisition_profile = arguments.acquisition_profile.resolve(strict=True)
+    acquisition_receipt = arguments.acquisition_receipt.resolve(strict=True)
     material = arguments.material.resolve(strict=True)
     inspector = Path(__file__).resolve(strict=True)
+    distribution = validate_acquisition(
+        acquisition_profile, acquisition_receipt, archive
+    )
 
     data_relative_path(cross_sections, data_root)
     _, libraries = read_cross_sections(cross_sections)
@@ -294,7 +481,7 @@ def main() -> None:
     ]
 
     manifest = {
-        "schema_version": "nctforge.openmc-nuclear-data-manifest/0.2.0",
+        "schema_version": MANIFEST_SCHEMA,
         "id": arguments.manifest_id,
         "openmc_version": OPENMC_VERSION,
         "openmc_source_commit": OPENMC_SOURCE_COMMIT,
@@ -307,11 +494,7 @@ def main() -> None:
             "h5py_version": h5py.__version__,
             "hdf5_library_version": h5py.version.hdf5_version,
         },
-        "distribution": {
-            "id": arguments.distribution_id,
-            "source_uri": arguments.archive_source_uri,
-            "archive_sha256": sha256_file(archive),
-        },
+        "distribution": {"id": arguments.distribution_id, **distribution},
         "cross_sections": artifact(cross_sections, data_root),
         "neutron_tables": neutron_tables,
         "photon_tables": photon_tables,

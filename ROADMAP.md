@@ -87,10 +87,15 @@ Implementation status:
   including pointwise neutron-KERMA closure and review-state enforcement;
 - complete: case-scoped OpenMC nuclear-data manifest, HDF5 capability
   inspection, artifact verification, and cross-sections mapping preflight;
+- complete: resumable, no-overwrite nuclear-data acquisition with frozen
+  publisher profiles, redirect confinement, size and publisher-digest checks,
+  and receipts bound into manifest schema `0.3.0`;
+- complete: byte-stable OpenMC 0.16 input generation with complete scoring and
+  audit tally ledgers;
 - in progress: evaluated-data binding, response-table generation, and
   independent method checks;
-- pending: inspect and freeze the official ENDF/B-VIII.1 data selection, then
-  enable deterministic OpenMC input preparation;
+- pending: acquire, inspect, and freeze the official ENDF/B-VIII.1 case data
+  selection;
 - pending: smoke execution, statepoint import, and independent estimator
   comparison.
 

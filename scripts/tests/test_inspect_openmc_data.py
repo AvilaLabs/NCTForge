@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import runpy
 import subprocess
 import sys
 import tempfile
@@ -20,6 +21,66 @@ INSPECTOR = REPOSITORY_ROOT / "scripts" / "inspect-openmc-data.py"
 
 def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def write_acquisition_evidence(root: Path, archive: Path) -> tuple[Path, Path]:
+    source_uri = "https://example.invalid/data.tar.xz"
+    profile = {
+        "schema_version": "nctforge.data-acquisition-profile/0.1.0",
+        "id": "synthetic-openmc-data-profile",
+        "artifact_role": "openmc_continuous_energy_library",
+        "publication": {
+            "publisher": "synthetic test publisher",
+            "release_page_uri": "https://example.invalid/data/",
+            "source_uri": source_uri,
+            "allowed_https_host_suffixes": ["example.invalid"],
+        },
+        "artifact": {
+            "filename": archive.name,
+            "media_type": "application/x-xz",
+            "expected_size_bytes": archive.stat().st_size,
+            "expected_content_disposition_filename": archive.name,
+            "publisher_digest": None,
+        },
+        "size_evidence": {
+            "method": "synthetic_test_fixture",
+            "observed_on": "2026-08-31",
+        },
+        "upstream_recipe": None,
+    }
+    profile_path = root / "acquisition-profile.json"
+    profile_path.write_text(
+        json.dumps(profile, indent=2) + "\n", encoding="utf-8", newline="\n"
+    )
+    receipt = {
+        "schema_version": "nctforge.data-acquisition-receipt/0.1.0",
+        "profile_id": profile["id"],
+        "profile_sha256": sha256(profile_path),
+        "artifact_role": profile["artifact_role"],
+        "artifact": {
+            "path": archive.name,
+            "media_type": profile["artifact"]["media_type"],
+            "size_bytes": archive.stat().st_size,
+            "sha256": sha256(archive),
+            "publisher_digest": None,
+        },
+        "transfer": {
+            "requested_uri": source_uri,
+            "final_origin": "https://example.invalid",
+            "resumed_from_bytes": 0,
+            "content_disposition_filename": archive.name,
+            "etag": None,
+            "last_modified": None,
+        },
+        "publisher_digest_status": "unavailable",
+        "evidence_state": "acquisition_only",
+        "completed_at_unix_seconds": 1,
+    }
+    receipt_path = root / "acquisition-receipt.json"
+    receipt_path.write_text(
+        json.dumps(receipt, indent=2) + "\n", encoding="utf-8", newline="\n"
+    )
+    return profile_path, receipt_path
 
 
 def write_neutron(path: Path, nuclide: str, reactions: dict[int, bool]) -> None:
@@ -63,6 +124,26 @@ def write_photon(path: Path, element: str) -> None:
 
 
 class InspectorTest(unittest.TestCase):
+    def test_rejects_receipt_that_does_not_bind_archive(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            archive = root / "data.tar.xz"
+            archive.write_bytes(b"synthetic archive")
+            profile, receipt = write_acquisition_evidence(root, archive)
+            receipt_document = json.loads(receipt.read_text(encoding="utf-8"))
+            receipt_document["artifact"]["sha256"] = "0" * 64
+            receipt.write_text(
+                json.dumps(receipt_document, indent=2) + "\n",
+                encoding="utf-8",
+                newline="\n",
+            )
+            validate_acquisition = runpy.run_path(str(INSPECTOR))[
+                "validate_acquisition"
+            ]
+
+            with self.assertRaisesRegex(ValueError, "archive SHA-256"):
+                validate_acquisition(profile, receipt, archive)
+
     def test_extracts_case_scoped_capabilities_and_hashes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -116,6 +197,9 @@ class InspectorTest(unittest.TestCase):
             )
             archive = root / "data.tar.xz"
             archive.write_bytes(b"synthetic archive")
+            acquisition_profile, acquisition_receipt = write_acquisition_evidence(
+                root, archive
+            )
             output = root / "manifest.json"
             environment = os.environ.copy()
             environment["PYTHONPATH"] = os.pathsep.join(sys.path)
@@ -132,8 +216,10 @@ class InspectorTest(unittest.TestCase):
                     str(material),
                     "--archive",
                     str(archive),
-                    "--archive-source-uri",
-                    "https://example.invalid/data.tar.xz",
+                    "--acquisition-profile",
+                    str(acquisition_profile),
+                    "--acquisition-receipt",
+                    str(acquisition_receipt),
                     "--distribution-id",
                     "synthetic-distribution",
                     "--manifest-id",
@@ -153,6 +239,22 @@ class InspectorTest(unittest.TestCase):
             self.assertEqual(manifest["inspection"]["numpy_version"], numpy.__version__)
             self.assertEqual(manifest["inspection"]["h5py_version"], h5py.__version__)
             self.assertEqual(manifest["distribution"]["archive_sha256"], sha256(archive))
+            self.assertEqual(
+                manifest["distribution"]["archive_size_bytes"],
+                archive.stat().st_size,
+            )
+            self.assertEqual(
+                manifest["distribution"]["acquisition_profile_sha256"],
+                sha256(acquisition_profile),
+            )
+            self.assertEqual(
+                manifest["distribution"]["acquisition_receipt_sha256"],
+                sha256(acquisition_receipt),
+            )
+            self.assertEqual(
+                manifest["distribution"]["acquisition_evidence_state"],
+                "acquisition_only",
+            )
             self.assertEqual(manifest["cross_sections"]["sha256"], sha256(cross_sections))
 
             boron = next(

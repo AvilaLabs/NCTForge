@@ -103,6 +103,13 @@ Patient data is denied by default during early development. The repository
 ignores common medical-image and transport-output formats. Only deliberately
 reviewed synthetic artifacts may enter the public benchmark corpus.
 
+Large external nuclear-data artifacts are never implicit build dependencies.
+Reviewed acquisition profiles constrain their publisher URI, HTTPS redirects,
+size, and digest evidence. The Rust acquisition path emits a receipt, and the
+case-scoped OpenMC manifest binds both profile and receipt by SHA-256 before any
+table is accepted. This establishes transfer provenance without implying
+scientific or clinical qualification; see ADR 0010.
+
 ## Qualification
 
 Every result declares one of the bounded qualification states defined by

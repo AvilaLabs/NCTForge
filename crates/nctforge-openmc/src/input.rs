@@ -1406,7 +1406,7 @@ mod tests {
             })
             .collect();
         NuclearDataManifest {
-            schema_version: "nctforge.openmc-nuclear-data-manifest/0.2.0".into(),
+            schema_version: crate::data::TARGET_NUCLEAR_DATA_MANIFEST_SCHEMA.into(),
             id: "nctforge.nf-bnct-001.endf-b-viii.1.test".into(),
             openmc_version: TARGET_OPENMC_VERSION.into(),
             openmc_source_commit: TARGET_OPENMC_SOURCE_COMMIT.into(),
@@ -1421,8 +1421,14 @@ mod tests {
             },
             distribution: DataDistributionIdentity {
                 id: "synthetic-test-data".into(),
-                source_uri: "https://example.invalid/data.tar.xz".into(),
+                source_uri: crate::data::TARGET_DISTRIBUTION_SOURCE_URI.into(),
+                archive_size_bytes: crate::data::TARGET_DISTRIBUTION_ARCHIVE_SIZE_BYTES,
                 archive_sha256: "c".repeat(64),
+                acquisition_profile_id: crate::data::TARGET_ACQUISITION_PROFILE_ID.into(),
+                acquisition_profile_sha256: crate::data::TARGET_ACQUISITION_PROFILE_SHA256.into(),
+                acquisition_receipt_sha256: "0".repeat(64),
+                publisher_digest_status: crate::PublisherDigestStatus::Unavailable,
+                acquisition_evidence_state: crate::AcquisitionEvidenceState::AcquisitionOnly,
             },
             cross_sections: artifact("cross_sections.xml"),
             neutron_tables,
@@ -1592,7 +1598,7 @@ mod tests {
                 ),
                 (
                     "nctforge-input-manifest.json",
-                    "b8419faa5b1983b073de98118e386e7b3252a4e43cde997a7603ae78a5a34188"
+                    "a0a99a8e8c21d7b02d90c943f8dc43c104a5254b7100f9660cf999eac2b5957b"
                 ),
             ]
         );

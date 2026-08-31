@@ -371,6 +371,8 @@ component-profile.json
 response-tables/
 dicom-manifest.json
 engine-manifest.json
+data-acquisition-profile.json
+data-acquisition-receipt.json
 nuclear-data-manifest.json
 run-settings.json
 inputs/
@@ -409,8 +411,8 @@ profiles.
 
 Geometry, material, source, classification, response-generation method, and
 OpenMC smoke execution profile are frozen by this version. Deterministic input
-generation is implemented, but the benchmark cannot enter execution until the
-official evaluated-data selection and generated KERMA tables have been hashed,
-checked against the ADR 0007 gates, and independently reviewed. Changing any
-frozen quantity creates a new benchmark specification version and cannot
-silently replace earlier results.
+generation and verifiable data acquisition are implemented, but the benchmark
+cannot enter execution until the official evaluated-data selection and
+generated KERMA tables have been hashed, checked against the ADR 0007 gates,
+and independently reviewed. Changing any frozen quantity creates a new
+benchmark specification version and cannot silently replace earlier results.

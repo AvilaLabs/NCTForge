@@ -10,14 +10,24 @@ use nctforge_transport::{
 };
 use thiserror::Error;
 
+mod acquisition;
 mod data;
 mod input;
 
+pub use acquisition::{
+    ACQUISITION_PROFILE_SCHEMA, ACQUISITION_RECEIPT_SCHEMA, AcquiredData, AcquiredDataArtifact,
+    AcquisitionError, AcquisitionEvidenceState, AcquisitionProgress, DataAcquisitionClient,
+    DataAcquisitionProbe, DataAcquisitionProfile, DataAcquisitionProfileDocument,
+    DataAcquisitionReceipt, DataPublication, DataTransferEvidence, DigestAlgorithm,
+    PublishedDataArtifact, PublishedDigest, PublisherDigestStatus, SizeEvidence, UpstreamRecipe,
+};
 pub use data::{
     DataArtifact, DataDistributionIdentity, DataInspectionIdentity, NeutronTableCapability,
-    NuclearDataError, NuclearDataManifest, PhotonTableCapability, TARGET_DATA_HDF5_VERSION,
-    TARGET_EVALUATED_DATA_RELEASE, TARGET_INSPECTION_METHOD, TARGET_OPENMC_SOURCE_COMMIT,
-    TARGET_OPENMC_VERSION, TEMPERATURE_TOLERANCE_K,
+    NuclearDataError, NuclearDataManifest, PhotonTableCapability, TARGET_ACQUISITION_PROFILE_ID,
+    TARGET_ACQUISITION_PROFILE_SHA256, TARGET_DATA_HDF5_VERSION,
+    TARGET_DISTRIBUTION_ARCHIVE_SIZE_BYTES, TARGET_DISTRIBUTION_SOURCE_URI,
+    TARGET_EVALUATED_DATA_RELEASE, TARGET_INSPECTION_METHOD, TARGET_NUCLEAR_DATA_MANIFEST_SCHEMA,
+    TARGET_OPENMC_SOURCE_COMMIT, TARGET_OPENMC_VERSION, TEMPERATURE_TOLERANCE_K,
 };
 pub use input::{
     CANDIDATE_REFERENCE_SEEDS, GeneratedOpenMcFile, OPENMC_DEFAULT_STRIDE,
