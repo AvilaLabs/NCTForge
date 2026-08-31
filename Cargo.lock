@@ -2469,6 +2469,7 @@ version = "0.1.0"
 dependencies = [
  "eframe",
  "nctforge-dicom",
+ "nctforge-evidence",
  "nctforge-openmc",
  "nctforge-transport",
  "nctforge-view",

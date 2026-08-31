@@ -118,6 +118,9 @@ Implementation status:
 - complete: establish that the official processed tables retain effective
   local-photon fallback for O-17 and O-18, so official-library acquisition does
   not by itself resolve the transported-photon KERMA blocker;
+- complete: expose the intended workflow in an evidence-aware egui shell with
+  overview, geometry, transport, four-component dose, and evidence workspaces;
+  unfinished physics and backend actions remain explicitly disabled;
 - in progress: define and independently justify a versioned response treatment
   for the O-17/O-18 photon-data gap, then repeat the complete review gates;
 - pending: generate the first reviewable response tables only after the

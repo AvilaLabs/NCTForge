@@ -16,6 +16,7 @@ path = "src/main.rs"
 [dependencies]
 eframe.workspace = true
 nctforge-dicom = { path = "../nctforge-dicom" }
+nctforge-evidence = { path = "../nctforge-evidence" }
 nctforge-openmc = { path = "../nctforge-openmc" }
 nctforge-transport = { path = "../nctforge-transport" }
 nctforge-view = { path = "../nctforge-view" }

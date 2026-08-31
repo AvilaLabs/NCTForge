@@ -7,9 +7,20 @@ use std::path::{Path, PathBuf};
 
 use eframe::egui;
 use nctforge_dicom::{VerifiedBenchmarkCase, load_nf_bnct_001};
-use nctforge_openmc::OpenMcBackend;
+use nctforge_evidence::sha256_hex;
+use nctforge_openmc::{OpenMcBackend, TARGET_OPENMC_VERSION};
 use nctforge_transport::TransportBackend;
 use nctforge_view::{AnatomicalPlane, Crosshair, PatientAlignedGrid, SliceView};
+
+const OPENMC_MANIFEST_EVIDENCE: &[u8] = include_bytes!(
+    "../../../benchmarks/synthetic/nf-bnct-001/transport/provenance/openmc-endfb81-processed-data-manifest.json"
+);
+const NJOY_EXECUTION_EVIDENCE: &[u8] = include_bytes!(
+    "../../../benchmarks/synthetic/nf-bnct-001/transport/provenance/njoy2016-78-execution-receipt.json"
+);
+const HEATING_COMPARISON_EVIDENCE: &[u8] = include_bytes!(
+    "../../../benchmarks/synthetic/nf-bnct-001/transport/provenance/openmc-njoy-mt301-comparison.json"
+);
 
 fn main() -> eframe::Result {
     let initial_case = std::env::args_os().nth(1).map(PathBuf::from);
@@ -22,8 +33,127 @@ fn main() -> eframe::Result {
     eframe::run_native(
         "NCTForge",
         options,
-        Box::new(move |_creation_context| Ok(Box::new(NctForgeApp::new(initial_case)))),
+        Box::new(move |creation_context| {
+            configure_style(&creation_context.egui_ctx);
+            Ok(Box::new(NctForgeApp::new(initial_case)))
+        }),
     )
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+enum WorkspaceTab {
+    #[default]
+    Overview,
+    Geometry,
+    Transport,
+    Dose,
+    Evidence,
+}
+
+impl WorkspaceTab {
+    const ALL: [Self; 5] = [
+        Self::Overview,
+        Self::Geometry,
+        Self::Transport,
+        Self::Dose,
+        Self::Evidence,
+    ];
+
+    const fn label(self) -> &'static str {
+        match self {
+            Self::Overview => "Overview",
+            Self::Geometry => "Geometry",
+            Self::Transport => "Transport",
+            Self::Dose => "Dose components",
+            Self::Evidence => "Evidence",
+        }
+    }
+
+    const fn marker(self) -> &'static str {
+        match self {
+            Self::Overview => "01",
+            Self::Geometry => "02",
+            Self::Transport => "03",
+            Self::Dose => "04",
+            Self::Evidence => "05",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum GateState {
+    Verified,
+    Frozen,
+    Blocked,
+    Pending,
+    InputRequired,
+}
+
+impl GateState {
+    const fn label(self) -> &'static str {
+        match self {
+            Self::Verified => "VERIFIED",
+            Self::Frozen => "FROZEN",
+            Self::Blocked => "BLOCKED",
+            Self::Pending => "PENDING",
+            Self::InputRequired => "INPUT REQUIRED",
+        }
+    }
+
+    fn color(self) -> egui::Color32 {
+        match self {
+            Self::Verified => egui::Color32::from_rgb(90, 210, 153),
+            Self::Frozen => egui::Color32::from_rgb(91, 166, 255),
+            Self::Blocked => egui::Color32::from_rgb(244, 171, 67),
+            Self::Pending => egui::Color32::from_rgb(151, 158, 178),
+            Self::InputRequired => egui::Color32::from_rgb(214, 117, 117),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct ReadinessGate {
+    title: &'static str,
+    detail: &'static str,
+    state: GateState,
+}
+
+fn readiness_gates(case_loaded: bool) -> [ReadinessGate; 5] {
+    [
+        ReadinessGate {
+            title: "DICOM geometry",
+            detail: if case_loaded {
+                "Case artifacts and patient-space geometry passed the runtime gate."
+            } else {
+                "Load NF-BNCT-001 to run the DICOM and integrity gate."
+            },
+            state: if case_loaded {
+                GateState::Verified
+            } else {
+                GateState::InputRequired
+            },
+        },
+        ReadinessGate {
+            title: "Material and source",
+            detail: "Versioned NF-BNCT-001 benchmark contracts are checked in.",
+            state: GateState::Frozen,
+        },
+        ReadinessGate {
+            title: "OpenMC nuclear data",
+            detail: "Official case selection and 16 artifact identities are frozen.",
+            state: GateState::Frozen,
+        },
+        ReadinessGate {
+            title: "Component responses",
+            detail: "O-17/O-18 transported-photon treatment requires independent review.",
+            state: GateState::Blocked,
+        },
+        ReadinessGate {
+            title: "Controlled transport run",
+            detail: "Disabled until every upstream scientific gate passes.",
+            state: GateState::Pending,
+        },
+    ]
 }
 
 struct NctForgeApp {
@@ -31,10 +161,12 @@ struct NctForgeApp {
     load_error: Option<String>,
     case: Option<ViewerCase>,
     display: DisplaySettings,
+    workspace: WorkspaceTab,
 }
 
 impl NctForgeApp {
     fn new(initial_case: Option<PathBuf>) -> Self {
+        let has_initial_case = initial_case.is_some();
         let mut app = Self {
             case_path: initial_case
                 .as_deref()
@@ -42,8 +174,13 @@ impl NctForgeApp {
             load_error: None,
             case: None,
             display: DisplaySettings::default(),
+            workspace: if has_initial_case {
+                WorkspaceTab::Geometry
+            } else {
+                WorkspaceTab::Overview
+            },
         };
-        if initial_case.is_some() {
+        if has_initial_case {
             app.load_case();
         }
         app
@@ -70,39 +207,273 @@ impl NctForgeApp {
 
 impl eframe::App for NctForgeApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        ui.horizontal_wrapped(|ui| {
-            ui.strong("RESEARCH SOFTWARE");
-            ui.label("Not commissioned or certified for clinical decision-making.");
-            ui.separator();
-            ui.label("R1 geometry viewer — synthetic NF-BNCT-001 only");
-        });
-        ui.separator();
-
+        show_app_header(ui, self.case.as_ref());
+        ui.add_space(8.0);
         let enter_pressed = ui.input(|input| input.key_pressed(egui::Key::Enter));
-        ui.horizontal(|ui| {
-            ui.label("Case directory");
-            let path_response = ui.add(
-                egui::TextEdit::singleline(&mut self.case_path)
-                    .desired_width(520.0)
-                    .hint_text("/tmp/nf-bnct-001"),
-            );
-            if ui.button("Load and verify").clicked()
-                || (path_response.has_focus() && enter_pressed)
-            {
-                self.load_case();
-            }
-        });
+        let load_requested =
+            show_case_loader(ui, &mut self.case_path, self.case.as_ref(), enter_pressed);
+        if load_requested {
+            self.load_case();
+        }
         if let Some(error) = &self.load_error {
             ui.colored_label(egui::Color32::LIGHT_RED, format!("Load rejected: {error}"));
         }
+        ui.add_space(8.0);
         ui.separator();
-
-        if let Some(case) = &mut self.case {
-            show_loaded_case(ui, case, &mut self.display);
-        } else {
-            show_empty_state(ui);
-        }
+        show_workbench(
+            ui,
+            &mut self.workspace,
+            self.case.as_mut(),
+            &mut self.display,
+        );
     }
+}
+
+fn configure_style(context: &egui::Context) {
+    let mut visuals = egui::Visuals::dark();
+    visuals.panel_fill = egui::Color32::from_rgb(17, 21, 29);
+    visuals.window_fill = egui::Color32::from_rgb(21, 26, 36);
+    visuals.extreme_bg_color = egui::Color32::from_rgb(10, 13, 19);
+    visuals.faint_bg_color = egui::Color32::from_rgb(27, 33, 44);
+    visuals.selection.bg_fill = egui::Color32::from_rgb(30, 116, 138);
+    visuals.selection.stroke = egui::Stroke::new(1.0, egui::Color32::from_rgb(144, 231, 239));
+    context.set_visuals(visuals);
+
+    context.global_style_mut(|style| {
+        style.spacing.item_spacing = egui::vec2(10.0, 8.0);
+        style.spacing.button_padding = egui::vec2(12.0, 7.0);
+    });
+}
+
+fn show_app_header(ui: &mut egui::Ui, case: Option<&ViewerCase>) {
+    egui::Frame::new()
+        .fill(egui::Color32::from_rgb(21, 30, 40))
+        .corner_radius(8)
+        .inner_margin(egui::Margin::symmetric(14, 10))
+        .show(ui, |ui| {
+            ui.horizontal(|ui| {
+                ui.vertical(|ui| {
+                    ui.label(
+                        egui::RichText::new("NCTFORGE")
+                            .size(24.0)
+                            .strong()
+                            .color(egui::Color32::from_rgb(139, 229, 235)),
+                    );
+                    ui.label(
+                        egui::RichText::new("Open BNCT research and verification workbench")
+                            .color(egui::Color32::from_rgb(183, 192, 209)),
+                    );
+                });
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    status_badge(ui, GateState::Pending, "RESEARCH ONLY");
+                    if case.is_some() {
+                        status_badge(ui, GateState::Verified, "CASE VERIFIED");
+                    }
+                });
+            });
+        });
+    ui.horizontal_wrapped(|ui| {
+        ui.colored_label(
+            egui::Color32::from_rgb(244, 188, 95),
+            egui::RichText::new("NOT FOR CLINICAL DECISION-MAKING").strong(),
+        );
+        ui.label("No dose, prescription, or treatment-delivery claim is available in this build.");
+    });
+}
+
+fn show_case_loader(
+    ui: &mut egui::Ui,
+    case_path: &mut String,
+    case: Option<&ViewerCase>,
+    enter_pressed: bool,
+) -> bool {
+    let mut load_requested = false;
+    egui::Frame::group(ui.style()).show(ui, |ui| {
+        ui.horizontal(|ui| {
+            ui.label(egui::RichText::new("CASE").small().strong());
+            let path_response = ui.add(
+                egui::TextEdit::singleline(case_path)
+                    .desired_width(520.0)
+                    .hint_text("/tmp/nf-bnct-001"),
+            );
+            load_requested = ui.button("Load + verify").clicked()
+                || (path_response.has_focus() && enter_pressed);
+            if let Some(case) = case {
+                ui.separator();
+                ui.strong(case.verified.report.case_id);
+                ui.label(format!(
+                    "{} artifacts",
+                    case.verified.report.verified_artifact_count
+                ));
+            }
+        });
+    });
+    load_requested
+}
+
+fn show_workbench(
+    ui: &mut egui::Ui,
+    workspace: &mut WorkspaceTab,
+    case: Option<&mut ViewerCase>,
+    display: &mut DisplaySettings,
+) {
+    egui::Panel::left("nctforge-workspace-navigation")
+        .exact_size(180.0)
+        .resizable(false)
+        .frame(
+            egui::Frame::new()
+                .fill(egui::Color32::from_rgb(15, 19, 27))
+                .inner_margin(egui::Margin::symmetric(10, 12)),
+        )
+        .show(ui, |ui| {
+            ui.label(
+                egui::RichText::new("WORKSPACES")
+                    .small()
+                    .strong()
+                    .color(egui::Color32::from_rgb(137, 146, 165)),
+            );
+            for candidate in WorkspaceTab::ALL {
+                let label = format!("{}  {}", candidate.marker(), candidate.label());
+                if ui
+                    .selectable_label(*workspace == candidate, label)
+                    .clicked()
+                {
+                    *workspace = candidate;
+                }
+            }
+            ui.add_space(16.0);
+            ui.separator();
+            ui.small("Milestone");
+            ui.strong("R2 · physical truth");
+            ui.small("Evidence-gated; no calendar-based completion claims.");
+        });
+    egui::CentralPanel::default()
+        .frame(egui::Frame::new().inner_margin(egui::Margin::symmetric(12, 8)))
+        .show(ui, |ui| {
+            egui::ScrollArea::vertical()
+                .id_salt("nctforge-workspace")
+                .auto_shrink([false, false])
+                .show(ui, |ui| match *workspace {
+                    WorkspaceTab::Overview => show_overview(ui, case.as_deref()),
+                    WorkspaceTab::Geometry => {
+                        if let Some(case) = case {
+                            show_geometry_workspace(ui, case, display);
+                        } else {
+                            show_workspace_heading(
+                                ui,
+                                "Geometry",
+                                "Patient-space DICOM truth before transport.",
+                            );
+                            show_empty_state(ui);
+                        }
+                    }
+                    WorkspaceTab::Transport => show_transport_workspace(ui, case.as_deref()),
+                    WorkspaceTab::Dose => show_dose_workspace(ui),
+                    WorkspaceTab::Evidence => show_evidence_workspace(ui, case.as_deref()),
+                });
+        });
+}
+
+fn show_workspace_heading(ui: &mut egui::Ui, title: &str, subtitle: &str) {
+    ui.heading(egui::RichText::new(title).size(23.0));
+    ui.label(egui::RichText::new(subtitle).color(egui::Color32::from_rgb(164, 174, 193)));
+    ui.add_space(8.0);
+}
+
+fn show_overview(ui: &mut egui::Ui, case: Option<&ViewerCase>) {
+    show_workspace_heading(
+        ui,
+        "Research overview",
+        "One place to see what is verified, what is frozen, and what still blocks a result.",
+    );
+
+    egui::Frame::new()
+        .fill(egui::Color32::from_rgb(19, 36, 45))
+        .corner_radius(8)
+        .inner_margin(egui::Margin::same(14))
+        .show(ui, |ui| {
+            ui.horizontal_wrapped(|ui| {
+                ui.vertical(|ui| {
+                    ui.label(
+                        egui::RichText::new("NF-BNCT-001")
+                            .size(20.0)
+                            .strong()
+                            .color(egui::Color32::from_rgb(139, 229, 235)),
+                    );
+                    ui.label("Synthetic conformance case · macroscopic physical dose");
+                });
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    status_badge(ui, GateState::Blocked, "RESPONSE GATE");
+                    status_badge(
+                        ui,
+                        if case.is_some() {
+                            GateState::Verified
+                        } else {
+                            GateState::InputRequired
+                        },
+                        if case.is_some() {
+                            "GEOMETRY READY"
+                        } else {
+                            "LOAD GEOMETRY"
+                        },
+                    );
+                });
+            });
+        });
+
+    ui.add_space(12.0);
+    ui.heading("Readiness gates");
+    ui.columns(2, |columns| {
+        for (index, gate) in readiness_gates(case.is_some()).into_iter().enumerate() {
+            show_gate_card(&mut columns[index % 2], gate);
+        }
+    });
+
+    ui.add_space(12.0);
+    egui::Frame::group(ui.style()).show(ui, |ui| {
+        ui.label(egui::RichText::new("NEXT SCIENTIFIC DECISION").small().strong());
+        ui.heading("Resolve O-17/O-18 transported-photon response semantics");
+        ui.label(
+            "The official OpenMC tables reproduce the controlled NJOY MT 301 curves. "
+                .to_owned()
+                + "That confirms the data gap; it does not authorize a zero or a hidden local-deposition fallback.",
+        );
+    });
+}
+
+fn show_gate_card(ui: &mut egui::Ui, gate: ReadinessGate) {
+    egui::Frame::group(ui.style()).show(ui, |ui| {
+        ui.set_min_height(78.0);
+        ui.horizontal(|ui| {
+            ui.colored_label(gate.state.color(), "●");
+            ui.vertical(|ui| {
+                ui.strong(gate.title);
+                ui.small(gate.detail);
+                ui.label(
+                    egui::RichText::new(gate.state.label())
+                        .small()
+                        .strong()
+                        .color(gate.state.color()),
+                );
+            });
+        });
+    });
+}
+
+fn status_badge(ui: &mut egui::Ui, state: GateState, label: &str) {
+    egui::Frame::new()
+        .fill(state.color().gamma_multiply(0.14))
+        .stroke(egui::Stroke::new(1.0, state.color().gamma_multiply(0.75)))
+        .corner_radius(5)
+        .inner_margin(egui::Margin::symmetric(7, 3))
+        .show(ui, |ui| {
+            ui.label(
+                egui::RichText::new(label)
+                    .small()
+                    .strong()
+                    .color(state.color()),
+            );
+        });
 }
 
 struct DisplaySettings {
@@ -183,7 +554,16 @@ impl ViewerCase {
     }
 }
 
-fn show_loaded_case(ui: &mut egui::Ui, case: &mut ViewerCase, display: &mut DisplaySettings) {
+fn show_geometry_workspace(
+    ui: &mut egui::Ui,
+    case: &mut ViewerCase,
+    display: &mut DisplaySettings,
+) {
+    show_workspace_heading(
+        ui,
+        "Geometry",
+        "Integrity-gated, linked patient-space views of the frozen synthetic case.",
+    );
     ui.horizontal_top(|ui| {
         ui.vertical(|ui| {
             ui.set_min_width(245.0);
@@ -226,6 +606,264 @@ fn show_loaded_case(ui: &mut egui::Ui, case: &mut ViewerCase, display: &mut Disp
             {
                 case.textures_dirty = true;
             }
+        });
+    });
+}
+
+fn show_transport_workspace(ui: &mut egui::Ui, case: Option<&ViewerCase>) {
+    show_workspace_heading(
+        ui,
+        "Transport",
+        "Backend-neutral preparation with explicit scientific and execution gates.",
+    );
+    let backend = OpenMcBackend::default().descriptor();
+
+    egui::Frame::new()
+        .fill(egui::Color32::from_rgb(22, 30, 41))
+        .corner_radius(8)
+        .inner_margin(egui::Margin::same(14))
+        .show(ui, |ui| {
+            ui.horizontal(|ui| {
+                ui.vertical(|ui| {
+                    ui.heading(format!("{} adapter", backend.display_name));
+                    ui.label(format!(
+                        "Pinned target {} · executable boundary: {}",
+                        TARGET_OPENMC_VERSION, backend.id
+                    ));
+                });
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    status_badge(ui, GateState::Pending, "NOT EXECUTABLE")
+                });
+            });
+            ui.separator();
+            ui.horizontal_wrapped(|ui| {
+                capability_label(ui, "Prepare", backend.can_prepare);
+                capability_label(ui, "Execute", backend.can_execute);
+                capability_label(ui, "Import", backend.can_import);
+            });
+        });
+
+    ui.add_space(12.0);
+    ui.heading("Run gate chain");
+    for (index, gate) in readiness_gates(case.is_some()).into_iter().enumerate() {
+        ui.horizontal(|ui| {
+            ui.monospace(format!("{:02}", index + 1));
+            ui.colored_label(gate.state.color(), "●");
+            ui.strong(gate.title);
+            ui.label("—");
+            ui.label(gate.detail);
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                ui.label(
+                    egui::RichText::new(gate.state.label())
+                        .small()
+                        .strong()
+                        .color(gate.state.color()),
+                );
+            });
+        });
+        if index + 1 != readiness_gates(case.is_some()).len() {
+            ui.separator();
+        }
+    }
+
+    ui.add_space(14.0);
+    ui.horizontal(|ui| {
+        ui.add_enabled(false, egui::Button::new("Prepare OpenMC run"))
+            .on_disabled_hover_text("Blocked until the reviewed component responses pass.");
+        ui.add_enabled(false, egui::Button::new("Execute transport"))
+            .on_disabled_hover_text("The backend does not advertise controlled execution yet.");
+        ui.label("Disabled controls reflect real adapter capabilities.");
+    });
+}
+
+fn capability_label(ui: &mut egui::Ui, name: &str, enabled: bool) {
+    let (state, value) = if enabled {
+        (GateState::Verified, "available")
+    } else {
+        (GateState::Pending, "unavailable")
+    };
+    egui::Frame::group(ui.style()).show(ui, |ui| {
+        ui.horizontal(|ui| {
+            ui.strong(name);
+            ui.colored_label(state.color(), value);
+        });
+    });
+}
+
+fn show_dose_workspace(ui: &mut egui::Ui) {
+    show_workspace_heading(
+        ui,
+        "Physical dose components",
+        "Unweighted absorbed dose stays separate from biological interpretation.",
+    );
+    ui.columns(4, |columns| {
+        for (column, (symbol, name, color, detail)) in columns.iter_mut().zip([
+            (
+                "D_B",
+                "Boron",
+                egui::Color32::from_rgb(92, 207, 171),
+                "B-10 charged reaction products; emitted photon energy excluded.",
+            ),
+            (
+                "D_N",
+                "Nitrogen",
+                egui::Color32::from_rgb(99, 165, 244),
+                "Charged products assigned to the nitrogen reaction group.",
+            ),
+            (
+                "D_H",
+                "Hydrogen / neutron",
+                egui::Color32::from_rgb(228, 167, 91),
+                "Residual non-photon neutron KERMA, with its contributor ledger.",
+            ),
+            (
+                "D_gamma",
+                "Photon",
+                egui::Color32::from_rgb(206, 121, 226),
+                "Incident and transported secondary-photon energy deposition.",
+            ),
+        ]) {
+            egui::Frame::group(column.style()).show(column, |ui| {
+                ui.set_min_height(150.0);
+                ui.colored_label(color, egui::RichText::new(symbol).size(20.0).strong());
+                ui.strong(name);
+                ui.small(detail);
+                ui.add_space(8.0);
+                ui.label(
+                    egui::RichText::new("NO RESULT LOADED")
+                        .small()
+                        .strong()
+                        .color(GateState::Pending.color()),
+                );
+            });
+        }
+    });
+
+    ui.add_space(14.0);
+    egui::Frame::new()
+        .fill(egui::Color32::from_rgb(41, 32, 22))
+        .corner_radius(8)
+        .inner_margin(egui::Margin::same(14))
+        .show(ui, |ui| {
+            status_badge(ui, GateState::Blocked, "NUMERICAL DISPLAY LOCKED");
+            ui.heading("No placeholder dose values");
+            ui.label(
+                "NCTForge will not render synthetic-looking heat maps, DVHs, totals, or uncertainty "
+                    .to_owned()
+                    + "until a validated physical-dose bundle is actually loaded.",
+            );
+        });
+
+    ui.add_space(12.0);
+    ui.heading("Later, this workspace will provide");
+    ui.horizontal_wrapped(|ui| {
+        for capability in [
+            "linked component overlays",
+            "absolute one-sigma uncertainty",
+            "ROI statistics and DVHs",
+            "physical-total closure",
+            "side-by-side backend comparison",
+            "separate biological model layer",
+        ] {
+            egui::Frame::group(ui.style()).show(ui, |ui| {
+                ui.label(capability);
+            });
+        }
+    });
+}
+
+fn show_evidence_workspace(ui: &mut egui::Ui, case: Option<&ViewerCase>) {
+    show_workspace_heading(
+        ui,
+        "Evidence",
+        "Qualification is a chain of scoped claims, not one global green check.",
+    );
+
+    let geometry_detail = case.map_or_else(
+        || "No runtime case has been verified in this session.".to_owned(),
+        |case| {
+            format!(
+                "{} DICOM artifacts verified for {}.",
+                case.verified.report.verified_artifact_count, case.verified.report.case_id
+            )
+        },
+    );
+    let manifest_hash = short_evidence_hash(OPENMC_MANIFEST_EVIDENCE);
+    let execution_hash = short_evidence_hash(NJOY_EXECUTION_EVIDENCE);
+    let comparison_hash = short_evidence_hash(HEATING_COMPARISON_EVIDENCE);
+    show_evidence_row(
+        ui,
+        "Runtime geometry gate",
+        if case.is_some() {
+            GateState::Verified
+        } else {
+            GateState::InputRequired
+        },
+        &geometry_detail,
+        None,
+    );
+    show_evidence_row(
+        ui,
+        "Official OpenMC processed selection",
+        GateState::Frozen,
+        "Case manifest binds cross_sections.xml, ten neutron tables, and five photon tables.",
+        Some(&manifest_hash),
+    );
+    show_evidence_row(
+        ui,
+        "Controlled NJOY2016.78 execution",
+        GateState::Blocked,
+        "Preserved rejected evidence: 72 kinematic findings across four nuclides.",
+        Some(&execution_hash),
+    );
+    show_evidence_row(
+        ui,
+        "OpenMC / NJOY MT 301 comparison",
+        GateState::Frozen,
+        "All ten curves agree within 4.9e-7; O-17/O-18 local fallback remains explicit.",
+        Some(&comparison_hash),
+    );
+
+    ui.add_space(12.0);
+    egui::Frame::group(ui.style()).show(ui, |ui| {
+        ui.heading("Qualification ceiling");
+        ui.label(
+            egui::RichText::new("synthetic_research_only")
+                .monospace()
+                .strong(),
+        );
+        ui.label(
+            "Acquisition identity, transport capability, response suitability, execution, "
+                .to_owned()
+                + "cross-code comparison, and experimental validation remain separate claims.",
+        );
+    });
+}
+
+fn short_evidence_hash(bytes: &[u8]) -> String {
+    sha256_hex(bytes)[..12].to_owned()
+}
+
+fn show_evidence_row(
+    ui: &mut egui::Ui,
+    title: &str,
+    state: GateState,
+    detail: &str,
+    hash: Option<&str>,
+) {
+    egui::Frame::group(ui.style()).show(ui, |ui| {
+        ui.horizontal(|ui| {
+            ui.colored_label(state.color(), "●");
+            ui.vertical(|ui| {
+                ui.strong(title);
+                ui.label(detail);
+                if let Some(hash) = hash {
+                    ui.monospace(format!("sha256:{hash}…"));
+                }
+            });
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                status_badge(ui, state, state.label())
+            });
         });
     });
 }
@@ -279,12 +917,6 @@ fn show_case_summary(ui: &mut egui::Ui, case: &ViewerCase) {
             format!("ROIs: {}", names.join(", "))
         });
     }
-
-    ui.separator();
-    ui.heading("Transport backends");
-    let openmc = OpenMcBackend::default().descriptor();
-    ui.label(format!("{} — adapter scaffold", openmc.display_name));
-    ui.small("prepare=false, execute=false, import=false");
 }
 
 fn show_display_controls(
@@ -551,5 +1183,62 @@ mod tests {
         let overlay = egui::Color32::from_rgb(210, 120, 60);
         assert_eq!(blend(base, overlay, 0.0), base);
         assert_eq!(blend(base, overlay, 1.0), overlay);
+    }
+
+    #[test]
+    fn workspace_navigation_has_stable_unique_labels() {
+        let labels = WorkspaceTab::ALL.map(WorkspaceTab::label);
+        assert_eq!(labels.len(), 5);
+        assert!(labels.iter().all(|label| !label.is_empty()));
+        for (index, left) in labels.iter().enumerate() {
+            assert!(!labels[index + 1..].contains(left));
+        }
+    }
+
+    #[test]
+    fn readiness_never_promotes_the_blocked_response_or_transport_run() {
+        for case_loaded in [false, true] {
+            let gates = readiness_gates(case_loaded);
+            assert_eq!(gates[3].state, GateState::Blocked);
+            assert_eq!(gates[4].state, GateState::Pending);
+        }
+        assert_eq!(readiness_gates(false)[0].state, GateState::InputRequired);
+        assert_eq!(readiness_gates(true)[0].state, GateState::Verified);
+    }
+
+    #[test]
+    fn displayed_evidence_hashes_are_derived_from_frozen_bytes() {
+        assert_eq!(
+            sha256_hex(OPENMC_MANIFEST_EVIDENCE),
+            "3eaae09921172199c34f3fb236ae082ea5ace4567e0e04d2afcce357add73fb1"
+        );
+        assert_eq!(
+            sha256_hex(NJOY_EXECUTION_EVIDENCE),
+            "65a21b57507e76a68b77349e92390ae03ebb8c38f6ed6cee66197aa5ee4adea7"
+        );
+        assert_eq!(
+            sha256_hex(HEATING_COMPARISON_EVIDENCE),
+            "e9b1ffc5e70e3e489f23f9e185d12a5edeb7525161eb3b81470233d33f36f1e7"
+        );
+    }
+
+    #[test]
+    fn every_empty_workspace_renders_at_the_minimum_viewport() {
+        let context = egui::Context::default();
+        configure_style(&context);
+        for mut workspace in WorkspaceTab::ALL {
+            let input = egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(960.0, 640.0),
+                )),
+                ..Default::default()
+            };
+            let mut display = DisplaySettings::default();
+            let mut output = context.run_ui(input, |ui| {
+                show_workbench(ui, &mut workspace, None, &mut display);
+            });
+            output.textures_delta.clear();
+        }
     }
 }

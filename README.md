@@ -57,7 +57,8 @@ contains:
 - an egui-independent, orientation-tested tri-planar view model with linked
   voxel crosshairs and explicit patient-side labels;
 - content-hash and run-manifest primitives;
-- a CLI and a native egui geometry viewer for the verified synthetic case;
+- a CLI and a native, evidence-aware egui workbench shell with overview,
+  geometry, transport, component-dose, and evidence workspaces;
 - an evidence-gated development roadmap;
 - an explicit research and intellectual-property boundary;
 - a researched technical baseline and frozen first synthetic conformance-case
@@ -66,11 +67,13 @@ contains:
 The R1 geometry milestone is implemented. CT slices are ordered from DICOM
 patient-space geometry rather than filenames or Instance Number; affine, frame,
 native pixel, and rescale invariants are validated; and the frozen RTSTRUCT is
-rasterized to exact masks. The desktop viewer opens only an integrity-verified
-`NF-BNCT-001` case and provides linked axial, coronal, and sagittal views,
-window/level, structure overlays, patient-edge labels, and an LPS cursor
-readout. CI also requires all 41 generated DICOM instances to pass independent
-IOD and cross-instance consistency validation without errors or warnings.
+rasterized to exact masks. The desktop workbench exposes the intended workflow
+while keeping unfinished capabilities visibly blocked. Its geometry workspace
+opens only an integrity-verified `NF-BNCT-001` case and provides linked axial,
+coronal, and sagittal views, window/level, structure overlays, patient-edge
+labels, and an LPS cursor readout. CI also requires all 41 generated DICOM
+instances to pass independent IOD and cross-instance consistency validation
+without errors or warnings.
 Material and source inputs are now explicit, validated, and transport-neutral.
 The first identity-oriented synthetic geometry can be translated into
 deterministic OpenMC XML. Its exact evaluated-neutron source files and the
@@ -149,6 +152,14 @@ cargo run --bin nctforge-gui -- /tmp/nf-bnct-001
 
 Generation refuses to overwrite an existing destination. Generated DICOM files
 are ignored by default and contain visibly synthetic identity values only.
+
+Without a case argument, the GUI opens on a research-readiness overview. Passing
+a verified case opens its geometry workspace directly. Use the left navigation
+to see the current OpenMC capability gates, the four-component dose workspace,
+and the evidence ledger. Dose and transport actions are disabled because this
+build has no qualified response bundle or executable backend; the interface
+does not show placeholder dose values. See [ADR
+0014](docs/adr/0014-evidence-aware-workbench-shell.md).
 
 ### Independent DICOM validation
 
