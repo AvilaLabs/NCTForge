@@ -11,12 +11,21 @@ use nctforge_transport::{
 use thiserror::Error;
 
 mod data;
+mod input;
 
 pub use data::{
     DataArtifact, DataDistributionIdentity, DataInspectionIdentity, NeutronTableCapability,
     NuclearDataError, NuclearDataManifest, PhotonTableCapability, TARGET_DATA_HDF5_VERSION,
     TARGET_EVALUATED_DATA_RELEASE, TARGET_INSPECTION_METHOD, TARGET_OPENMC_SOURCE_COMMIT,
     TARGET_OPENMC_VERSION, TEMPERATURE_TOLERANCE_K,
+};
+pub use input::{
+    CANDIDATE_REFERENCE_SEEDS, GeneratedOpenMcFile, OPENMC_DEFAULT_STRIDE,
+    OpenMcCollectionNormalization, OpenMcElectronTreatment, OpenMcEnergyMode,
+    OpenMcExecutionProfile, OpenMcExecutionPurpose, OpenMcInputArtifacts, OpenMcInputBindings,
+    OpenMcInputDeck, OpenMcInputError, OpenMcInputManifest, OpenMcInputManifestArtifact,
+    OpenMcProfileError, OpenMcRawTallyUnit, OpenMcRunControls, OpenMcRunMode, OpenMcScoringMesh,
+    OpenMcTallyContract, OpenMcTallyQuantity, OpenMcTemperatureMethod,
 };
 
 #[derive(Debug, Clone)]

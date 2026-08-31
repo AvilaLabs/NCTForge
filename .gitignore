@@ -3,6 +3,8 @@
 .DS_Store
 .idea/
 .vscode/
+__pycache__/
+*.py[cod]
 
 # Patient, transport, and generated calculation artifacts are never committed
 # by default. Public synthetic cases must be deliberately added under

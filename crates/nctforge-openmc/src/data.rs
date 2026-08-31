@@ -14,7 +14,7 @@ pub const TARGET_OPENMC_VERSION: &str = "0.16.0";
 pub const TARGET_OPENMC_SOURCE_COMMIT: &str = "617d35a5063c57796b43428bc401e627d2011046";
 pub const TARGET_EVALUATED_DATA_RELEASE: &str = "ENDF/B-VIII.1";
 pub const TARGET_DATA_HDF5_VERSION: [u16; 2] = [3, 0];
-pub const TARGET_INSPECTION_METHOD: &str = "nctforge-openmc-data-inspector/0.1.0";
+pub const TARGET_INSPECTION_METHOD: &str = "nctforge-openmc-data-inspector/0.2.0";
 /// OpenMC rounds HDF5 kT values to integer kelvin when selecting tables.
 pub const TEMPERATURE_TOLERANCE_K: f64 = 0.5;
 
@@ -70,6 +70,8 @@ pub struct NeutronTableCapability {
     pub atomic_weight_ratio: f64,
     /// Temperatures exposed to OpenMC, in kelvin and strictly increasing.
     pub temperatures_k: Vec<f64>,
+    /// Incident-neutron energy bounds for each corresponding temperature grid.
+    pub energy_ranges_ev: Vec<[f64; 2]>,
     /// Available incident-neutron reaction MT numbers, strictly increasing.
     pub reactions_mt: Vec<u16>,
     /// Reaction MT numbers with transported photon products.
@@ -174,6 +176,13 @@ impl NuclearDataManifest {
             {
                 return Err(NuclearDataError::InvalidTemperatures(table.nuclide.clone()));
             }
+            if table.energy_ranges_ev.len() != table.temperatures_k.len()
+                || table.energy_ranges_ev.iter().any(|[lower, upper]| {
+                    !lower.is_finite() || !upper.is_finite() || *lower < 0.0 || *lower >= *upper
+                })
+            {
+                return Err(NuclearDataError::InvalidEnergyRanges(table.nuclide.clone()));
+            }
             if !strictly_increasing(&table.reactions_mt)
                 || !strictly_increasing(&table.photon_production_mts)
             {
@@ -238,14 +247,7 @@ impl NuclearDataManifest {
 
         for table in &self.neutron_tables {
             self.require_reaction(&table.nuclide, 301)?;
-            if !table.temperatures_k.iter().any(|available| {
-                (*available - case.material.temperature_k).abs() < TEMPERATURE_TOLERANCE_K
-            }) {
-                return Err(NuclearDataError::MissingTemperature {
-                    nuclide: table.nuclide.clone(),
-                    temperature_k: case.material.temperature_k,
-                });
-            }
+            selected_temperature_index(table, case.material.temperature_k)?;
         }
         self.require_reaction("B10", 107)?;
         self.require_reaction("N14", 103)?;
@@ -293,6 +295,31 @@ impl NuclearDataManifest {
         }
 
         Ok(())
+    }
+
+    /// Return the energy interval OpenMC can transport for all selected
+    /// neutron tables at the case material temperature.
+    pub fn neutron_transport_energy_range_for_case(
+        &self,
+        case: &TransportCase,
+    ) -> Result<[f64; 2], NuclearDataError> {
+        self.validate_for_case(case)?;
+
+        let mut common_lower = 0.0_f64;
+        let mut common_upper = f64::INFINITY;
+        for table in &self.neutron_tables {
+            let index = selected_temperature_index(table, case.material.temperature_k)?;
+            let [lower, upper] = table.energy_ranges_ev[index];
+            common_lower = common_lower.max(lower);
+            common_upper = common_upper.min(upper);
+        }
+        if common_lower >= common_upper {
+            return Err(NuclearDataError::EmptyCommonNeutronEnergyRange {
+                lower_ev: common_lower,
+                upper_ev: common_upper,
+            });
+        }
+        Ok([common_lower, common_upper])
     }
 
     /// Verify all selected files and cross-check their cross_sections.xml map.
@@ -386,6 +413,31 @@ impl NuclearDataManifest {
             .chain(self.neutron_tables.iter().map(|table| &table.artifact))
             .chain(self.photon_tables.iter().map(|table| &table.artifact))
     }
+}
+
+fn selected_temperature_index(
+    table: &NeutronTableCapability,
+    requested_k: f64,
+) -> Result<usize, NuclearDataError> {
+    let mut matches = table
+        .temperatures_k
+        .iter()
+        .enumerate()
+        .filter(|(_, available)| (**available - requested_k).abs() < TEMPERATURE_TOLERANCE_K)
+        .map(|(index, _)| index);
+    let Some(index) = matches.next() else {
+        return Err(NuclearDataError::MissingTemperature {
+            nuclide: table.nuclide.clone(),
+            temperature_k: requested_k,
+        });
+    };
+    if matches.next().is_some() {
+        return Err(NuclearDataError::AmbiguousTemperature {
+            nuclide: table.nuclide.clone(),
+            temperature_k: requested_k,
+        });
+    }
+    Ok(index)
 }
 
 impl DataArtifact {
@@ -622,6 +674,8 @@ pub enum NuclearDataError {
     InvalidAtomicWeightRatio(String),
     #[error("nuclide {0} has invalid or non-increasing temperatures")]
     InvalidTemperatures(String),
+    #[error("nuclide {0} has invalid or temperature-misaligned neutron energy ranges")]
+    InvalidEnergyRanges(String),
     #[error("nuclide {0} has unsorted or duplicate MT capabilities")]
     NoncanonicalMtOrder(String),
     #[error("element {0} has unsorted or duplicate photon MT capabilities")]
@@ -638,6 +692,12 @@ pub enum NuclearDataError {
     UnexpectedNuclide(String),
     #[error("nuclide {nuclide} has no table within 0.5 K of {temperature_k} K")]
     MissingTemperature { nuclide: String, temperature_k: f64 },
+    #[error("nuclide {nuclide} has multiple tables within 0.5 K of {temperature_k} K")]
+    AmbiguousTemperature { nuclide: String, temperature_k: f64 },
+    #[error(
+        "selected neutron tables have no common transport energy range ({lower_ev} to {upper_ev} eV)"
+    )]
+    EmptyCommonNeutronEnergyRange { lower_ev: f64, upper_ev: f64 },
     #[error("nuclide {nuclide} lacks required reaction MT {mt}")]
     MissingReaction { nuclide: String, mt: u16 },
     #[error("nuclide {nuclide} lacks transported photon production for MT {mt}")]
@@ -733,6 +793,7 @@ mod tests {
                 hdf5_version: TARGET_DATA_HDF5_VERSION,
                 atomic_weight_ratio: 1.0,
                 temperatures_k: vec![294.0],
+                energy_ranges_ev: vec![[1.0e-5, 20.0e6]],
                 reactions_mt: match nuclide.name.as_str() {
                     "B10" => vec![107, 301],
                     "N14" => vec![103, 301],
@@ -766,7 +827,7 @@ mod tests {
             .collect();
 
         NuclearDataManifest {
-            schema_version: "nctforge.openmc-nuclear-data-manifest/0.1.0".into(),
+            schema_version: "nctforge.openmc-nuclear-data-manifest/0.2.0".into(),
             id: "nctforge.nf-bnct-001.endf-b-viii.1.v1".into(),
             openmc_version: TARGET_OPENMC_VERSION.into(),
             openmc_source_commit: TARGET_OPENMC_SOURCE_COMMIT.into(),
@@ -833,6 +894,19 @@ mod tests {
                 mt: 301
             }) if nuclide == "C12"
         ));
+    }
+
+    #[test]
+    fn returns_common_selected_neutron_energy_range() {
+        let mut manifest = manifest();
+        manifest.neutron_tables[0].energy_ranges_ev[0] = [2.0e-5, 19.0e6];
+
+        assert_eq!(
+            manifest
+                .neutron_transport_energy_range_for_case(&case())
+                .unwrap(),
+            [2.0e-5, 19.0e6]
+        );
     }
 
     #[test]

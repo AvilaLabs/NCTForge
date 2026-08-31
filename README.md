@@ -25,8 +25,13 @@ contains:
 - a fail-closed neutron response-set contract binding material, nuclear data,
   generation method, pointwise closure, and independent-review evidence;
 - a case-scoped OpenMC nuclear-data inspector and preflight that bind table
-  hashes and reject missing temperatures, reactions, heating, or photon data;
-- an intentionally non-functional OpenMC adapter;
+  hashes and reject missing temperatures, energy coverage, reactions, heating,
+  or photon data;
+- a byte-stable OpenMC 0.16 input-deck generator that verifies content
+  bindings and selected nuclear-data files before emitting the complete tally
+  ledger;
+- an OpenMC adapter whose capability flags remain intentionally disabled until
+  a real smoke run and statepoint import pass;
 - a strict DICOM CT geometry and RT Structure Set import boundary;
 - a deterministic generator and independent verifier for `NF-BNCT-001`;
 - a backend-neutral `case.json` binding geometry, structure truth values, DICOM
@@ -48,10 +53,13 @@ rasterized to exact masks. The desktop viewer opens only an integrity-verified
 window/level, structure overlays, patient-edge labels, and an LPS cursor
 readout. CI also requires all 41 generated DICOM instances to pass independent
 IOD and cross-instance consistency validation without errors or warnings.
-Material and source inputs are now explicit, validated, and transport-neutral;
-material mapping from general DICOM cases, particle transport, biological
-modeling, and dose calculation are not implemented yet. Transport capability
-flags remain false until their acceptance gates pass.
+Material and source inputs are now explicit, validated, and transport-neutral.
+The first identity-oriented synthetic geometry can be translated into
+deterministic OpenMC XML, but the official case data selection and reviewed
+response tables do not yet exist. Material mapping from general DICOM cases,
+particle execution, statepoint import, biological modeling, and dose
+calculation are not implemented yet. Transport capability flags remain false
+until their acceptance gates pass.
 
 The first implementation target is
 [`NF-BNCT-001`](benchmarks/synthetic/nf-bnct-001/SPECIFICATION.md). Its geometry,
@@ -87,7 +95,7 @@ crates/nctforge-dicom/      strict DICOM import and synthetic geometry benchmark
 crates/nctforge-view/       patient-aligned tri-planar view geometry
 crates/nctforge-transport/  backend interface and normalized run lifecycle
 crates/nctforge-evidence/   hashes, manifests, and qualification boundary
-crates/nctforge-openmc/     OpenMC adapter (scaffold)
+crates/nctforge-openmc/     OpenMC preflight and deterministic input generator
 crates/nctforge-cli/        headless entry point
 crates/nctforge-gui/        native egui application shell
 bindings/python/            future scientific extension surface

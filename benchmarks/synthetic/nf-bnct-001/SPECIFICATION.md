@@ -264,6 +264,16 @@ The smoke profile only establishes that the full pipeline executes and all
 artifacts validate. It has no scientific acceptance threshold and cannot create
 reference results.
 
+Its machine input is
+[`transport/openmc-smoke-profile.json`](transport/openmc-smoke-profile.json),
+with SHA-256
+`73c644e483e9b9008a88be93d0f47ede174e5180f4c137c208fd7cc62be23e07`.
+It freezes five active batches, seed `20260831`, stride `152917`, coupled photon
+transport, atomic relaxation, local electron energy deposition, probability
+tables, nearest-temperature selection within `0.5 K`, history-based transport,
+and the diagnostic energy boundaries required above. The case's requested
+history count must divide exactly into those batches.
+
 ### Candidate reference
 
 - At least 50 statistically active batches.
@@ -397,9 +407,10 @@ profiles.
 
 ## Remaining freeze gate
 
-Geometry, material, source, classification, and the response-generation method
-are frozen by this version. The benchmark cannot enter candidate-reference
-execution until evaluated inputs and generated KERMA tables have been hashed,
+Geometry, material, source, classification, response-generation method, and
+OpenMC smoke execution profile are frozen by this version. Deterministic input
+generation is implemented, but the benchmark cannot enter execution until the
+official evaluated-data selection and generated KERMA tables have been hashed,
 checked against the ADR 0007 gates, and independently reviewed. Changing any
 frozen quantity creates a new benchmark specification version and cannot
 silently replace earlier results.

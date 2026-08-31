@@ -29,8 +29,9 @@ manifest pins:
 - the source distribution URI and archive SHA-256;
 - `cross_sections.xml` and every selected HDF5 file by normalized path and
   SHA-256;
-- each neutron table's atomic-weight ratio, temperatures, reaction MTs, and
-  reaction MTs carrying photon products; and
+- each neutron table's atomic-weight ratio, temperatures, corresponding
+  incident-energy bounds, reaction MTs, and reaction MTs carrying photon
+  products; and
 - each photon table's reaction MTs, atomic-relaxation data, and Compton-profile
   data.
 
@@ -49,6 +50,12 @@ B-10 must contain MT 107, N-14 MT 103, H-1 MT 102 photon production, and B-10
 MT 107 photon production. Photon tables must contain coherent MT 502,
 incoherent MT 504, and photoelectric MT 522 data, plus atomic-relaxation and
 Compton-profile structures.
+
+At the selected temperature, the preflight also calculates the common neutron
+transport interval in the same way as OpenMC: the maximum lower grid bound and
+minimum upper grid bound across every loaded nuclide. Input generation requires
+the reviewed component-response functions to cover that complete interval, not
+only the monoenergetic source value.
 
 The manifest is deliberately not hand-authored. The first checked-in manifest
 will be generated from the downloaded archive, mechanically validated, and

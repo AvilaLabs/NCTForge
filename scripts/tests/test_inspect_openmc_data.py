@@ -32,6 +32,8 @@ def write_neutron(path: Path, nuclide: str, reactions: dict[int, bool]) -> None:
         temperatures.create_dataset(
             "294K", data=293.6 * K_BOLTZMANN_EV_PER_K
         )
+        energies = nuclide_group.create_group("energy")
+        energies.create_dataset("294K", data=[1.0e-5, 1.0e3, 20.0e6])
         reaction_group = nuclide_group.create_group("reactions")
         for mt, emits_photon in reactions.items():
             reaction = reaction_group.create_group(f"reaction_{mt:03}")
@@ -159,6 +161,7 @@ class InspectorTest(unittest.TestCase):
             self.assertEqual(boron["reactions_mt"], [107, 301])
             self.assertEqual(boron["photon_production_mts"], [107])
             self.assertAlmostEqual(boron["temperatures_k"][0], 293.6)
+            self.assertEqual(boron["energy_ranges_ev"], [[1.0e-5, 20.0e6]])
             self.assertEqual(boron["hdf5_version"], [3, 0])
 
             for table in manifest["photon_tables"]:

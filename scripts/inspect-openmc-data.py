@@ -31,7 +31,7 @@ except ModuleNotFoundError:
 OPENMC_VERSION = "0.16.0"
 OPENMC_SOURCE_COMMIT = "617d35a5063c57796b43428bc401e627d2011046"
 EVALUATED_DATA_RELEASE = "ENDF/B-VIII.1"
-INSPECTION_METHOD = "nctforge-openmc-data-inspector/0.1.0"
+INSPECTION_METHOD = "nctforge-openmc-data-inspector/0.2.0"
 HDF5_VERSION = [3, 0]
 K_BOLTZMANN_EV_PER_K = 8.617333262e-5
 NUCLIDE_PATTERN = re.compile(r"^([A-Z][a-z]?)\d+(?:_m\d+)?$")
@@ -106,12 +106,32 @@ def inspect_neutron(path: Path, nuclide: str, data_root: Path) -> dict[str, Any]
         version = hdf5_version(handle, path)
         group = expected_root_group(handle, nuclide, path)
         atomic_weight_ratio = float(group.attrs["atomic_weight_ratio"])
-        temperatures = sorted(
-            {
-                float(dataset[()]) / K_BOLTZMANN_EV_PER_K
-                for dataset in group["kTs"].values()
-            }
-        )
+        temperature_grids = []
+        for label, dataset in group["kTs"].items():
+            if label not in group["energy"]:
+                raise ValueError(
+                    f"{path} lacks an energy grid for temperature {label!r}"
+                )
+            energies = numpy.asarray(group["energy"][label][()], dtype=float)
+            if (
+                energies.ndim != 1
+                or len(energies) < 2
+                or not numpy.all(numpy.isfinite(energies))
+                or energies[0] < 0.0
+                or not numpy.all(numpy.diff(energies) > 0.0)
+            ):
+                raise ValueError(
+                    f"{path} has an invalid neutron energy grid for {label!r}"
+                )
+            temperature_grids.append(
+                (
+                    float(dataset[()]) / K_BOLTZMANN_EV_PER_K,
+                    [float(energies[0]), float(energies[-1])],
+                )
+            )
+        temperature_grids.sort(key=lambda entry: entry[0])
+        temperatures = [entry[0] for entry in temperature_grids]
+        energy_ranges = [entry[1] for entry in temperature_grids]
 
         reactions: list[int] = []
         photon_production: list[int] = []
@@ -137,6 +157,7 @@ def inspect_neutron(path: Path, nuclide: str, data_root: Path) -> dict[str, Any]
         "hdf5_version": version,
         "atomic_weight_ratio": atomic_weight_ratio,
         "temperatures_k": temperatures,
+        "energy_ranges_ev": energy_ranges,
         "reactions_mt": sorted(set(reactions)),
         "photon_production_mts": sorted(set(photon_production)),
     }
@@ -273,7 +294,7 @@ def main() -> None:
     ]
 
     manifest = {
-        "schema_version": "nctforge.openmc-nuclear-data-manifest/0.1.0",
+        "schema_version": "nctforge.openmc-nuclear-data-manifest/0.2.0",
         "id": arguments.manifest_id,
         "openmc_version": OPENMC_VERSION,
         "openmc_source_commit": OPENMC_SOURCE_COMMIT,

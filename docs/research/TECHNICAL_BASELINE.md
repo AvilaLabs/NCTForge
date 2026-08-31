@@ -265,9 +265,14 @@ result exists. Cross-code agreement alone remains `cross_code_research_only`.
   a table only after its derivation and evaluated inputs pass independent review.
 - Complete: inspect and validate a case-scoped OpenMC nuclear-data manifest,
   including exact file hashes, cross-sections mappings, HDF5 format,
-  temperatures, MT 301, required reaction MTs, photon production, photoatomic
-  data, atomic relaxation, and Compton profiles; pending: run it on and freeze
-  the official ENDF/B-VIII.1 archive selection.
+  temperatures, selected neutron energy bounds, MT 301, required reaction MTs,
+  photon production, photoatomic data, atomic relaxation, and Compton profiles;
+  pending: run it on and freeze the official ENDF/B-VIII.1 archive selection.
+- Complete: generate byte-stable OpenMC 0.16 geometry, material, source,
+  settings, response, audit, spectrum, and leakage XML directly in Rust; verify
+  all content bindings and selected nuclear-data files; reject incomplete
+  response energy coverage; and emit a hashed input manifest. Pending: supply
+  real reviewed response tables and pass a controlled OpenMC smoke execution.
 - Complete: freeze the NJOY2016.78 MT 407/403 partial-KERMA method and MT 301
   residual classification in ADR 0007; pending: bind evaluated inputs, generate
   tables, and pass every declared review gate.
@@ -283,6 +288,8 @@ result exists. Cross-code agreement alone remains `cross_code_research_only`.
 R1 is complete: one CLI command generates `NF-BNCT-001`, arbitrary file order
 does not change the imported geometry, every declared affine and ROI mask is
 reproduced, external DICOM IOD/entity validation is warning-free, and frozen
-malformed variants fail closed. R2 begins with the response ledger and
-transport-neutral material/source contracts before deterministic OpenMC 0.16.0
-input preparation is enabled.
+malformed variants fail closed. R2 now contains the response ledger,
+transport-neutral material/source contracts, nuclear-data capability preflight,
+and deterministic OpenMC 0.16.0 deck generation. Adapter preparation remains
+disabled until official data and reviewed response artifacts satisfy the
+complete gate.
