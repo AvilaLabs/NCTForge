@@ -1,0 +1,125 @@
+{
+  "schema_version": "nctforge.response-treatment-candidate-comparison/0.1.0",
+  "id": "nctforge.nf-bnct-001.jeff40-neutron-source-selection.v1.njoy2016-78-inputs.execution.1788195965.8a37cf70cf80.transported-photon-kerma-suitability.response-treatment-comparison.39f32c071e71",
+  "case_id": "nf-bnct-001",
+  "requirement": "transported_photon_kerma_with_coupled_photon_transport",
+  "qualification": "candidate_rejected",
+  "baseline_report": {
+    "id": "nctforge.nf-bnct-001.endfb81-neutron-source-selection.v1.njoy2016-78-inputs.execution.1788177479.8a37cf70cf80.transported-photon-kerma-suitability",
+    "sha256": "39f32c071e715d4b712a92a25faf1424ba99f548aeabe88c934e84b5d2e48e22"
+  },
+  "candidate_report": {
+    "id": "nctforge.nf-bnct-001.jeff40-neutron-source-selection.v1.njoy2016-78-inputs.execution.1788195965.8a37cf70cf80.transported-photon-kerma-suitability",
+    "sha256": "0b33a754c6f1223fcb680d7fe7916d311d93acf7848e733c87ce607e5793cdbb"
+  },
+  "runs": [
+    {
+      "nuclide": "B10",
+      "baseline_suitability": "candidate_unreviewed",
+      "candidate_suitability": "candidate_unreviewed",
+      "baseline_kinematic_violation_count": 0,
+      "candidate_kinematic_violation_count": 0,
+      "baseline_processor_finding_count": 0,
+      "candidate_processor_finding_count": 0,
+      "outcome": "remained_candidate_unreviewed"
+    },
+    {
+      "nuclide": "C12",
+      "baseline_suitability": "candidate_unreviewed",
+      "candidate_suitability": "candidate_unreviewed",
+      "baseline_kinematic_violation_count": 0,
+      "candidate_kinematic_violation_count": 0,
+      "baseline_processor_finding_count": 0,
+      "candidate_processor_finding_count": 0,
+      "outcome": "remained_candidate_unreviewed"
+    },
+    {
+      "nuclide": "C13",
+      "baseline_suitability": "candidate_unreviewed",
+      "candidate_suitability": "rejected",
+      "baseline_kinematic_violation_count": 0,
+      "candidate_kinematic_violation_count": 32,
+      "baseline_processor_finding_count": 0,
+      "candidate_processor_finding_count": 1,
+      "outcome": "rejection_introduced"
+    },
+    {
+      "nuclide": "H1",
+      "baseline_suitability": "candidate_unreviewed",
+      "candidate_suitability": "candidate_unreviewed",
+      "baseline_kinematic_violation_count": 0,
+      "candidate_kinematic_violation_count": 0,
+      "baseline_processor_finding_count": 0,
+      "candidate_processor_finding_count": 0,
+      "outcome": "remained_candidate_unreviewed"
+    },
+    {
+      "nuclide": "H2",
+      "baseline_suitability": "candidate_unreviewed",
+      "candidate_suitability": "rejected",
+      "baseline_kinematic_violation_count": 0,
+      "candidate_kinematic_violation_count": 15,
+      "baseline_processor_finding_count": 0,
+      "candidate_processor_finding_count": 0,
+      "outcome": "rejection_introduced"
+    },
+    {
+      "nuclide": "N14",
+      "baseline_suitability": "candidate_unreviewed",
+      "candidate_suitability": "candidate_unreviewed",
+      "baseline_kinematic_violation_count": 0,
+      "candidate_kinematic_violation_count": 0,
+      "baseline_processor_finding_count": 0,
+      "candidate_processor_finding_count": 0,
+      "outcome": "remained_candidate_unreviewed"
+    },
+    {
+      "nuclide": "N15",
+      "baseline_suitability": "rejected",
+      "candidate_suitability": "rejected",
+      "baseline_kinematic_violation_count": 10,
+      "candidate_kinematic_violation_count": 0,
+      "baseline_processor_finding_count": 1,
+      "candidate_processor_finding_count": 1,
+      "outcome": "remained_rejected"
+    },
+    {
+      "nuclide": "O16",
+      "baseline_suitability": "rejected",
+      "candidate_suitability": "rejected",
+      "baseline_kinematic_violation_count": 15,
+      "candidate_kinematic_violation_count": 1,
+      "baseline_processor_finding_count": 1,
+      "candidate_processor_finding_count": 0,
+      "outcome": "remained_rejected"
+    },
+    {
+      "nuclide": "O17",
+      "baseline_suitability": "rejected",
+      "candidate_suitability": "rejected",
+      "baseline_kinematic_violation_count": 20,
+      "candidate_kinematic_violation_count": 45,
+      "baseline_processor_finding_count": 1,
+      "candidate_processor_finding_count": 0,
+      "outcome": "remained_rejected"
+    },
+    {
+      "nuclide": "O18",
+      "baseline_suitability": "rejected",
+      "candidate_suitability": "rejected",
+      "baseline_kinematic_violation_count": 27,
+      "candidate_kinematic_violation_count": 27,
+      "baseline_processor_finding_count": 1,
+      "candidate_processor_finding_count": 1,
+      "outcome": "remained_rejected"
+    }
+  ],
+  "baseline_rejected_run_count": 4,
+  "candidate_rejected_run_count": 6,
+  "resolved_baseline_rejection_count": 0,
+  "introduced_rejection_count": 2,
+  "baseline_kinematic_violation_count": 72,
+  "candidate_kinematic_violation_count": 120,
+  "baseline_processor_finding_count": 4,
+  "candidate_processor_finding_count": 3
+}

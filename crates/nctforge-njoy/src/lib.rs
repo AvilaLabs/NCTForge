@@ -26,8 +26,16 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use thiserror::Error;
 
+mod comparison;
 mod execution;
 mod suitability;
+
+pub use comparison::{
+    NJOY_SUITABILITY_COMPARISON_SCHEMA, NjoySuitabilityComparison,
+    NjoySuitabilityComparisonDocument, NjoySuitabilityComparisonError,
+    NjoySuitabilityComparisonOutcome, NjoySuitabilityComparisonQualification,
+    NjoySuitabilityComparisonResult, NjoySuitabilityComparisonRun,
+};
 
 pub use execution::{
     DEFAULT_NJOY_TIMEOUT_SECONDS, NJOY_EXECUTION_RECEIPT_FILENAME, NJOY_EXECUTION_RECEIPT_SCHEMA,

@@ -123,8 +123,14 @@ Implementation status:
   unfinished physics and backend actions remain explicitly disabled;
 - complete: add official Avila Labs branding, contextual offline help, and
   guided dim-and-spotlight tours over live workflow controls;
-- in progress: define and independently justify a versioned response treatment
-  for the O-17/O-18 photon-data gap, then repeat the complete review gates;
+- complete: add a separately versioned alternate-library selection and
+  deterministic comparison contract, then run the first complete candidate
+  gate with publisher-matched JEFF-4.0; it is rejected with six affected
+  nuclides, 120 kinematic violations, no baseline rejection resolved, and two
+  new rejections;
+- in progress: inventory the exact photon-production representation behind the
+  N-15/O-16/O-17/O-18 failures and independently calculate the corresponding
+  energy-release balance before defining a reviewed response treatment;
 - pending: generate the first reviewable response tables only after the
   diagnostic blocker is resolved through a versioned, reviewed data profile;
 - pending: smoke execution, statepoint import, and independent estimator

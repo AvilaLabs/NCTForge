@@ -21,6 +21,11 @@ use crate::data::TARGET_EVALUATED_DATA_RELEASE;
 
 pub const EVALUATED_SOURCE_SELECTION_SCHEMA: &str =
     "nctforge.evaluated-neutron-source-selection/0.1.0";
+pub const EVALUATED_SOURCE_SELECTION_CANDIDATE_SCHEMA: &str =
+    "nctforge.evaluated-neutron-source-selection/0.2.0";
+
+const ENDFB_ACQUISITION_ROLE: &str = "endfb_incident_neutron_evaluations";
+const CANDIDATE_ACQUISITION_ROLE: &str = "incident_neutron_evaluations";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -39,6 +44,7 @@ pub struct EvaluatedNeutronSourceSelection {
 #[serde(rename_all = "snake_case")]
 pub enum EvaluatedSourceQualification {
     CandidateArchiveEquivalenceUnresolved,
+    ResponseTreatmentCandidateUnreviewed,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -90,10 +96,31 @@ impl EvaluatedNeutronSourceSelectionDocument {
 
 impl EvaluatedNeutronSourceSelection {
     pub fn validate(&self) -> Result<(), EvaluatedSourceError> {
-        if self.schema_version != EVALUATED_SOURCE_SELECTION_SCHEMA {
-            return Err(EvaluatedSourceError::UnsupportedSchema(
-                self.schema_version.clone(),
-            ));
+        match self.schema_version.as_str() {
+            EVALUATED_SOURCE_SELECTION_SCHEMA => {
+                if self.qualification
+                    != EvaluatedSourceQualification::CandidateArchiveEquivalenceUnresolved
+                {
+                    return Err(EvaluatedSourceError::QualificationSchemaMismatch);
+                }
+                if self.evaluated_data_release != TARGET_EVALUATED_DATA_RELEASE {
+                    return Err(EvaluatedSourceError::UnsupportedEvaluatedDataRelease(
+                        self.evaluated_data_release.clone(),
+                    ));
+                }
+            }
+            EVALUATED_SOURCE_SELECTION_CANDIDATE_SCHEMA => {
+                if self.qualification
+                    != EvaluatedSourceQualification::ResponseTreatmentCandidateUnreviewed
+                {
+                    return Err(EvaluatedSourceError::QualificationSchemaMismatch);
+                }
+            }
+            _ => {
+                return Err(EvaluatedSourceError::UnsupportedSchema(
+                    self.schema_version.clone(),
+                ));
+            }
         }
         for (label, value) in [
             ("id", self.id.as_str()),
@@ -110,11 +137,6 @@ impl EvaluatedNeutronSourceSelection {
             if value.trim().is_empty() {
                 return Err(EvaluatedSourceError::EmptyIdentifier(label));
             }
-        }
-        if self.evaluated_data_release != TARGET_EVALUATED_DATA_RELEASE {
-            return Err(EvaluatedSourceError::UnsupportedEvaluatedDataRelease(
-                self.evaluated_data_release.clone(),
-            ));
         }
         self.material
             .validate()
@@ -237,7 +259,16 @@ impl EvaluatedNeutronSourceSelection {
         receipt
             .validate_for_profile(profile)
             .map_err(|error| EvaluatedSourceError::InvalidAcquisition(error.to_string()))?;
-        if profile.profile.artifact_role != "endfb_incident_neutron_evaluations"
+        let expected_artifact_role = match self.schema_version.as_str() {
+            EVALUATED_SOURCE_SELECTION_SCHEMA => ENDFB_ACQUISITION_ROLE,
+            EVALUATED_SOURCE_SELECTION_CANDIDATE_SCHEMA => CANDIDATE_ACQUISITION_ROLE,
+            _ => {
+                return Err(EvaluatedSourceError::UnsupportedSchema(
+                    self.schema_version.clone(),
+                ));
+            }
+        };
+        if profile.profile.artifact_role != expected_artifact_role
             || receipt.receipt.publisher_digest_status != PublisherDigestStatus::Matched
             || receipt.receipt.evidence_state != AcquisitionEvidenceState::AcquisitionOnly
         {
@@ -459,6 +490,8 @@ pub enum EvaluatedSourceError {
     Json(#[from] serde_json::Error),
     #[error("evaluated-source selection schema {0:?} is unsupported")]
     UnsupportedSchema(String),
+    #[error("evaluated-source qualification does not match its schema version")]
+    QualificationSchemaMismatch,
     #[error("required evaluated-source identifier {0} is empty")]
     EmptyIdentifier(&'static str),
     #[error("evaluated-data release {0:?} is unsupported")]
@@ -553,6 +586,14 @@ mod tests {
     const SELECTION_BYTES: &[u8] = include_bytes!(
         "../../../benchmarks/synthetic/nf-bnct-001/transport/evaluated-neutron-source-selection.json"
     );
+    const JEFF40_PROFILE_BYTES: &[u8] =
+        include_bytes!("../../../profiles/njoy/jeff40-neutron-evaluations.json");
+    const JEFF40_RECEIPT_BYTES: &[u8] = include_bytes!(
+        "../../../benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-neutron-acquisition-receipt.json"
+    );
+    const JEFF40_SELECTION_BYTES: &[u8] = include_bytes!(
+        "../../../benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/evaluated-neutron-source-selection.json"
+    );
 
     fn frozen_selection() -> EvaluatedNeutronSourceSelection {
         EvaluatedNeutronSourceSelectionDocument::from_bytes(SELECTION_BYTES)
@@ -572,6 +613,37 @@ mod tests {
             .unwrap();
         selection.validate_acquisition(&profile, &receipt).unwrap();
         assert_eq!(selection.evaluations.len(), material.nuclides.len());
+    }
+
+    #[test]
+    fn versioned_candidate_selection_binds_material_and_matched_acquisition() {
+        let selection = EvaluatedNeutronSourceSelectionDocument::from_bytes(JEFF40_SELECTION_BYTES)
+            .unwrap()
+            .selection;
+        let material: MaterialDefinition = serde_json::from_slice(MATERIAL_BYTES).unwrap();
+        let profile = DataAcquisitionProfileDocument::from_bytes(JEFF40_PROFILE_BYTES).unwrap();
+        let receipt = DataAcquisitionReceiptDocument::from_bytes(JEFF40_RECEIPT_BYTES).unwrap();
+
+        selection
+            .validate_for_material(&material, MATERIAL_BYTES)
+            .unwrap();
+        selection.validate_acquisition(&profile, &receipt).unwrap();
+        assert_eq!(selection.evaluated_data_release, "JEFF-4.0");
+        assert_eq!(
+            selection.qualification,
+            EvaluatedSourceQualification::ResponseTreatmentCandidateUnreviewed
+        );
+        assert_eq!(selection.evaluations.len(), material.nuclides.len());
+    }
+
+    #[test]
+    fn candidate_schema_rejects_baseline_qualification() {
+        let mut selection = frozen_selection();
+        selection.schema_version = EVALUATED_SOURCE_SELECTION_CANDIDATE_SCHEMA.into();
+        assert!(matches!(
+            selection.validate(),
+            Err(EvaluatedSourceError::QualificationSchemaMismatch)
+        ));
     }
 
     #[test]

@@ -1,0 +1,28 @@
+{
+  "schema_version": "nctforge.data-acquisition-receipt/0.1.0",
+  "profile_id": "jeff40-neutron-evaluations-nea-2025-06",
+  "profile_sha256": "8700f11ee9cd3c339ff78d24bb21c3faaf0d47c217840f17004787978abbe7d9",
+  "artifact_role": "incident_neutron_evaluations",
+  "artifact": {
+    "path": "JEFF40-Evaluations-Neutron-593.zip",
+    "media_type": "application/zip",
+    "size_bytes": 608170633,
+    "sha256": "202c43e8bbea9ed530b6368cc7ef9fc919776e87bc79db5d4bbde937a999472f",
+    "publisher_digest": {
+      "algorithm": "md5",
+      "value": "51d00ee7bf1491d428f9b30a9782e41d",
+      "evidence": "Publisher Content-MD5 header and JEFF-4.0 dataset record, verified 2026-08-31"
+    }
+  },
+  "transfer": {
+    "requested_uri": "https://data.oecd-nea.org/records/e9ajn-a3p20/files/JEFF40-Evaluations-Neutron-593.zip?download=1",
+    "final_origin": "https://data.oecd-nea.org",
+    "resumed_from_bytes": 608170633,
+    "content_disposition_filename": "JEFF40-Evaluations-Neutron-593.zip",
+    "etag": "\"md5:51d00ee7bf1491d428f9b30a9782e41d\"",
+    "last_modified": "Mon, 31 Aug 2026 15:31:46 GMT"
+  },
+  "publisher_digest_status": "matched",
+  "evidence_state": "acquisition_only",
+  "completed_at_unix_seconds": 1788195619
+}

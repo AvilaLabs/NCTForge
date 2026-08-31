@@ -1,0 +1,23 @@
+reconr
+20 21
+'NCTForge JEFF-4.0 H1 reconstructed pointwise data'/
+125 2/
+1.000000000000e-3/
+'NCTForge partial-KERMA response generation'/
+'No Q-value overrides'/
+0/
+broadr
+20 21 22
+125 1 0 0 0. /
+1.000000000000e-3/
+293.600000
+0/
+heatr
+20 22 23 0 /
+125 1 0 0 0 0 0 /
+443 /
+heatr
+20 22 24 25 /
+125 1 0 1 0 2 0 /
+443 /
+stop

@@ -1,0 +1,101 @@
+{
+  "schema_version": "nctforge.evaluated-neutron-source-selection/0.2.0",
+  "id": "nctforge.nf-bnct-001.jeff40-neutron-source-selection.v1",
+  "case_id": "nf-bnct-001",
+  "qualification": "response_treatment_candidate_unreviewed",
+  "evaluated_data_release": "JEFF-4.0",
+  "material": {
+    "id": "nctforge.nf-bnct-001.material.v1",
+    "sha256": "096e236d234acabc18f3027ae53be3c94f5608a86a1dec866cefc8bb330db813"
+  },
+  "acquisition": {
+    "profile_id": "jeff40-neutron-evaluations-nea-2025-06",
+    "profile_sha256": "8700f11ee9cd3c339ff78d24bb21c3faaf0d47c217840f17004787978abbe7d9",
+    "receipt_sha256": "d0e0855c5c16a194362a0966f6540b9eeee6c484059687e7b3dd75128ffda9fc",
+    "archive_filename": "JEFF40-Evaluations-Neutron-593.zip",
+    "archive_size_bytes": 608170633,
+    "archive_sha256": "202c43e8bbea9ed530b6368cc7ef9fc919776e87bc79db5d4bbde937a999472f"
+  },
+  "evaluations": [
+    {
+      "nuclide": "B10",
+      "endf_mat": 525,
+      "archive_path": "n_5-B-010g.jeff",
+      "extracted_filename": "n_5-B-010g.jeff",
+      "size_bytes": 1208842,
+      "sha256": "a02f834e12d98455be9699e5edef14628a1a607c56e50c1ce014c50528ea2b86"
+    },
+    {
+      "nuclide": "C12",
+      "endf_mat": 625,
+      "archive_path": "n_6-C-012g.jeff",
+      "extracted_filename": "n_6-C-012g.jeff",
+      "size_bytes": 3857390,
+      "sha256": "09af11fe72d5d6cdb9f6dff7c6a8a03dfa9f11a8fb6887336fa9bbb326dbad8b"
+    },
+    {
+      "nuclide": "C13",
+      "endf_mat": 628,
+      "archive_path": "n_6-C-013g.jeff",
+      "extracted_filename": "n_6-C-013g.jeff",
+      "size_bytes": 3510122,
+      "sha256": "f27cecb9236022436f0f596bc3bcc313938cbea03cb00f134b6f1d27f7522284"
+    },
+    {
+      "nuclide": "H1",
+      "endf_mat": 125,
+      "archive_path": "n_1-H-001g.jeff",
+      "extracted_filename": "n_1-H-001g.jeff",
+      "size_bytes": 744724,
+      "sha256": "4b34684fc6dfe1d2d82f6bcd99b2c7ac4db30b10a1369deb7f0043623222425a"
+    },
+    {
+      "nuclide": "H2",
+      "endf_mat": 128,
+      "archive_path": "n_1-H-002g.jeff",
+      "extracted_filename": "n_1-H-002g.jeff",
+      "size_bytes": 2340444,
+      "sha256": "d0791bdbebe04d33b17a44debd2d3fc68651bbcf956fdc220a21f3fa17314d8d"
+    },
+    {
+      "nuclide": "N14",
+      "endf_mat": 725,
+      "archive_path": "n_7-N-014g.jeff",
+      "extracted_filename": "n_7-N-014g.jeff",
+      "size_bytes": 1352918,
+      "sha256": "758dad9cead8bbf43fb5f7d7b628f82ec7b8a947f4e39d4e5d566c8cc0a948e7"
+    },
+    {
+      "nuclide": "N15",
+      "endf_mat": 728,
+      "archive_path": "n_7-N-015g.jeff",
+      "extracted_filename": "n_7-N-015g.jeff",
+      "size_bytes": 329148,
+      "sha256": "8624d4425edae8fa82d168ba91c133c9e4babdc83d0dbb39dc35b9b74495a6d6"
+    },
+    {
+      "nuclide": "O16",
+      "endf_mat": 825,
+      "archive_path": "n_8-O-016g.jeff",
+      "extracted_filename": "n_8-O-016g.jeff",
+      "size_bytes": 3037690,
+      "sha256": "c5cb12e4db9480cd13f5dce2e15c543b6a837a7b2007c88a69e803f21addbbc1"
+    },
+    {
+      "nuclide": "O17",
+      "endf_mat": 828,
+      "archive_path": "n_8-O-017g.jeff",
+      "extracted_filename": "n_8-O-017g.jeff",
+      "size_bytes": 3167824,
+      "sha256": "7cfd2d7c9a93b4a46672eceec6cdd0f5ee658fc731f5501f19589b9b5008c7ed"
+    },
+    {
+      "nuclide": "O18",
+      "endf_mat": 831,
+      "archive_path": "n_8-O-018g.jeff",
+      "extracted_filename": "n_8-O-018g.jeff",
+      "size_bytes": 137022,
+      "sha256": "374ec0a9e49f3024aa466029fa2c23151b0c03000049af7c146b55218675c76d"
+    }
+  ]
+}

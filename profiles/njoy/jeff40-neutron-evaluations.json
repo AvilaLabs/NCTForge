@@ -1,0 +1,30 @@
+{
+  "schema_version": "nctforge.data-acquisition-profile/0.2.0",
+  "id": "jeff40-neutron-evaluations-nea-2025-06",
+  "artifact_role": "incident_neutron_evaluations",
+  "publication": {
+    "publisher": "OECD Nuclear Energy Agency Data Bank",
+    "release_page_uri": "https://data.oecd-nea.org/records/e9ajn-a3p20",
+    "source_uri": "https://data.oecd-nea.org/records/e9ajn-a3p20/files/JEFF40-Evaluations-Neutron-593.zip?download=1",
+    "allowed_https_host_suffixes": [
+      "data.oecd-nea.org"
+    ]
+  },
+  "artifact": {
+    "filename": "JEFF40-Evaluations-Neutron-593.zip",
+    "media_type": "application/zip",
+    "expected_size_bytes": 608170633,
+    "expected_content_disposition_filename": "JEFF40-Evaluations-Neutron-593.zip",
+    "publisher_digest": {
+      "algorithm": "md5",
+      "value": "51d00ee7bf1491d428f9b30a9782e41d",
+      "evidence": "Publisher Content-MD5 header and JEFF-4.0 dataset record, verified 2026-08-31"
+    },
+    "known_prior_digests": []
+  },
+  "size_evidence": {
+    "method": "https_head_content_length",
+    "observed_on": "2026-08-31"
+  },
+  "upstream_recipe": null
+}

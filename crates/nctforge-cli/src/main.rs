@@ -13,12 +13,14 @@ use nctforge_dicom::synthetic::generate_nf_bnct_001;
 use nctforge_dicom::verify_nf_bnct_001;
 use nctforge_njoy::{
     DEFAULT_NJOY_TIMEOUT_SECONDS, NjoyExecutionOptions, NjoyExecutionReceipt,
-    NjoyExecutionReceiptDocument, NjoyInputArtifacts, NjoyInputBundle, NjoySuitabilityReport,
-    NjoySuitabilityReportDocument,
+    NjoyExecutionReceiptDocument, NjoyInputArtifacts, NjoyInputBundle, NjoySuitabilityComparison,
+    NjoySuitabilityComparisonDocument, NjoySuitabilityComparisonQualification,
+    NjoySuitabilityReport, NjoySuitabilityReportDocument,
 };
 use nctforge_openmc::{
     DataAcquisitionClient, DataAcquisitionProfileDocument, DataAcquisitionReceiptDocument,
-    EvaluatedNeutronSourceSelectionDocument, NuclearDataManifest, OpenMcBackend,
+    EvaluatedNeutronSourceSelectionDocument, EvaluatedSourceQualification, NuclearDataManifest,
+    OpenMcBackend,
 };
 use nctforge_transport::{MaterialDefinition, TransportBackend};
 
@@ -183,6 +185,30 @@ enum NjoyCommand {
         /// Suitability report to validate and regenerate.
         #[arg(long)]
         suitability_report: PathBuf,
+    },
+    /// Compare a candidate suitability report against a rejected baseline.
+    CompareSuitability {
+        /// Rejected baseline transported-photon suitability report.
+        #[arg(long)]
+        baseline_report: PathBuf,
+        /// Candidate transported-photon suitability report.
+        #[arg(long)]
+        candidate_report: PathBuf,
+        /// New JSON comparison path; it must not already exist.
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Regenerate and verify a response-treatment candidate comparison.
+    VerifyComparison {
+        /// Rejected baseline transported-photon suitability report.
+        #[arg(long)]
+        baseline_report: PathBuf,
+        /// Candidate transported-photon suitability report.
+        #[arg(long)]
+        candidate_report: PathBuf,
+        /// Comparison report to validate and regenerate.
+        #[arg(long)]
+        comparison_report: PathBuf,
     },
 }
 
@@ -378,7 +404,15 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                         "archive SHA-256: {}",
                         selection.selection.acquisition.archive_sha256
                     );
-                    println!("qualification: candidate_archive_equivalence_unresolved");
+                    println!(
+                        "qualification: {}",
+                        match selection.selection.qualification {
+                            EvaluatedSourceQualification::CandidateArchiveEquivalenceUnresolved =>
+                                "candidate_archive_equivalence_unresolved",
+                            EvaluatedSourceQualification::ResponseTreatmentCandidateUnreviewed =>
+                                "response_treatment_candidate_unreviewed",
+                        }
+                    );
                 }
                 OpenMcDataCommand::VerifyManifest {
                     manifest,
@@ -587,6 +621,79 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                         "transported_photon_kerma_candidate_unreviewed"
                     } else {
                         "transported_photon_kerma_rejected"
+                    }
+                );
+            }
+            NjoyCommand::CompareSuitability {
+                baseline_report,
+                candidate_report,
+                output,
+            } => {
+                let baseline = NjoySuitabilityReportDocument::from_path(&baseline_report)?;
+                let candidate = NjoySuitabilityReportDocument::from_path(&candidate_report)?;
+                let comparison = NjoySuitabilityComparison::compare(&baseline, &candidate)?;
+                let result = comparison.write_new(&output)?;
+                println!("compared response-treatment candidate with rejected baseline");
+                println!("comparison: {}", result.comparison_path.display());
+                println!("comparison SHA-256: {}", result.comparison_sha256);
+                println!(
+                    "rejected nuclide runs: baseline={} candidate={}",
+                    result.comparison.baseline_rejected_run_count,
+                    result.comparison.candidate_rejected_run_count
+                );
+                println!(
+                    "baseline rejections resolved: {}",
+                    result.comparison.resolved_baseline_rejection_count
+                );
+                println!(
+                    "new candidate rejections: {}",
+                    result.comparison.introduced_rejection_count
+                );
+                println!(
+                    "kinematic violations: baseline={} candidate={}",
+                    result.comparison.baseline_kinematic_violation_count,
+                    result.comparison.candidate_kinematic_violation_count
+                );
+                match result.comparison.qualification {
+                    NjoySuitabilityComparisonQualification::CandidateRejected => {
+                        println!("qualification: candidate_rejected");
+                        return Err(io::Error::other(format!(
+                            "candidate retains {} rejected nuclide run(s); comparison was preserved",
+                            result.comparison.candidate_rejected_run_count
+                        ))
+                        .into());
+                    }
+                    NjoySuitabilityComparisonQualification::CandidateMechanicalGateClearUnreviewed => {
+                        println!("qualification: candidate_mechanical_gate_clear_unreviewed");
+                    }
+                }
+            }
+            NjoyCommand::VerifyComparison {
+                baseline_report,
+                candidate_report,
+                comparison_report,
+            } => {
+                let baseline = NjoySuitabilityReportDocument::from_path(&baseline_report)?;
+                let candidate = NjoySuitabilityReportDocument::from_path(&candidate_report)?;
+                let comparison = NjoySuitabilityComparisonDocument::from_path(&comparison_report)?;
+                comparison.verify_against_reports(&baseline, &candidate)?;
+                println!(
+                    "verified response-treatment comparison {}",
+                    comparison_report.display()
+                );
+                println!("comparison SHA-256: {}", comparison.sha256);
+                println!(
+                    "rejected nuclide runs: baseline={} candidate={}",
+                    comparison.comparison.baseline_rejected_run_count,
+                    comparison.comparison.candidate_rejected_run_count
+                );
+                println!(
+                    "qualification: {}",
+                    match comparison.comparison.qualification {
+                        NjoySuitabilityComparisonQualification::CandidateRejected =>
+                            "candidate_rejected",
+                        NjoySuitabilityComparisonQualification::CandidateMechanicalGateClearUnreviewed =>
+                            "candidate_mechanical_gate_clear_unreviewed",
                     }
                 );
             }

@@ -1,0 +1,318 @@
+{
+  "schema_version": "nctforge.njoy-input-manifest/0.1.0",
+  "id": "nctforge.nf-bnct-001.jeff40-neutron-source-selection.v1.njoy2016-78-inputs",
+  "case_id": "nf-bnct-001",
+  "qualification": "input_preparation_only",
+  "processor": {
+    "name": "NJOY2016",
+    "version": "2016.78",
+    "source_commit": "71a76bc6345fa15f36bacc816ae7900714345d97"
+  },
+  "bindings": {
+    "evaluated_source_selection": {
+      "id": "nctforge.nf-bnct-001.jeff40-neutron-source-selection.v1",
+      "sha256": "010bceddfd83d1bafbe5b46238195bdb64cd75ab0f368b6c6662de98c5c34dcf"
+    },
+    "material": {
+      "id": "nctforge.nf-bnct-001.material.v1",
+      "sha256": "096e236d234acabc18f3027ae53be3c94f5608a86a1dec866cefc8bb330db813"
+    },
+    "generation_method": {
+      "id": "nctforge.nf-bnct-001.response-generation.jeff40.v1",
+      "sha256": "a2c45ead5d36add372d27e70677f6c444cc05310b1401b24b9c5e0955724ebf9"
+    },
+    "acquisition_profile_sha256": "8700f11ee9cd3c339ff78d24bb21c3faaf0d47c217840f17004787978abbe7d9",
+    "acquisition_receipt_sha256": "d0e0855c5c16a194362a0966f6540b9eeee6c484059687e7b3dd75128ffda9fc"
+  },
+  "settings": {
+    "temperature_k": 293.6,
+    "reconstruction_tolerance_fraction": 0.001,
+    "local_photon_deposition": false,
+    "q_value_override_count": 0,
+    "kinematic_checks": true,
+    "normal_heatr_temperature_count": 0,
+    "normal_heatr_print_option": 0,
+    "diagnostic_heatr_temperature_count": 1,
+    "diagnostic_heatr_print_option": 2,
+    "total_kerma_mt": 301,
+    "kinematic_kerma_mt": 443
+  },
+  "runs": [
+    {
+      "nuclide": "B10",
+      "endf_mat": 525,
+      "source_evaluation": {
+        "filename": "n_5-B-010g.jeff",
+        "size_bytes": 1208842,
+        "sha256": "a02f834e12d98455be9699e5edef14628a1a607c56e50c1ce014c50528ea2b86"
+      },
+      "requested_partial_reaction_mts": [
+        107
+      ],
+      "generated_kerma_mts": [
+        301,
+        407,
+        443
+      ],
+      "input_deck": {
+        "path": "B10/input.njoy",
+        "media_type": "text/plain",
+        "sha256": "a5a3f047f660c541e4c6757998b10c1bdeec5db87a8777a31a73050f2b3aab17"
+      },
+      "tapes": {
+        "endf_input": 20,
+        "reconstructed_pendf": 21,
+        "broadened_pendf": 22,
+        "heatr_pendf": 23,
+        "kinematic_check_pendf": 24,
+        "kinematic_check_plot": 25
+      }
+    },
+    {
+      "nuclide": "C12",
+      "endf_mat": 625,
+      "source_evaluation": {
+        "filename": "n_6-C-012g.jeff",
+        "size_bytes": 3857390,
+        "sha256": "09af11fe72d5d6cdb9f6dff7c6a8a03dfa9f11a8fb6887336fa9bbb326dbad8b"
+      },
+      "requested_partial_reaction_mts": [],
+      "generated_kerma_mts": [
+        301,
+        443
+      ],
+      "input_deck": {
+        "path": "C12/input.njoy",
+        "media_type": "text/plain",
+        "sha256": "eb8a55dc2b4cb672e6d23c02562c171ad9f98908c022cfcda6cb6ee8d46ba3f3"
+      },
+      "tapes": {
+        "endf_input": 20,
+        "reconstructed_pendf": 21,
+        "broadened_pendf": 22,
+        "heatr_pendf": 23,
+        "kinematic_check_pendf": 24,
+        "kinematic_check_plot": 25
+      }
+    },
+    {
+      "nuclide": "C13",
+      "endf_mat": 628,
+      "source_evaluation": {
+        "filename": "n_6-C-013g.jeff",
+        "size_bytes": 3510122,
+        "sha256": "f27cecb9236022436f0f596bc3bcc313938cbea03cb00f134b6f1d27f7522284"
+      },
+      "requested_partial_reaction_mts": [],
+      "generated_kerma_mts": [
+        301,
+        443
+      ],
+      "input_deck": {
+        "path": "C13/input.njoy",
+        "media_type": "text/plain",
+        "sha256": "9438c260b8eec4bb17435caab0094fcdc6abf6a5dca42d367b022a251e653684"
+      },
+      "tapes": {
+        "endf_input": 20,
+        "reconstructed_pendf": 21,
+        "broadened_pendf": 22,
+        "heatr_pendf": 23,
+        "kinematic_check_pendf": 24,
+        "kinematic_check_plot": 25
+      }
+    },
+    {
+      "nuclide": "H1",
+      "endf_mat": 125,
+      "source_evaluation": {
+        "filename": "n_1-H-001g.jeff",
+        "size_bytes": 744724,
+        "sha256": "4b34684fc6dfe1d2d82f6bcd99b2c7ac4db30b10a1369deb7f0043623222425a"
+      },
+      "requested_partial_reaction_mts": [],
+      "generated_kerma_mts": [
+        301,
+        443
+      ],
+      "input_deck": {
+        "path": "H1/input.njoy",
+        "media_type": "text/plain",
+        "sha256": "64e84c14b30264f7d768fb2f352e88962ead5321fe52ca43e1f09524766483c6"
+      },
+      "tapes": {
+        "endf_input": 20,
+        "reconstructed_pendf": 21,
+        "broadened_pendf": 22,
+        "heatr_pendf": 23,
+        "kinematic_check_pendf": 24,
+        "kinematic_check_plot": 25
+      }
+    },
+    {
+      "nuclide": "H2",
+      "endf_mat": 128,
+      "source_evaluation": {
+        "filename": "n_1-H-002g.jeff",
+        "size_bytes": 2340444,
+        "sha256": "d0791bdbebe04d33b17a44debd2d3fc68651bbcf956fdc220a21f3fa17314d8d"
+      },
+      "requested_partial_reaction_mts": [],
+      "generated_kerma_mts": [
+        301,
+        443
+      ],
+      "input_deck": {
+        "path": "H2/input.njoy",
+        "media_type": "text/plain",
+        "sha256": "6a9a40f1792c4d671c6536c42d3031f81c847c2736dbc3b203932f73ac88ec08"
+      },
+      "tapes": {
+        "endf_input": 20,
+        "reconstructed_pendf": 21,
+        "broadened_pendf": 22,
+        "heatr_pendf": 23,
+        "kinematic_check_pendf": 24,
+        "kinematic_check_plot": 25
+      }
+    },
+    {
+      "nuclide": "N14",
+      "endf_mat": 725,
+      "source_evaluation": {
+        "filename": "n_7-N-014g.jeff",
+        "size_bytes": 1352918,
+        "sha256": "758dad9cead8bbf43fb5f7d7b628f82ec7b8a947f4e39d4e5d566c8cc0a948e7"
+      },
+      "requested_partial_reaction_mts": [
+        103
+      ],
+      "generated_kerma_mts": [
+        301,
+        403,
+        443
+      ],
+      "input_deck": {
+        "path": "N14/input.njoy",
+        "media_type": "text/plain",
+        "sha256": "e8edbf7783336e383e388ede9bde0f1b505617462dc4dbcd70d7d6958fa29579"
+      },
+      "tapes": {
+        "endf_input": 20,
+        "reconstructed_pendf": 21,
+        "broadened_pendf": 22,
+        "heatr_pendf": 23,
+        "kinematic_check_pendf": 24,
+        "kinematic_check_plot": 25
+      }
+    },
+    {
+      "nuclide": "N15",
+      "endf_mat": 728,
+      "source_evaluation": {
+        "filename": "n_7-N-015g.jeff",
+        "size_bytes": 329148,
+        "sha256": "8624d4425edae8fa82d168ba91c133c9e4babdc83d0dbb39dc35b9b74495a6d6"
+      },
+      "requested_partial_reaction_mts": [],
+      "generated_kerma_mts": [
+        301,
+        443
+      ],
+      "input_deck": {
+        "path": "N15/input.njoy",
+        "media_type": "text/plain",
+        "sha256": "eae6be929a2fde04dfa62325b87ea5a31b8df64939e76c98d1f3aa8be9ab52e1"
+      },
+      "tapes": {
+        "endf_input": 20,
+        "reconstructed_pendf": 21,
+        "broadened_pendf": 22,
+        "heatr_pendf": 23,
+        "kinematic_check_pendf": 24,
+        "kinematic_check_plot": 25
+      }
+    },
+    {
+      "nuclide": "O16",
+      "endf_mat": 825,
+      "source_evaluation": {
+        "filename": "n_8-O-016g.jeff",
+        "size_bytes": 3037690,
+        "sha256": "c5cb12e4db9480cd13f5dce2e15c543b6a837a7b2007c88a69e803f21addbbc1"
+      },
+      "requested_partial_reaction_mts": [],
+      "generated_kerma_mts": [
+        301,
+        443
+      ],
+      "input_deck": {
+        "path": "O16/input.njoy",
+        "media_type": "text/plain",
+        "sha256": "b40da59b616980c62d213fcd8682139ce907439816024bda0e0be38709e67e67"
+      },
+      "tapes": {
+        "endf_input": 20,
+        "reconstructed_pendf": 21,
+        "broadened_pendf": 22,
+        "heatr_pendf": 23,
+        "kinematic_check_pendf": 24,
+        "kinematic_check_plot": 25
+      }
+    },
+    {
+      "nuclide": "O17",
+      "endf_mat": 828,
+      "source_evaluation": {
+        "filename": "n_8-O-017g.jeff",
+        "size_bytes": 3167824,
+        "sha256": "7cfd2d7c9a93b4a46672eceec6cdd0f5ee658fc731f5501f19589b9b5008c7ed"
+      },
+      "requested_partial_reaction_mts": [],
+      "generated_kerma_mts": [
+        301,
+        443
+      ],
+      "input_deck": {
+        "path": "O17/input.njoy",
+        "media_type": "text/plain",
+        "sha256": "fa8c390d6b593f4d9d77afe99b8e0a157877ef6b52fbe3eded563f06bb7d0f69"
+      },
+      "tapes": {
+        "endf_input": 20,
+        "reconstructed_pendf": 21,
+        "broadened_pendf": 22,
+        "heatr_pendf": 23,
+        "kinematic_check_pendf": 24,
+        "kinematic_check_plot": 25
+      }
+    },
+    {
+      "nuclide": "O18",
+      "endf_mat": 831,
+      "source_evaluation": {
+        "filename": "n_8-O-018g.jeff",
+        "size_bytes": 137022,
+        "sha256": "374ec0a9e49f3024aa466029fa2c23151b0c03000049af7c146b55218675c76d"
+      },
+      "requested_partial_reaction_mts": [],
+      "generated_kerma_mts": [
+        301,
+        443
+      ],
+      "input_deck": {
+        "path": "O18/input.njoy",
+        "media_type": "text/plain",
+        "sha256": "8c344c1989dbd3fa42092ba7d6ea636fc1bc4cd30d8734a9ce06497000d14a22"
+      },
+      "tapes": {
+        "endf_input": 20,
+        "reconstructed_pendf": 21,
+        "broadened_pendf": 22,
+        "heatr_pendf": 23,
+        "kinematic_check_pendf": 24,
+        "kinematic_check_plot": 25
+      }
+    }
+  ]
+}

@@ -32,7 +32,8 @@ pub use data::{
     TARGET_OPENMC_SOURCE_COMMIT, TARGET_OPENMC_VERSION, TEMPERATURE_TOLERANCE_K,
 };
 pub use evaluated::{
-    EVALUATED_SOURCE_SELECTION_SCHEMA, EvaluatedNeutronArtifact, EvaluatedNeutronSourceSelection,
+    EVALUATED_SOURCE_SELECTION_CANDIDATE_SCHEMA, EVALUATED_SOURCE_SELECTION_SCHEMA,
+    EvaluatedNeutronArtifact, EvaluatedNeutronSourceSelection,
     EvaluatedNeutronSourceSelectionDocument, EvaluatedSourceAcquisition, EvaluatedSourceError,
     EvaluatedSourceQualification,
 };
