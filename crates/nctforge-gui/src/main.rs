@@ -2,6 +2,9 @@
 
 #![forbid(unsafe_code)]
 
+mod brand;
+mod help;
+
 use std::array;
 use std::path::{Path, PathBuf};
 
@@ -11,6 +14,8 @@ use nctforge_evidence::sha256_hex;
 use nctforge_openmc::{OpenMcBackend, TARGET_OPENMC_VERSION};
 use nctforge_transport::TransportBackend;
 use nctforge_view::{AnatomicalPlane, Crosshair, PatientAlignedGrid, SliceView};
+
+use help::{GuidedHelp, HelpWorkspace, TourTarget, TourTargets};
 
 const OPENMC_MANIFEST_EVIDENCE: &[u8] = include_bytes!(
     "../../../benchmarks/synthetic/nf-bnct-001/transport/provenance/openmc-endfb81-processed-data-manifest.json"
@@ -35,7 +40,10 @@ fn main() -> eframe::Result {
         options,
         Box::new(move |creation_context| {
             configure_style(&creation_context.egui_ctx);
-            Ok(Box::new(NctForgeApp::new(initial_case)))
+            Ok(Box::new(NctForgeApp::new(
+                initial_case,
+                &creation_context.egui_ctx,
+            )))
         }),
     )
 }
@@ -76,6 +84,30 @@ impl WorkspaceTab {
             Self::Transport => "03",
             Self::Dose => "04",
             Self::Evidence => "05",
+        }
+    }
+}
+
+impl From<WorkspaceTab> for HelpWorkspace {
+    fn from(workspace: WorkspaceTab) -> Self {
+        match workspace {
+            WorkspaceTab::Overview => Self::Overview,
+            WorkspaceTab::Geometry => Self::Geometry,
+            WorkspaceTab::Transport => Self::Transport,
+            WorkspaceTab::Dose => Self::Dose,
+            WorkspaceTab::Evidence => Self::Evidence,
+        }
+    }
+}
+
+impl From<HelpWorkspace> for WorkspaceTab {
+    fn from(workspace: HelpWorkspace) -> Self {
+        match workspace {
+            HelpWorkspace::Overview => Self::Overview,
+            HelpWorkspace::Geometry => Self::Geometry,
+            HelpWorkspace::Transport => Self::Transport,
+            HelpWorkspace::Dose => Self::Dose,
+            HelpWorkspace::Evidence => Self::Evidence,
         }
     }
 }
@@ -162,10 +194,12 @@ struct NctForgeApp {
     case: Option<ViewerCase>,
     display: DisplaySettings,
     workspace: WorkspaceTab,
+    brand_logo: Option<egui::TextureHandle>,
+    help: GuidedHelp,
 }
 
 impl NctForgeApp {
-    fn new(initial_case: Option<PathBuf>) -> Self {
+    fn new(initial_case: Option<PathBuf>, context: &egui::Context) -> Self {
         let has_initial_case = initial_case.is_some();
         let mut app = Self {
             case_path: initial_case
@@ -179,6 +213,8 @@ impl NctForgeApp {
             } else {
                 WorkspaceTab::Overview
             },
+            brand_logo: brand::load_logo_texture(context).ok(),
+            help: GuidedHelp::default(),
         };
         if has_initial_case {
             app.load_case();
@@ -207,11 +243,31 @@ impl NctForgeApp {
 
 impl eframe::App for NctForgeApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        show_app_header(ui, self.case.as_ref());
+        if ui.input(|input| input.key_pressed(egui::Key::F1)) {
+            self.help.toggle_center();
+        }
+        if let Some(workspace) = self.help.requested_workspace() {
+            self.workspace = workspace.into();
+        }
+
+        let mut tour_targets = TourTargets::default();
+        if show_app_header(
+            ui,
+            self.case.as_ref(),
+            self.brand_logo.as_ref(),
+            &mut tour_targets,
+        ) {
+            self.help.toggle_center();
+        }
         ui.add_space(8.0);
         let enter_pressed = ui.input(|input| input.key_pressed(egui::Key::Enter));
-        let load_requested =
-            show_case_loader(ui, &mut self.case_path, self.case.as_ref(), enter_pressed);
+        let load_requested = show_case_loader(
+            ui,
+            &mut self.case_path,
+            self.case.as_ref(),
+            enter_pressed,
+            &mut tour_targets,
+        );
         if load_requested {
             self.load_case();
         }
@@ -225,7 +281,11 @@ impl eframe::App for NctForgeApp {
             &mut self.workspace,
             self.case.as_mut(),
             &mut self.display,
+            &mut tour_targets,
         );
+        self.help
+            .show_center(ui.ctx(), self.workspace.into(), self.case.is_some());
+        self.help.show_tour(ui.ctx(), &tour_targets);
     }
 }
 
@@ -245,13 +305,37 @@ fn configure_style(context: &egui::Context) {
     });
 }
 
-fn show_app_header(ui: &mut egui::Ui, case: Option<&ViewerCase>) {
+fn show_app_header(
+    ui: &mut egui::Ui,
+    case: Option<&ViewerCase>,
+    brand_logo: Option<&egui::TextureHandle>,
+    tour_targets: &mut TourTargets,
+) -> bool {
+    let mut help_clicked = false;
     egui::Frame::new()
         .fill(egui::Color32::from_rgb(21, 30, 40))
         .corner_radius(8)
         .inner_margin(egui::Margin::symmetric(14, 10))
         .show(ui, |ui| {
             ui.horizontal(|ui| {
+                if let Some(brand_logo) = brand_logo {
+                    let response = ui
+                        .add(
+                            egui::Image::from_texture(brand_logo)
+                                .fit_to_exact_size(egui::vec2(48.0, 48.0))
+                                .corner_radius(6.0),
+                        )
+                        .on_hover_text("Avila Labs");
+                    tour_targets.set(TourTarget::Brand, response.rect);
+                } else {
+                    let response = ui.label(
+                        egui::RichText::new("AVILA LABS")
+                            .small()
+                            .strong()
+                            .color(egui::Color32::from_rgb(139, 229, 235)),
+                    );
+                    tour_targets.set(TourTarget::Brand, response.rect);
+                }
                 ui.vertical(|ui| {
                     ui.label(
                         egui::RichText::new("NCTFORGE")
@@ -263,8 +347,22 @@ fn show_app_header(ui: &mut egui::Ui, case: Option<&ViewerCase>) {
                         egui::RichText::new("Open BNCT research and verification workbench")
                             .color(egui::Color32::from_rgb(183, 192, 209)),
                     );
+                    ui.label(
+                        egui::RichText::new("AN AVILA LABS OPEN-SOURCE PROJECT")
+                            .size(9.5)
+                            .strong()
+                            .color(egui::Color32::from_rgb(137, 146, 165)),
+                    );
                 });
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    let response = ui
+                        .add_sized(
+                            [36.0, 36.0],
+                            egui::Button::new(egui::RichText::new("?").size(19.0).strong()),
+                        )
+                        .on_hover_text("Help, common questions, and guided tours (F1)");
+                    help_clicked = response.clicked();
+                    tour_targets.set(TourTarget::HelpButton, response.rect);
                     status_badge(ui, GateState::Pending, "RESEARCH ONLY");
                     if case.is_some() {
                         status_badge(ui, GateState::Verified, "CASE VERIFIED");
@@ -279,6 +377,7 @@ fn show_app_header(ui: &mut egui::Ui, case: Option<&ViewerCase>) {
         );
         ui.label("No dose, prescription, or treatment-delivery claim is available in this build.");
     });
+    help_clicked
 }
 
 fn show_case_loader(
@@ -286,9 +385,10 @@ fn show_case_loader(
     case_path: &mut String,
     case: Option<&ViewerCase>,
     enter_pressed: bool,
+    tour_targets: &mut TourTargets,
 ) -> bool {
     let mut load_requested = false;
-    egui::Frame::group(ui.style()).show(ui, |ui| {
+    let response = egui::Frame::group(ui.style()).show(ui, |ui| {
         ui.horizontal(|ui| {
             ui.label(egui::RichText::new("CASE").small().strong());
             let path_response = ui.add(
@@ -308,6 +408,7 @@ fn show_case_loader(
             }
         });
     });
+    tour_targets.set(TourTarget::CaseLoader, response.response.rect);
     load_requested
 }
 
@@ -316,8 +417,9 @@ fn show_workbench(
     workspace: &mut WorkspaceTab,
     case: Option<&mut ViewerCase>,
     display: &mut DisplaySettings,
+    tour_targets: &mut TourTargets,
 ) {
-    egui::Panel::left("nctforge-workspace-navigation")
+    let navigation = egui::Panel::left("nctforge-workspace-navigation")
         .exact_size(180.0)
         .resizable(false)
         .frame(
@@ -347,6 +449,7 @@ fn show_workbench(
             ui.strong("R2 · physical truth");
             ui.small("Evidence-gated; no calendar-based completion claims.");
         });
+    tour_targets.set(TourTarget::WorkspaceNavigation, navigation.response.rect);
     egui::CentralPanel::default()
         .frame(egui::Frame::new().inner_margin(egui::Margin::symmetric(12, 8)))
         .show(ui, |ui| {
@@ -354,10 +457,10 @@ fn show_workbench(
                 .id_salt("nctforge-workspace")
                 .auto_shrink([false, false])
                 .show(ui, |ui| match *workspace {
-                    WorkspaceTab::Overview => show_overview(ui, case.as_deref()),
+                    WorkspaceTab::Overview => show_overview(ui, case.as_deref(), tour_targets),
                     WorkspaceTab::Geometry => {
                         if let Some(case) = case {
-                            show_geometry_workspace(ui, case, display);
+                            show_geometry_workspace(ui, case, display, tour_targets);
                         } else {
                             show_workspace_heading(
                                 ui,
@@ -367,9 +470,13 @@ fn show_workbench(
                             show_empty_state(ui);
                         }
                     }
-                    WorkspaceTab::Transport => show_transport_workspace(ui, case.as_deref()),
+                    WorkspaceTab::Transport => {
+                        show_transport_workspace(ui, case.as_deref(), tour_targets)
+                    }
                     WorkspaceTab::Dose => show_dose_workspace(ui),
-                    WorkspaceTab::Evidence => show_evidence_workspace(ui, case.as_deref()),
+                    WorkspaceTab::Evidence => {
+                        show_evidence_workspace(ui, case.as_deref(), tour_targets)
+                    }
                 });
         });
 }
@@ -380,7 +487,7 @@ fn show_workspace_heading(ui: &mut egui::Ui, title: &str, subtitle: &str) {
     ui.add_space(8.0);
 }
 
-fn show_overview(ui: &mut egui::Ui, case: Option<&ViewerCase>) {
+fn show_overview(ui: &mut egui::Ui, case: Option<&ViewerCase>, tour_targets: &mut TourTargets) {
     show_workspace_heading(
         ui,
         "Research overview",
@@ -422,12 +529,15 @@ fn show_overview(ui: &mut egui::Ui, case: Option<&ViewerCase>) {
         });
 
     ui.add_space(12.0);
-    ui.heading("Readiness gates");
-    ui.columns(2, |columns| {
-        for (index, gate) in readiness_gates(case.is_some()).into_iter().enumerate() {
-            show_gate_card(&mut columns[index % 2], gate);
-        }
+    let gates = ui.scope(|ui| {
+        ui.heading("Readiness gates");
+        ui.columns(2, |columns| {
+            for (index, gate) in readiness_gates(case.is_some()).into_iter().enumerate() {
+                show_gate_card(&mut columns[index % 2], gate);
+            }
+        });
     });
+    tour_targets.set(TourTarget::OverviewGates, gates.response.rect);
 
     ui.add_space(12.0);
     egui::Frame::group(ui.style()).show(ui, |ui| {
@@ -558,6 +668,7 @@ fn show_geometry_workspace(
     ui: &mut egui::Ui,
     case: &mut ViewerCase,
     display: &mut DisplaySettings,
+    tour_targets: &mut TourTargets,
 ) {
     show_workspace_heading(
         ui,
@@ -565,7 +676,7 @@ fn show_geometry_workspace(
         "Integrity-gated, linked patient-space views of the frozen synthetic case.",
     );
     ui.horizontal_top(|ui| {
-        ui.vertical(|ui| {
+        let controls = ui.vertical(|ui| {
             ui.set_min_width(245.0);
             ui.set_max_width(280.0);
             show_case_summary(ui, case);
@@ -574,8 +685,9 @@ fn show_geometry_workspace(
                 case.textures_dirty = true;
             }
         });
+        tour_targets.set(TourTarget::GeometryControls, controls.response.rect);
         ui.separator();
-        ui.vertical(|ui| {
+        let views = ui.vertical(|ui| {
             ui.heading("Linked anatomical views");
             ui.label("Click or drag in any view to move the shared voxel crosshair.");
             if let Err(error) = case.refresh_textures(ui.ctx(), display) {
@@ -607,10 +719,15 @@ fn show_geometry_workspace(
                 case.textures_dirty = true;
             }
         });
+        tour_targets.set(TourTarget::GeometryViews, views.response.rect);
     });
 }
 
-fn show_transport_workspace(ui: &mut egui::Ui, case: Option<&ViewerCase>) {
+fn show_transport_workspace(
+    ui: &mut egui::Ui,
+    case: Option<&ViewerCase>,
+    tour_targets: &mut TourTargets,
+) {
     show_workspace_heading(
         ui,
         "Transport",
@@ -644,36 +761,40 @@ fn show_transport_workspace(ui: &mut egui::Ui, case: Option<&ViewerCase>) {
         });
 
     ui.add_space(12.0);
-    ui.heading("Run gate chain");
-    for (index, gate) in readiness_gates(case.is_some()).into_iter().enumerate() {
-        ui.horizontal(|ui| {
-            ui.monospace(format!("{:02}", index + 1));
-            ui.colored_label(gate.state.color(), "●");
-            ui.strong(gate.title);
-            ui.label("—");
-            ui.label(gate.detail);
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                ui.label(
-                    egui::RichText::new(gate.state.label())
-                        .small()
-                        .strong()
-                        .color(gate.state.color()),
-                );
+    let gate_chain = ui.scope(|ui| {
+        ui.heading("Run gate chain");
+        for (index, gate) in readiness_gates(case.is_some()).into_iter().enumerate() {
+            ui.horizontal(|ui| {
+                ui.monospace(format!("{:02}", index + 1));
+                ui.colored_label(gate.state.color(), "●");
+                ui.strong(gate.title);
+                ui.label("—");
+                ui.label(gate.detail);
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    ui.label(
+                        egui::RichText::new(gate.state.label())
+                            .small()
+                            .strong()
+                            .color(gate.state.color()),
+                    );
+                });
             });
-        });
-        if index + 1 != readiness_gates(case.is_some()).len() {
-            ui.separator();
+            if index + 1 != readiness_gates(case.is_some()).len() {
+                ui.separator();
+            }
         }
-    }
+    });
+    tour_targets.set(TourTarget::TransportGates, gate_chain.response.rect);
 
     ui.add_space(14.0);
-    ui.horizontal(|ui| {
+    let actions = ui.horizontal(|ui| {
         ui.add_enabled(false, egui::Button::new("Prepare OpenMC run"))
             .on_disabled_hover_text("Blocked until the reviewed component responses pass.");
         ui.add_enabled(false, egui::Button::new("Execute transport"))
             .on_disabled_hover_text("The backend does not advertise controlled execution yet.");
         ui.label("Disabled controls reflect real adapter capabilities.");
     });
+    tour_targets.set(TourTarget::TransportActions, actions.response.rect);
 }
 
 fn capability_label(ui: &mut egui::Ui, name: &str, enabled: bool) {
@@ -772,7 +893,11 @@ fn show_dose_workspace(ui: &mut egui::Ui) {
     });
 }
 
-fn show_evidence_workspace(ui: &mut egui::Ui, case: Option<&ViewerCase>) {
+fn show_evidence_workspace(
+    ui: &mut egui::Ui,
+    case: Option<&ViewerCase>,
+    tour_targets: &mut TourTargets,
+) {
     show_workspace_heading(
         ui,
         "Evidence",
@@ -791,38 +916,41 @@ fn show_evidence_workspace(ui: &mut egui::Ui, case: Option<&ViewerCase>) {
     let manifest_hash = short_evidence_hash(OPENMC_MANIFEST_EVIDENCE);
     let execution_hash = short_evidence_hash(NJOY_EXECUTION_EVIDENCE);
     let comparison_hash = short_evidence_hash(HEATING_COMPARISON_EVIDENCE);
-    show_evidence_row(
-        ui,
-        "Runtime geometry gate",
-        if case.is_some() {
-            GateState::Verified
-        } else {
-            GateState::InputRequired
-        },
-        &geometry_detail,
-        None,
-    );
-    show_evidence_row(
-        ui,
-        "Official OpenMC processed selection",
-        GateState::Frozen,
-        "Case manifest binds cross_sections.xml, ten neutron tables, and five photon tables.",
-        Some(&manifest_hash),
-    );
-    show_evidence_row(
-        ui,
-        "Controlled NJOY2016.78 execution",
-        GateState::Blocked,
-        "Preserved rejected evidence: 72 kinematic findings across four nuclides.",
-        Some(&execution_hash),
-    );
-    show_evidence_row(
-        ui,
-        "OpenMC / NJOY MT 301 comparison",
-        GateState::Frozen,
-        "All ten curves agree within 4.9e-7; O-17/O-18 local fallback remains explicit.",
-        Some(&comparison_hash),
-    );
+    let ledger = ui.scope(|ui| {
+        show_evidence_row(
+            ui,
+            "Runtime geometry gate",
+            if case.is_some() {
+                GateState::Verified
+            } else {
+                GateState::InputRequired
+            },
+            &geometry_detail,
+            None,
+        );
+        show_evidence_row(
+            ui,
+            "Official OpenMC processed selection",
+            GateState::Frozen,
+            "Case manifest binds cross_sections.xml, ten neutron tables, and five photon tables.",
+            Some(&manifest_hash),
+        );
+        show_evidence_row(
+            ui,
+            "Controlled NJOY2016.78 execution",
+            GateState::Blocked,
+            "Preserved rejected evidence: 72 kinematic findings across four nuclides.",
+            Some(&execution_hash),
+        );
+        show_evidence_row(
+            ui,
+            "OpenMC / NJOY MT 301 comparison",
+            GateState::Frozen,
+            "All ten curves agree within 4.9e-7; O-17/O-18 local fallback remains explicit.",
+            Some(&comparison_hash),
+        );
+    });
+    tour_targets.set(TourTarget::EvidenceLedger, ledger.response.rect);
 
     ui.add_space(12.0);
     egui::Frame::group(ui.style()).show(ui, |ui| {
@@ -1235,8 +1363,9 @@ mod tests {
                 ..Default::default()
             };
             let mut display = DisplaySettings::default();
+            let mut tour_targets = TourTargets::default();
             let mut output = context.run_ui(input, |ui| {
-                show_workbench(ui, &mut workspace, None, &mut display);
+                show_workbench(ui, &mut workspace, None, &mut display, &mut tour_targets);
             });
             output.textures_delta.clear();
         }

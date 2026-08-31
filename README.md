@@ -58,7 +58,8 @@ contains:
   voxel crosshairs and explicit patient-side labels;
 - content-hash and run-manifest primitives;
 - a CLI and a native, evidence-aware egui workbench shell with overview,
-  geometry, transport, component-dose, and evidence workspaces;
+  geometry, transport, component-dose, and evidence workspaces, official Avila
+  Labs branding, contextual help, and guided spotlight tours;
 - an evidence-gated development roadmap;
 - an explicit research and intellectual-property boundary;
 - a researched technical baseline and frozen first synthetic conformance-case
@@ -124,7 +125,7 @@ crates/nctforge-openmc/     OpenMC preflight and deterministic input generator
 crates/nctforge-njoy/       deterministic NJOY preparation, execution, and evidence
 crates/nctforge-cli/        headless entry point
 crates/nctforge-gui/        native egui application shell
-bindings/python/            future scientific extension surface
+bindings/python/            planned PyO3/maturin scientific package
 benchmarks/synthetic/       public, non-patient validation corpus
 profiles/                   reviewed external-data acquisition profiles
 schemas/                    versioned interchange schemas
@@ -156,10 +157,18 @@ are ignored by default and contain visibly synthetic identity values only.
 Without a case argument, the GUI opens on a research-readiness overview. Passing
 a verified case opens its geometry workspace directly. Use the left navigation
 to see the current OpenMC capability gates, the four-component dose workspace,
-and the evidence ledger. Dose and transport actions are disabled because this
-build has no qualified response bundle or executable backend; the interface
-does not show placeholder dose values. See [ADR
+and the evidence ledger. Select the `?` button or press `F1` for contextual
+guidance, bundled offline answers, and guided tours that dim the application and
+spotlight live workflow controls. Dose and transport actions are disabled
+because this build has no qualified response bundle or executable backend; the
+interface does not show placeholder dose values. See [ADR
 0014](docs/adr/0014-evidence-aware-workbench-shell.md).
+
+`pip install nctforge` is the planned primary distribution path for scientific
+users, backed by the same Rust implementation through PyO3 and maturin. It is not
+published yet. Cargo remains the native source/developer path, while desktop
+releases will ship as native artifacts. See [ADR
+0015](docs/adr/0015-python-and-native-distribution.md).
 
 ### Independent DICOM validation
 

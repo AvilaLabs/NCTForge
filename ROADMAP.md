@@ -121,6 +121,8 @@ Implementation status:
 - complete: expose the intended workflow in an evidence-aware egui shell with
   overview, geometry, transport, four-component dose, and evidence workspaces;
   unfinished physics and backend actions remain explicitly disabled;
+- complete: add official Avila Labs branding, contextual offline help, and
+  guided dim-and-spotlight tours over live workflow controls;
 - in progress: define and independently justify a versioned response treatment
   for the O-17/O-18 photon-data gap, then repeat the complete review gates;
 - pending: generate the first reviewable response tables only after the
@@ -137,6 +139,8 @@ Exit evidence:
 
 - one-command reproducible run;
 - GUI and CLI consume identical engine results;
+- an installable Python alpha wraps the same Rust validation and model contracts
+  without duplicating scientific logic;
 - physical and biological layers can be inspected separately;
 - deterministic manifest binds inputs and outputs;
 - independent verifier rejects modified artifacts.
@@ -153,6 +157,24 @@ Exit evidence:
 - public conformance suite and versioned reference outputs;
 - Python API supports external biological-model experiments without duplicating
   production evaluation logic.
+
+## Cross-cutting distribution
+
+The accepted distribution boundary is recorded in [ADR
+0015](docs/adr/0015-python-and-native-distribution.md): PyPI is the planned
+primary scientific-user entry point, Cargo remains the native developer path,
+and desktop builds ship as native release artifacts. All three surfaces call the
+same Rust contracts.
+
+Implementation status:
+
+- complete: choose the PyO3/maturin mixed-package architecture and prohibit a
+  parallel Python dose, geometry, evidence, or qualification engine;
+- pending: implement the first bounded Python API after its Rust contracts are
+  selected and versioned;
+- pending: build and smoke-test the supported wheel matrix through TestPyPI;
+- pending: review public crate surfaces before enabling crates.io publication;
+- pending: produce signed native desktop release artifacts.
 
 ## R5 — External validation and adoption
 

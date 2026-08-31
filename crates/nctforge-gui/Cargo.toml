@@ -14,7 +14,9 @@ name = "nctforge-gui"
 path = "src/main.rs"
 
 [dependencies]
+base64.workspace = true
 eframe.workspace = true
+image.workspace = true
 nctforge-dicom = { path = "../nctforge-dicom" }
 nctforge-evidence = { path = "../nctforge-evidence" }
 nctforge-openmc = { path = "../nctforge-openmc" }

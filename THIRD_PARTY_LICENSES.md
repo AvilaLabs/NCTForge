@@ -8,11 +8,13 @@ The current direct third-party packages are:
 
 | Package | Resolved version | Declared license |
 | --- | ---: | --- |
+| base64 | 0.22.1 | MIT OR Apache-2.0 |
 | clap | 4.6.6 | MIT OR Apache-2.0 |
 | dicom-core | 0.10.0 | MIT OR Apache-2.0 |
 | dicom-dictionary-std | 0.10.0 | MIT OR Apache-2.0 |
 | dicom-object | 0.10.0 | MIT OR Apache-2.0 |
 | eframe | 0.36.1 | MIT OR Apache-2.0 |
+| image | 0.25.10 | MIT OR Apache-2.0 |
 | md-5 | 0.10.6 | MIT OR Apache-2.0 |
 | quick-xml | 0.42.0 | MIT |
 | reqwest | 0.13.4 | MIT OR Apache-2.0 |

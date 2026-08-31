@@ -26,6 +26,13 @@ The native egui application has five stable workspaces:
 4. Dose components; and
 5. Evidence.
 
+The shell carries the official Avila Labs mark and provides an always-visible
+help entry point. The help center has workspace-specific explanations, reviewed
+bundled answers, and guided tours. A tour dims the rest of the application,
+spotlights the relevant live controls, and can move between workspaces as the
+user advances. Bundled question matching is local and deterministic; it is not
+presented as an external or generative assistant.
+
 The shell follows these rules:
 
 - `verified` is shown for geometry only after `load_nf_bnct_001` completes the
@@ -57,3 +64,8 @@ the response and execution gates to remain blocked or pending.
   unavailable instead of being represented by fabricated data.
 - Later dose, comparison, and biological-model views must add typed artifact
   inputs and tests before replacing their empty states.
+- New users can learn the evidence language and geometry workflow in context
+  without the guide changing or bypassing any scientific gate.
+- A future conversational assistant can replace or augment bundled answers only
+  through an explicit service, privacy, provenance, and scientific-authority
+  decision; the current help surface makes no such claim.
