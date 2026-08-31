@@ -20,7 +20,7 @@ pub const TARGET_NUCLEAR_DATA_MANIFEST_SCHEMA: &str = "nctforge.openmc-nuclear-d
 pub const TARGET_INSPECTION_METHOD: &str = "nctforge-openmc-data-inspector/0.3.0";
 pub const TARGET_ACQUISITION_PROFILE_ID: &str = "openmc-endfb81-official-library-2025-12-18";
 pub const TARGET_ACQUISITION_PROFILE_SHA256: &str =
-    "8a9dea021bf3d72e65e0c150c0cd563508fc77403ac0f1c46688d6aee476536d";
+    "237a45d81b7f57dbbb0f1acace641e5dcbda13757e9bfcef686b4daf145ecab7";
 pub const TARGET_DISTRIBUTION_SOURCE_URI: &str =
     "https://anl.box.com/shared/static/6qr7jezzihkj9p9esl5jn19qgpujyjyz.xz";
 pub const TARGET_DISTRIBUTION_ARCHIVE_SIZE_BYTES: u64 = 9_661_406_540;

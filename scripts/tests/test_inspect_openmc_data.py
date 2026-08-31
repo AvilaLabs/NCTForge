@@ -26,7 +26,7 @@ def sha256(path: Path) -> str:
 def write_acquisition_evidence(root: Path, archive: Path) -> tuple[Path, Path]:
     source_uri = "https://example.invalid/data.tar.xz"
     profile = {
-        "schema_version": "nctforge.data-acquisition-profile/0.1.0",
+        "schema_version": "nctforge.data-acquisition-profile/0.2.0",
         "id": "synthetic-openmc-data-profile",
         "artifact_role": "openmc_continuous_energy_library",
         "publication": {
@@ -41,6 +41,7 @@ def write_acquisition_evidence(root: Path, archive: Path) -> tuple[Path, Path]:
             "expected_size_bytes": archive.stat().st_size,
             "expected_content_disposition_filename": archive.name,
             "publisher_digest": None,
+            "known_prior_digests": [],
         },
         "size_evidence": {
             "method": "synthetic_test_fixture",

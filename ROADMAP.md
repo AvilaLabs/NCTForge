@@ -90,12 +90,17 @@ Implementation status:
 - complete: resumable, no-overwrite nuclear-data acquisition with frozen
   publisher profiles, redirect confinement, size and publisher-digest checks,
   and receipts bound into manifest schema `0.3.0`;
+- complete: acquire the current publisher-matched NNDC neutron archive and
+  freeze the ten `NF-BNCT-001` evaluations by path, size, and SHA-256 as an
+  unqualified candidate, preserving the different OpenMC-recipe archive digest
+  and unresolved equivalence state;
 - complete: byte-stable OpenMC 0.16 input generation with complete scoring and
   audit tally ledgers;
 - in progress: evaluated-data binding, response-table generation, and
   independent method checks;
-- pending: acquire, inspect, and freeze the official ENDF/B-VIII.1 case data
-  selection;
+- pending: acquire and inspect the processed official OpenMC ENDF/B-VIII.1
+  distribution, compare it with the selected evaluated sources, and generate
+  the first reviewable response tables;
 - pending: smoke execution, statepoint import, and independent estimator
   comparison.
 

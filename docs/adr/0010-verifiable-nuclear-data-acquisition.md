@@ -1,6 +1,6 @@
 # ADR 0010: Verifiable Nuclear-Data Acquisition
 
-**Status:** Accepted and implemented; official archives not yet acquired
+**Status:** Accepted and implemented; evaluated-source candidate acquired
 
 **Date:** 2026-08-31
 
@@ -20,18 +20,25 @@ OpenMC data-generation recipe at commit
 checks MD5 `dc622c0f1c3c4477433e698266e0fc80`, and processes the release at six
 temperatures. Its exact script SHA-256 is
 `b1b0342b35c3fe15f493dd4eafea457a28e441d079ec3ac831ecf7f6c5ac4f9c`.
-The NNDC archive's range response reports `343,724,780` bytes. Those evaluated
+On 2026-08-31, NNDC published MD5 `1a6abeac85bd2425df47983752687a93` at the
+same stable archive URI. The current archive remains `343,724,780` bytes but is
+not byte-identical to the object frozen by the OpenMC recipe. Those evaluated
 sources are required for NCTForge's independently generated partial-KERMA
-responses even though the processed OpenMC archive is used for transport.
+responses even though the processed OpenMC archive is used for transport. The
+observed drift and its qualification boundary are recorded in
+[`ENDFB81_NEUTRON_ARCHIVE_DRIFT.md`](../research/ENDFB81_NEUTRON_ARCHIVE_DRIFT.md).
 
 ## Decision
 
 NCTForge stores reviewed acquisition profiles under `profiles/openmc/` and
 implements probing and acquisition in Rust. A profile binds the release page,
 source URI, permitted HTTPS redirect-host suffixes, filename, media type,
-observed byte count, publisher digest when available, and the pinned upstream
-OpenMC generation recipe. The raw SHA-256 of the frozen processed-library
-profile is `8a9dea021bf3d72e65e0c150c0cd563508fc77403ac0f1c46688d6aee476536d`;
+observed byte count, current publisher digest when available, known historical
+digests, and the pinned upstream OpenMC generation recipe. Adding the digest
+history is a breaking profile-schema change to
+`nctforge.data-acquisition-profile/0.2.0`. The raw SHA-256 of the frozen
+processed-library profile is
+`237a45d81b7f57dbbb0f1acace641e5dcbda13757e9bfcef686b4daf145ecab7`;
 Git attributes force LF checkout for these raw-byte trust anchors.
 
 The CLI has two explicit operations:
@@ -64,10 +71,11 @@ the exact byte count. It:
 
 All receipts declare `acquisition_only`. For the processed OpenMC archive the
 publisher-digest status must remain `unavailable`; matching a locally computed
-SHA-256 does not raise that state. For the NNDC source archive, the legacy MD5
-is checked because it is the byte identifier frozen by the OpenMC recipe, while
-NCTForge also records SHA-256. MD5 is not treated as a modern security
-signature.
+SHA-256 does not raise that state. For the NNDC source archive, acquisition
+checks the MD5 currently published by NNDC and records SHA-256. The different
+MD5 frozen by the OpenMC recipe is retained as digest history rather than
+silently replaced. MD5 is an upstream byte identifier, not a modern security
+signature or proof of scientific equivalence.
 
 The OpenMC HDF5 inspector requires both the profile and receipt. It independently
 rehashes the archive and binds the profile and receipt hashes into nuclear-data
@@ -85,6 +93,10 @@ a self-authored profile while continuing to claim the frozen distribution.
   side effect.
 - Acquisition evidence establishes provenance and byte identity, not evaluated
   nuclear-data correctness, response-table qualification, or clinical fitness.
+- The current NNDC neutron archive is an unqualified source candidate until its
+  selected evaluations and generated responses are compared with the processed
+  OpenMC distribution; public evidence does not establish that the archive
+  change was packaging-only.
 - The processed archive remains an unqualified candidate until it is actually
   acquired, inspected, reviewed, and bound to the case response evidence.
 
@@ -93,4 +105,5 @@ a self-authored profile while continuing to claim the frozen distribution.
 - [OpenMC official data libraries](https://openmc.org/data/)
 - [OpenMC data-generation PR 96](https://github.com/openmc-dev/data/pull/96)
 - [Pinned OpenMC ENDF generation script](https://github.com/openmc-dev/data/blob/66cfe45ff7a3aa47a4d7805b92b3d5ab6ee018b6/generate_endf.py)
-- [NNDC ENDF/B-VIII.1 release](https://www.nndc.bnl.gov/endf-releases/?version=B-VIII.1)
+- [NNDC ENDF/B-VIII.1 neutron release](https://www.nndc.bnl.gov/endf-releases/?sublibrary=neutrons&version=B-VIII.1)
+- [NNDC ENDF/B-VIII.1 errata](https://www.nndc.bnl.gov/endf-library/B-VIII.1/errata/)

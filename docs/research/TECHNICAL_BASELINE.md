@@ -270,19 +270,23 @@ result exists. Cross-code agreement alone remains `cross_code_research_only`.
   photon production, photoatomic data, atomic relaxation, and Compton profiles,
   and bind the acquisition profile, receipt, source URI, byte count, and archive
   identity into manifest schema `0.3.0`; pending: run it on and freeze the
-  official ENDF/B-VIII.1 archive selection.
+  processed official OpenMC ENDF/B-VIII.1 distribution selection.
 - Complete: probe and safely acquire official data through a Rust path with
   HTTPS redirect confinement, exact resumable ranges, no overwrite, explicit
   size confirmation, publisher-digest verification when available, and an
   acquisition-only receipt.
+- Complete: acquire the current NNDC ENDF/B-VIII.1 neutron archive, bind its
+  receipt to the frozen material, and hash the exact ten selected evaluations;
+  pending: resolve the changed archive digest through processed-table and KERMA
+  comparisons before qualification.
 - Complete: generate byte-stable OpenMC 0.16 geometry, material, source,
   settings, response, audit, spectrum, and leakage XML directly in Rust; verify
   all content bindings and selected nuclear-data files; reject incomplete
   response energy coverage; and emit a hashed input manifest. Pending: supply
   real reviewed response tables and pass a controlled OpenMC smoke execution.
 - Complete: freeze the NJOY2016.78 MT 407/403 partial-KERMA method and MT 301
-  residual classification in ADR 0007; pending: bind evaluated inputs, generate
-  tables, and pass every declared review gate.
+  residual classification in ADR 0007 and bind the evaluated inputs; pending:
+  generate tables and pass every declared review gate.
 - Do not use reaction-filtered neutron heating as a component partition; retain
   it only as a diagnostic under ADR 0005.
 - Do not publish “golden” OpenMC dose arrays before an independent calculation is

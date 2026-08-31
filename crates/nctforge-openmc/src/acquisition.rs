@@ -22,7 +22,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use thiserror::Error;
 
-pub const ACQUISITION_PROFILE_SCHEMA: &str = "nctforge.data-acquisition-profile/0.1.0";
+pub const ACQUISITION_PROFILE_SCHEMA: &str = "nctforge.data-acquisition-profile/0.2.0";
 pub const ACQUISITION_RECEIPT_SCHEMA: &str = "nctforge.data-acquisition-receipt/0.1.0";
 
 const MAX_REDIRECTS: usize = 10;
@@ -57,6 +57,7 @@ pub struct PublishedDataArtifact {
     pub expected_size_bytes: u64,
     pub expected_content_disposition_filename: Option<String>,
     pub publisher_digest: Option<PublishedDigest>,
+    pub known_prior_digests: Vec<PublishedDigest>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -199,14 +200,28 @@ impl DataAcquisitionProfile {
         validate_transfer_url(&source, &self.publication.allowed_https_host_suffixes)?;
 
         if let Some(digest) = &self.artifact.publisher_digest {
-            validate_lower_hex(
-                "artifact.publisher_digest.value",
-                &digest.value,
-                digest.algorithm.hexadecimal_length(),
-            )?;
-            if digest.evidence.trim().is_empty() {
+            validate_published_digest("artifact.publisher_digest", digest)?;
+        }
+        for (index, digest) in self.artifact.known_prior_digests.iter().enumerate() {
+            validate_published_digest("artifact.known_prior_digests", digest)?;
+            if self
+                .artifact
+                .known_prior_digests
+                .iter()
+                .take(index)
+                .any(|earlier| {
+                    earlier.algorithm == digest.algorithm && earlier.value == digest.value
+                })
+                || self
+                    .artifact
+                    .publisher_digest
+                    .as_ref()
+                    .is_some_and(|current| {
+                        current.algorithm == digest.algorithm && current.value == digest.value
+                    })
+            {
                 return Err(AcquisitionError::InvalidProfile(
-                    "artifact.publisher_digest.evidence is empty".into(),
+                    "artifact digest history contains a duplicate".into(),
                 ));
             }
         }
@@ -271,6 +286,149 @@ pub struct DataAcquisitionReceipt {
     pub publisher_digest_status: PublisherDigestStatus,
     pub evidence_state: AcquisitionEvidenceState,
     pub completed_at_unix_seconds: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataAcquisitionReceiptDocument {
+    pub receipt: DataAcquisitionReceipt,
+    pub sha256: String,
+}
+
+impl DataAcquisitionReceiptDocument {
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, AcquisitionError> {
+        let receipt: DataAcquisitionReceipt = serde_json::from_slice(bytes)?;
+        receipt.validate()?;
+        Ok(Self {
+            receipt,
+            sha256: sha256_hex(bytes),
+        })
+    }
+
+    pub fn from_path(path: &Path) -> Result<Self, AcquisitionError> {
+        let bytes = fs::read(path).map_err(|source| AcquisitionError::Io {
+            path: path.to_path_buf(),
+            source,
+        })?;
+        Self::from_bytes(&bytes)
+    }
+
+    pub fn validate_for_profile(
+        &self,
+        profile: &DataAcquisitionProfileDocument,
+    ) -> Result<(), AcquisitionError> {
+        profile.profile.validate()?;
+        self.receipt.validate()?;
+        let receipt = &self.receipt;
+        let expected = &profile.profile;
+
+        if receipt.profile_id != expected.id
+            || receipt.profile_sha256 != profile.sha256
+            || receipt.artifact_role != expected.artifact_role
+            || receipt.artifact.path != expected.artifact.filename
+            || receipt.artifact.media_type != expected.artifact.media_type
+            || receipt.artifact.size_bytes != expected.artifact.expected_size_bytes
+            || receipt.artifact.publisher_digest != expected.artifact.publisher_digest
+            || receipt.transfer.requested_uri != expected.publication.source_uri
+        {
+            return Err(AcquisitionError::ReceiptProfileMismatch);
+        }
+
+        let expected_status = if expected.artifact.publisher_digest.is_some() {
+            PublisherDigestStatus::Matched
+        } else {
+            PublisherDigestStatus::Unavailable
+        };
+        if receipt.publisher_digest_status != expected_status {
+            return Err(AcquisitionError::ReceiptProfileMismatch);
+        }
+        validate_content_disposition(
+            expected,
+            receipt.transfer.content_disposition_filename.as_deref(),
+        )?;
+        let final_origin = Url::parse(&receipt.transfer.final_origin).map_err(|error| {
+            AcquisitionError::InvalidReceipt(format!("invalid final origin: {error}"))
+        })?;
+        validate_transfer_url(
+            &final_origin,
+            &expected.publication.allowed_https_host_suffixes,
+        )?;
+        if url_origin(&final_origin)? != receipt.transfer.final_origin {
+            return Err(AcquisitionError::InvalidReceipt(
+                "transfer.final_origin is not a canonical HTTPS origin".into(),
+            ));
+        }
+        Ok(())
+    }
+}
+
+impl DataAcquisitionReceipt {
+    pub fn validate(&self) -> Result<(), AcquisitionError> {
+        if self.schema_version != ACQUISITION_RECEIPT_SCHEMA {
+            return Err(AcquisitionError::InvalidReceipt(format!(
+                "unsupported schema {:?}",
+                self.schema_version
+            )));
+        }
+        for (label, value) in [
+            ("profile_id", self.profile_id.as_str()),
+            ("artifact_role", self.artifact_role.as_str()),
+            ("artifact.media_type", self.artifact.media_type.as_str()),
+            (
+                "transfer.requested_uri",
+                self.transfer.requested_uri.as_str(),
+            ),
+            ("transfer.final_origin", self.transfer.final_origin.as_str()),
+        ] {
+            if value.trim().is_empty() {
+                return Err(AcquisitionError::InvalidReceipt(format!(
+                    "{label} is empty"
+                )));
+            }
+        }
+        validate_lower_hex("profile_sha256", &self.profile_sha256, 64)
+            .map_err(profile_error_as_receipt)?;
+        validate_filename("artifact.path", &self.artifact.path)
+            .map_err(profile_error_as_receipt)?;
+        if self.artifact.size_bytes == 0 {
+            return Err(AcquisitionError::InvalidReceipt(
+                "artifact.size_bytes must be positive".into(),
+            ));
+        }
+        validate_lower_hex("artifact.sha256", &self.artifact.sha256, 64)
+            .map_err(profile_error_as_receipt)?;
+        if let Some(digest) = &self.artifact.publisher_digest {
+            validate_published_digest("artifact.publisher_digest", digest)
+                .map_err(profile_error_as_receipt)?;
+        }
+        if self.transfer.resumed_from_bytes > self.artifact.size_bytes {
+            return Err(AcquisitionError::InvalidReceipt(
+                "transfer resume offset exceeds artifact size".into(),
+            ));
+        }
+        for (label, value) in [
+            (
+                "transfer.content_disposition_filename",
+                self.transfer.content_disposition_filename.as_deref(),
+            ),
+            ("transfer.etag", self.transfer.etag.as_deref()),
+            (
+                "transfer.last_modified",
+                self.transfer.last_modified.as_deref(),
+            ),
+        ] {
+            if value.is_some_and(str::is_empty) {
+                return Err(AcquisitionError::InvalidReceipt(format!(
+                    "{label} is empty"
+                )));
+            }
+        }
+        if self.completed_at_unix_seconds == 0 {
+            return Err(AcquisitionError::InvalidReceipt(
+                "completed_at_unix_seconds must be positive".into(),
+            ));
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -684,6 +842,10 @@ impl DataAcquisitionClient {
 pub enum AcquisitionError {
     #[error("invalid acquisition profile: {0}")]
     InvalidProfile(String),
+    #[error("invalid acquisition receipt: {0}")]
+    InvalidReceipt(String),
+    #[error("acquisition receipt does not match its reviewed profile")]
+    ReceiptProfileMismatch,
     #[error("failed to parse or serialize acquisition JSON: {0}")]
     Json(#[from] serde_json::Error),
     #[error("HTTP request failed")]
@@ -736,6 +898,13 @@ pub enum AcquisitionError {
     },
 }
 
+fn profile_error_as_receipt(error: AcquisitionError) -> AcquisitionError {
+    match error {
+        AcquisitionError::InvalidProfile(message) => AcquisitionError::InvalidReceipt(message),
+        other => other,
+    }
+}
+
 fn validate_filename(label: &str, value: &str) -> Result<(), AcquisitionError> {
     let path = Path::new(value);
     let mut components = path.components();
@@ -760,6 +929,19 @@ fn validate_lower_hex(label: &str, value: &str, length: usize) -> Result<(), Acq
     {
         return Err(AcquisitionError::InvalidProfile(format!(
             "{label} must be {length} lowercase hexadecimal characters"
+        )));
+    }
+    Ok(())
+}
+
+fn validate_published_digest(
+    label: &str,
+    digest: &PublishedDigest,
+) -> Result<(), AcquisitionError> {
+    validate_lower_hex(label, &digest.value, digest.algorithm.hexadecimal_length())?;
+    if digest.evidence.trim().is_empty() {
+        return Err(AcquisitionError::InvalidProfile(format!(
+            "{label} evidence is empty"
         )));
     }
     Ok(())
@@ -1140,6 +1322,7 @@ mod tests {
                 expected_size_bytes: body.len() as u64,
                 expected_content_disposition_filename: None,
                 publisher_digest: digest,
+                known_prior_digests: Vec::new(),
             },
             size_evidence: SizeEvidence {
                 method: "test_range_probe".into(),
@@ -1189,6 +1372,16 @@ mod tests {
                 .expect("published neutron digest")
                 .algorithm,
             DigestAlgorithm::Md5
+        );
+        assert_eq!(
+            evaluations
+                .profile
+                .artifact
+                .known_prior_digests
+                .first()
+                .expect("prior OpenMC recipe digest")
+                .value,
+            "dc622c0f1c3c4477433e698266e0fc80"
         );
     }
 

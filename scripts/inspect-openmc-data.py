@@ -33,7 +33,7 @@ OPENMC_SOURCE_COMMIT = "617d35a5063c57796b43428bc401e627d2011046"
 EVALUATED_DATA_RELEASE = "ENDF/B-VIII.1"
 MANIFEST_SCHEMA = "nctforge.openmc-nuclear-data-manifest/0.3.0"
 INSPECTION_METHOD = "nctforge-openmc-data-inspector/0.3.0"
-ACQUISITION_PROFILE_SCHEMA = "nctforge.data-acquisition-profile/0.1.0"
+ACQUISITION_PROFILE_SCHEMA = "nctforge.data-acquisition-profile/0.2.0"
 ACQUISITION_RECEIPT_SCHEMA = "nctforge.data-acquisition-receipt/0.1.0"
 HDF5_VERSION = [3, 0]
 K_BOLTZMANN_EV_PER_K = 8.617333262e-5
@@ -121,6 +121,7 @@ def validate_acquisition(
             "expected_size_bytes",
             "expected_content_disposition_filename",
             "publisher_digest",
+            "known_prior_digests",
         },
         "acquisition profile artifact",
     )

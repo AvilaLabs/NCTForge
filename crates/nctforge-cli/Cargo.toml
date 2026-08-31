@@ -18,3 +18,4 @@ clap.workspace = true
 nctforge-dicom = { path = "../nctforge-dicom" }
 nctforge-openmc = { path = "../nctforge-openmc" }
 nctforge-transport = { path = "../nctforge-transport" }
+serde_json.workspace = true

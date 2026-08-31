@@ -1,5 +1,5 @@
 {
-  "schema_version": "nctforge.data-acquisition-profile/0.1.0",
+  "schema_version": "nctforge.data-acquisition-profile/0.2.0",
   "id": "openmc-endfb81-official-library-2025-12-18",
   "artifact_role": "openmc_continuous_energy_library",
   "publication": {
@@ -17,7 +17,8 @@
     "media_type": "application/x-xz",
     "expected_size_bytes": 9661406540,
     "expected_content_disposition_filename": "endfb81.tar.xz",
-    "publisher_digest": null
+    "publisher_digest": null,
+    "known_prior_digests": []
   },
   "size_evidence": {
     "method": "https_range_content_range",

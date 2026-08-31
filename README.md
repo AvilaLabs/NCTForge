@@ -30,6 +30,9 @@ contains:
 - a Rust nuclear-data acquisition path with HTTPS redirect confinement, exact
   byte-range resume, explicit large-transfer confirmation, publisher-digest
   checks when available, and content-addressed receipts;
+- a case-scoped ENDF/B-VIII.1 evaluated-neutron candidate selection that binds
+  the current NNDC archive, acquisition receipt, frozen material, and all ten
+  selected evaluation files by SHA-256;
 - a byte-stable OpenMC 0.16 input-deck generator that verifies content
   bindings and selected nuclear-data files before emitting the complete tally
   ledger;
@@ -58,11 +61,12 @@ readout. CI also requires all 41 generated DICOM instances to pass independent
 IOD and cross-instance consistency validation without errors or warnings.
 Material and source inputs are now explicit, validated, and transport-neutral.
 The first identity-oriented synthetic geometry can be translated into
-deterministic OpenMC XML, but the official case data selection and reviewed
-response tables do not yet exist. Material mapping from general DICOM cases,
-particle execution, statepoint import, biological modeling, and dose
-calculation are not implemented yet. Transport capability flags remain false
-until their acceptance gates pass.
+deterministic OpenMC XML. Its exact evaluated-neutron source files are frozen as
+an unqualified candidate; an upstream archive-digest change remains unresolved,
+and the processed OpenMC distribution and reviewed response tables have not yet
+been frozen. Material mapping from general DICOM cases, particle execution,
+statepoint import, biological modeling, and dose calculation are not implemented
+yet. Transport capability flags remain false until their acceptance gates pass.
 
 The first implementation target is
 [`NF-BNCT-001`](benchmarks/synthetic/nf-bnct-001/SPECIFICATION.md). Its geometry,

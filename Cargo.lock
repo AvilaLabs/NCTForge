@@ -2424,6 +2424,7 @@ dependencies = [
  "nctforge-dicom",
  "nctforge-openmc",
  "nctforge-transport",
+ "serde_json",
 ]
 
 [[package]]

@@ -1598,7 +1598,7 @@ mod tests {
                 ),
                 (
                     "nctforge-input-manifest.json",
-                    "a0a99a8e8c21d7b02d90c943f8dc43c104a5254b7100f9660cf999eac2b5957b"
+                    "49dcbe2501d88cdeb9c4585ccf2b0124c7783d71e0e9e248641f1b4c6b1027f9"
                 ),
             ]
         );

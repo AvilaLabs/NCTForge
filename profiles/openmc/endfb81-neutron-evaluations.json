@@ -1,6 +1,6 @@
 {
-  "schema_version": "nctforge.data-acquisition-profile/0.1.0",
-  "id": "endfb81-neutron-evaluations-openmc-recipe-66cfe45",
+  "schema_version": "nctforge.data-acquisition-profile/0.2.0",
+  "id": "endfb81-neutron-evaluations-nndc-observed-2026-08-31",
   "artifact_role": "endfb_incident_neutron_evaluations",
   "publication": {
     "publisher": "National Nuclear Data Center",
@@ -17,9 +17,16 @@
     "expected_content_disposition_filename": null,
     "publisher_digest": {
       "algorithm": "md5",
-      "value": "dc622c0f1c3c4477433e698266e0fc80",
-      "evidence": "openmc-dev/data generate_endf.py at commit 66cfe45ff7a3aa47a4d7805b92b3d5ab6ee018b6"
-    }
+      "value": "1a6abeac85bd2425df47983752687a93",
+      "evidence": "https://www.nndc.bnl.gov/endf-releases/?sublibrary=neutrons&version=B-VIII.1, verified 2026-08-31"
+    },
+    "known_prior_digests": [
+      {
+        "algorithm": "md5",
+        "value": "dc622c0f1c3c4477433e698266e0fc80",
+        "evidence": "https://github.com/openmc-dev/data/blob/66cfe45ff7a3aa47a4d7805b92b3d5ab6ee018b6/generate_endf.py"
+      }
+    ]
   },
   "size_evidence": {
     "method": "https_range_content_range",

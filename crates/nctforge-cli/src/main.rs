@@ -3,14 +3,18 @@
 #![forbid(unsafe_code)]
 
 use std::error::Error;
+use std::fs;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::{Args, Parser, Subcommand};
 use nctforge_dicom::synthetic::generate_nf_bnct_001;
 use nctforge_dicom::verify_nf_bnct_001;
-use nctforge_openmc::{DataAcquisitionClient, DataAcquisitionProfileDocument, OpenMcBackend};
-use nctforge_transport::TransportBackend;
+use nctforge_openmc::{
+    DataAcquisitionClient, DataAcquisitionProfileDocument, DataAcquisitionReceiptDocument,
+    EvaluatedNeutronSourceSelectionDocument, OpenMcBackend,
+};
+use nctforge_transport::{MaterialDefinition, TransportBackend};
 
 #[derive(Debug, Parser)]
 #[command(
@@ -90,6 +94,24 @@ enum OpenMcDataCommand {
         /// Exact byte count reported by `data probe`; required as a size guard.
         #[arg(long)]
         confirm_size_bytes: u64,
+    },
+    /// Verify a case-scoped evaluated-neutron selection and every extracted file.
+    VerifySelection {
+        /// Case-scoped evaluated-neutron source-selection manifest.
+        #[arg(long)]
+        selection: PathBuf,
+        /// Exact material JSON bound by the selection.
+        #[arg(long)]
+        material: PathBuf,
+        /// Reviewed acquisition profile bound by the receipt.
+        #[arg(long)]
+        profile: PathBuf,
+        /// Acquisition receipt checked into the case provenance.
+        #[arg(long)]
+        receipt: PathBuf,
+        /// Directory containing exactly the selected extracted ENDF files.
+        #[arg(long)]
+        evaluations_directory: PathBuf,
     },
 }
 
@@ -201,6 +223,39 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                     println!("SHA-256: {}", acquired.receipt.artifact.sha256);
                     println!("receipt: {}", acquired.receipt_path.display());
                     println!("evidence state: acquisition_only");
+                }
+                OpenMcDataCommand::VerifySelection {
+                    selection,
+                    material,
+                    profile,
+                    receipt,
+                    evaluations_directory,
+                } => {
+                    let selection = EvaluatedNeutronSourceSelectionDocument::from_path(&selection)?;
+                    let material_bytes = fs::read(&material)?;
+                    let material: MaterialDefinition = serde_json::from_slice(&material_bytes)?;
+                    let profile = DataAcquisitionProfileDocument::from_path(&profile)?;
+                    let receipt = DataAcquisitionReceiptDocument::from_path(&receipt)?;
+
+                    selection
+                        .selection
+                        .validate_for_material(&material, &material_bytes)?;
+                    selection
+                        .selection
+                        .validate_acquisition(&profile, &receipt)?;
+                    selection.selection.verify_files(&evaluations_directory)?;
+
+                    println!("selection: {}", selection.selection.id);
+                    println!("selection SHA-256: {}", selection.sha256);
+                    println!(
+                        "verified evaluations: {}",
+                        selection.selection.evaluations.len()
+                    );
+                    println!(
+                        "archive SHA-256: {}",
+                        selection.selection.acquisition.archive_sha256
+                    );
+                    println!("qualification: candidate_archive_equivalence_unresolved");
                 }
             },
         },

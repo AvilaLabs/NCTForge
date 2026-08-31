@@ -373,6 +373,7 @@ dicom-manifest.json
 engine-manifest.json
 data-acquisition-profile.json
 data-acquisition-receipt.json
+evaluated-neutron-source-selection.json
 nuclear-data-manifest.json
 run-settings.json
 inputs/
@@ -410,9 +411,11 @@ profiles.
 ## Remaining freeze gate
 
 Geometry, material, source, classification, response-generation method, and
-OpenMC smoke execution profile are frozen by this version. Deterministic input
-generation and verifiable data acquisition are implemented, but the benchmark
-cannot enter execution until the official evaluated-data selection and
-generated KERMA tables have been hashed, checked against the ADR 0007 gates,
-and independently reviewed. Changing any frozen quantity creates a new
-benchmark specification version and cannot silently replace earlier results.
+OpenMC smoke execution profile are frozen by this version. The current NNDC
+archive and exact ten-member evaluated-neutron selection are acquired, hashed,
+and receipt-bound as an unqualified candidate. The benchmark cannot enter
+execution until the archive drift is resolved at the response level, generated
+KERMA tables pass the ADR 0007 gates, the processed OpenMC distribution is
+inspected, and the required independent review is complete. Changing any frozen
+quantity creates a new benchmark specification version and cannot silently
+replace earlier results.

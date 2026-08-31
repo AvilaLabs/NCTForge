@@ -1,0 +1,28 @@
+{
+  "schema_version": "nctforge.data-acquisition-receipt/0.1.0",
+  "profile_id": "endfb81-neutron-evaluations-nndc-observed-2026-08-31",
+  "profile_sha256": "8966a40d91064826080554c81be84ab5ac490aa190b5a830afaa650c8e0ab0c4",
+  "artifact_role": "endfb_incident_neutron_evaluations",
+  "artifact": {
+    "path": "neutrons-version.VIII.1.tar.gz",
+    "media_type": "application/gzip",
+    "size_bytes": 343724780,
+    "sha256": "decff90016bfb5c25c8d4c7fb8d81f94ff2f104853165f0fe6a21bf61c4164e4",
+    "publisher_digest": {
+      "algorithm": "md5",
+      "value": "1a6abeac85bd2425df47983752687a93",
+      "evidence": "https://www.nndc.bnl.gov/endf-releases/?sublibrary=neutrons&version=B-VIII.1, verified 2026-08-31"
+    }
+  },
+  "transfer": {
+    "requested_uri": "https://www.nndc.bnl.gov/endf-releases/releases/B-VIII.1/neutrons/neutrons-version.VIII.1.tar.gz",
+    "final_origin": "https://www.nndc.bnl.gov",
+    "resumed_from_bytes": 343724780,
+    "content_disposition_filename": null,
+    "etag": "W/\"343724780-318211200000\"",
+    "last_modified": "Fri, 01 Feb 1980 00:00:00 GMT"
+  },
+  "publisher_digest_status": "matched",
+  "evidence_state": "acquisition_only",
+  "completed_at_unix_seconds": 1788169667
+}
