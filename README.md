@@ -36,6 +36,10 @@ contains:
 - a standalone, no-overwrite NJOY2016.78 input generator that verifies every
   source and content binding, emits ten deterministic partial-KERMA decks, and
   freezes their `input_preparation_only` manifest;
+- a controlled NJOY2016.78 runner that clears inherited environment state,
+  binds the processor and declared runtime artifacts, requires exact output
+  sections, parses kinematic findings, and emits an independently verifiable
+  receipt even when scientific qualification fails;
 - a byte-stable OpenMC 0.16 input-deck generator that verifies content
   bindings and selected nuclear-data files before emitting the complete tally
   ledger;
@@ -67,7 +71,9 @@ The first identity-oriented synthetic geometry can be translated into
 deterministic OpenMC XML. Its exact evaluated-neutron source files are frozen as
 an unqualified candidate; an upstream archive-digest change remains unresolved,
 and the processed OpenMC distribution and reviewed response tables have not yet
-been frozen. Material mapping from general DICOM cases, particle execution,
+been frozen. The first complete NJOY execution is preserved as rejected
+evidence because N-15 and three oxygen isotopes exceeded HEATR's MT 301
+kinematic limits. Material mapping from general DICOM cases, particle execution,
 statepoint import, biological modeling, and dose calculation are not implemented
 yet. Transport capability flags remain false until their acceptance gates pass.
 
@@ -106,7 +112,7 @@ crates/nctforge-view/       patient-aligned tri-planar view geometry
 crates/nctforge-transport/  backend interface and normalized run lifecycle
 crates/nctforge-evidence/   hashes, manifests, and qualification boundary
 crates/nctforge-openmc/     OpenMC preflight and deterministic input generator
-crates/nctforge-njoy/       deterministic NJOY partial-KERMA input preparation
+crates/nctforge-njoy/       deterministic NJOY preparation, execution, and evidence
 crates/nctforge-cli/        headless entry point
 crates/nctforge-gui/        native egui application shell
 bindings/python/            future scientific extension surface
@@ -189,6 +195,27 @@ The command executes no external processor and refuses an existing output
 directory. The frozen benchmark copy is under
 `benchmarks/synthetic/nf-bnct-001/transport/njoy/`; see [ADR
 0011](docs/adr/0011-deterministic-njoy-input-preparation.md).
+
+### Controlled NJOY execution evidence
+
+`nctforge njoy execute` requires the same five content-bound source documents,
+the exact prepared bundle, a real NJOY executable, explicitly declared runtime
+support artifacts, and a new output directory. Run `nctforge njoy execute
+--help` for the complete argument contract. It preserves a receipt before
+returning a failure when NJOY reports a kinematic violation.
+
+An execution directory can be checked later against an external receipt:
+
+```text
+cargo run --bin nctforge -- njoy verify-execution \
+  --receipt benchmarks/synthetic/nf-bnct-001/transport/provenance/njoy2016-78-execution-receipt.json \
+  --execution-directory PATH-TO-COMPLETE-EXECUTION-DIRECTORY
+```
+
+The first canonical receipt is intentionally
+`execution_observed_diagnostics_failed`, not a response table or reference
+result. See [ADR 0012](docs/adr/0012-controlled-njoy-execution-evidence.md) and
+the [structured finding summary](docs/research/NJOY2016_78_KINEMATIC_FINDINGS.md).
 
 ## License and use boundary
 

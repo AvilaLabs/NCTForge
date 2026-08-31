@@ -99,11 +99,19 @@ Implementation status:
   no-overwrite `input_preparation_only` manifest;
 - complete: byte-stable OpenMC 0.16 input generation with complete scoring and
   audit tally ledgers;
-- in progress: controlled NJOY execution, diagnostic parsing, response-table
-  generation, and independent method checks;
+- complete: controlled, no-overwrite NJOY2016.78 execution with exact
+  input/output file sets, processor/runtime hashes, structured kinematic
+  diagnostics, preserved rejected receipts, and independent artifact
+  verification;
+- complete: record the first ten-nuclide execution as rejected evidence after
+  72 MT 301 violations across N-15, O-16, O-17, and O-18, without clipping or
+  silently dropping an isotope;
+- in progress: investigate the rejected HEATR diagnostics and independently
+  test the affected total-heating responses;
 - pending: acquire and inspect the processed official OpenMC ENDF/B-VIII.1
-  distribution, compare it with the selected evaluated sources, and generate
-  the first reviewable response tables;
+  distribution and compare it with the selected evaluated sources;
+- pending: generate the first reviewable response tables only after the
+  diagnostic blocker is resolved through a versioned, reviewed data profile;
 - pending: smoke execution, statepoint import, and independent estimator
   comparison.
 

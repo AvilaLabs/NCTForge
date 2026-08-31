@@ -4,13 +4,17 @@
 
 use std::error::Error;
 use std::fs;
+use std::io;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::{Args, Parser, Subcommand};
 use nctforge_dicom::synthetic::generate_nf_bnct_001;
 use nctforge_dicom::verify_nf_bnct_001;
-use nctforge_njoy::{NjoyInputArtifacts, NjoyInputBundle};
+use nctforge_njoy::{
+    DEFAULT_NJOY_TIMEOUT_SECONDS, NjoyExecutionOptions, NjoyExecutionReceipt,
+    NjoyExecutionReceiptDocument, NjoyInputArtifacts, NjoyInputBundle,
+};
 use nctforge_openmc::{
     DataAcquisitionClient, DataAcquisitionProfileDocument, DataAcquisitionReceiptDocument,
     EvaluatedNeutronSourceSelectionDocument, OpenMcBackend,
@@ -109,6 +113,51 @@ enum NjoyCommand {
         /// New output directory; it must not already exist.
         #[arg(long)]
         output: PathBuf,
+    },
+    /// Execute a verified input bundle and emit an unreviewed evidence receipt.
+    Execute {
+        /// Case-scoped evaluated-neutron source-selection manifest.
+        #[arg(long)]
+        selection: PathBuf,
+        /// Exact material JSON bound by the response-generation method.
+        #[arg(long)]
+        material: PathBuf,
+        /// Frozen response-generation method JSON.
+        #[arg(long)]
+        generation_method: PathBuf,
+        /// Reviewed acquisition profile bound by the source selection.
+        #[arg(long)]
+        profile: PathBuf,
+        /// Publisher-matched acquisition receipt bound by the source selection.
+        #[arg(long)]
+        receipt: PathBuf,
+        /// Directory containing exactly the selected extracted ENDF files.
+        #[arg(long)]
+        evaluations_directory: PathBuf,
+        /// Exact prepared bundle to verify before execution.
+        #[arg(long)]
+        input_bundle: PathBuf,
+        /// Real regular NJOY executable to invoke with an empty environment.
+        #[arg(long)]
+        njoy_executable: PathBuf,
+        /// Additional processor/runtime artifact to bind by hash; repeatable.
+        #[arg(long = "processor-support-artifact")]
+        processor_support_artifacts: Vec<PathBuf>,
+        /// Per-nuclide wall-clock timeout.
+        #[arg(long, default_value_t = DEFAULT_NJOY_TIMEOUT_SECONDS)]
+        timeout_seconds: u64,
+        /// New evidence directory; it must not already exist.
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Verify every execution artifact against an external receipt.
+    VerifyExecution {
+        /// Receipt used as the independent trust anchor.
+        #[arg(long)]
+        receipt: PathBuf,
+        /// Complete execution directory, including its byte-identical receipt.
+        #[arg(long)]
+        execution_directory: PathBuf,
     },
 }
 
@@ -329,6 +378,93 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                     bundle.manifest.bindings.evaluated_source_selection.sha256
                 );
                 println!("qualification: input_preparation_only");
+            }
+            NjoyCommand::Execute {
+                selection,
+                material,
+                generation_method,
+                profile,
+                receipt,
+                evaluations_directory,
+                input_bundle,
+                njoy_executable,
+                processor_support_artifacts,
+                timeout_seconds,
+                output,
+            } => {
+                let selection_json = fs::read(selection)?;
+                let material_json = fs::read(material)?;
+                let generation_method_json = fs::read(generation_method)?;
+                let acquisition_profile_json = fs::read(profile)?;
+                let acquisition_receipt_json = fs::read(receipt)?;
+                let bundle = NjoyInputBundle::generate(
+                    &evaluations_directory,
+                    NjoyInputArtifacts {
+                        evaluated_source_selection_json: &selection_json,
+                        material_json: &material_json,
+                        generation_method_json: &generation_method_json,
+                        acquisition_profile_json: &acquisition_profile_json,
+                        acquisition_receipt_json: &acquisition_receipt_json,
+                    },
+                )?;
+                let result = NjoyExecutionReceipt::execute(
+                    &bundle,
+                    NjoyExecutionOptions {
+                        executable: &njoy_executable,
+                        processor_support_artifacts: &processor_support_artifacts,
+                        input_bundle_root: &input_bundle,
+                        evaluations_root: &evaluations_directory,
+                        output_root: &output,
+                        timeout_seconds,
+                    },
+                )?;
+                println!("executed NJOY2016.78 at {}", output.display());
+                println!("nuclide runs: {}", result.receipt.runs.len());
+                println!(
+                    "processor SHA-256: {}",
+                    result.receipt.processor.executable.sha256
+                );
+                println!("receipt: {}", result.receipt_path.display());
+                println!("receipt SHA-256: {}", result.receipt_sha256);
+                if result.receipt.rejected_run_count == 0 {
+                    println!("qualification: execution_observed_unreviewed");
+                } else {
+                    println!("qualification: execution_observed_diagnostics_failed");
+                    println!(
+                        "rejected nuclide runs: {}",
+                        result.receipt.rejected_run_count
+                    );
+                    return Err(io::Error::other(format!(
+                        "{} NJOY run(s) exceeded kinematic diagnostic limits; receipt was preserved",
+                        result.receipt.rejected_run_count
+                    ))
+                    .into());
+                }
+            }
+            NjoyCommand::VerifyExecution {
+                receipt,
+                execution_directory,
+            } => {
+                let document = NjoyExecutionReceiptDocument::from_path(&receipt)?;
+                document.verify_execution_root(&execution_directory)?;
+                println!(
+                    "verified NJOY execution artifacts at {}",
+                    execution_directory.display()
+                );
+                println!("receipt SHA-256: {}", document.sha256);
+                println!("nuclide runs: {}", document.receipt.runs.len());
+                println!(
+                    "rejected nuclide runs: {}",
+                    document.receipt.rejected_run_count
+                );
+                println!(
+                    "qualification: {}",
+                    if document.receipt.rejected_run_count == 0 {
+                        "execution_observed_unreviewed"
+                    } else {
+                        "execution_observed_diagnostics_failed"
+                    }
+                );
             }
         },
         None => {

@@ -22,8 +22,9 @@ are source-controlled.
   DICOM geometry, macroscopic material, source, dose semantics, uncertainty
   rules, and preregistered acceptance gates. Geometry, material, source,
   nuclear-data preflight, and deterministic OpenMC deck generation are
-  implemented; KERMA response tables and reference outputs are intentionally
-  not yet qualified.
+  implemented. Its first controlled NJOY execution is preserved as rejected
+  evidence; KERMA response tables and reference outputs remain intentionally
+  unqualified.
 
 Generate and verify its DICOM geometry inputs with:
 

@@ -1,6 +1,6 @@
 # ADR 0011: Deterministic NJOY Input Preparation
 
-**Status:** Accepted and implemented for input preparation; execution and output qualification pending
+**Status:** Accepted and implemented
 
 **Date:** 2026-08-31
 
@@ -20,8 +20,8 @@ while making every byte independently reviewable.
 ## Decision
 
 NCTForge generates NJOY inputs in the standalone `nctforge-njoy` Rust crate.
-The crate invokes no transport backend and does not execute NJOY. Before writing
-anything, it verifies:
+The preparation path invokes no transport backend or external processor. Before
+writing anything, it verifies:
 
 - the evaluated-source selection, material, response-generation method,
   acquisition profile, and acquisition receipt by content hash;
@@ -73,9 +73,12 @@ create a neutron response table.
   was corrected before the canonical bundle was frozen.
 
 These observations test deck semantics but are not accepted execution evidence.
-A later checkpoint must execute through a controlled Rust path, bind the NJOY
-binary and runtime environment, hash every log and tape, parse the diagnostic
-result, and reject missing or unexpected response sections.
+ADR 0012 now implements the separate controlled Rust execution boundary, binds
+the NJOY binary and declared runtime support artifacts, hashes every log and
+tape, parses the diagnostic result, and rejects missing or unexpected response
+sections. Its first canonical execution preserved a rejected receipt after four
+nuclides exceeded MT 301 kinematic limits; it does not change this input
+manifest's `input_preparation_only` qualification.
 
 ## Consequences
 

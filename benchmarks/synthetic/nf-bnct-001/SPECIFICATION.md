@@ -2,8 +2,8 @@
 
 **Specification version:** 0.1.0
 
-**Status:** Geometry, resolved material, and source frozen; response tables and
-reference results are unqualified pending implementation and independent review
+**Status:** Geometry, resolved material, and source frozen; first NJOY
+processing evidence rejected; response tables and reference results unqualified
 
 **Qualification ceiling:** Synthetic research only
 
@@ -256,6 +256,14 @@ with SHA-256
 ADR 0007 defines its unit path and acceptance evidence. The method artifact is
 not a response table and does not raise the benchmark qualification ceiling.
 
+The first controlled execution of all ten prepared NJOY decks is frozen in
+[`transport/provenance/njoy2016-78-execution-receipt.json`](transport/provenance/njoy2016-78-execution-receipt.json),
+with SHA-256
+`65a21b57507e76a68b77349e92390ae03ebb8c38f6ed6cee66197aa5ee4adea7`.
+It is rejected evidence, not a result: N-15, O-16, O-17, and O-18 produced 72
+MT 301 kinematic-limit violations. ADR 0012 defines the execution boundary and
+the research finding note records every affected energy.
+
 ## Execution profiles
 
 ### Smoke
@@ -375,7 +383,9 @@ data-acquisition-profile.json
 data-acquisition-receipt.json
 evaluated-neutron-source-selection.json
 nctforge-njoy-input-manifest.json
+nctforge-njoy-execution-receipt.json
 njoy-inputs/
+njoy-outputs/
 nuclear-data-manifest.json
 run-settings.json
 inputs/
@@ -416,10 +426,12 @@ Geometry, material, source, classification, response-generation method, and
 OpenMC smoke execution profile are frozen by this version. The current NNDC
 archive and exact ten-member evaluated-neutron selection are acquired, hashed,
 and receipt-bound as an unqualified candidate. The ten deterministic NJOY decks
-and their `input_preparation_only` manifest are also frozen, but they are not
-response tables or execution evidence. The benchmark cannot enter transport
-execution until the archive drift is resolved at the response level, generated
-KERMA tables pass the ADR 0007 gates, the processed OpenMC distribution is
-inspected, and the required independent review is complete. Changing any frozen
-quantity creates a new benchmark specification version and cannot silently
-replace earlier results.
+and their `input_preparation_only` manifest are also frozen. A controlled
+ten-nuclide execution receipt is now frozen as
+`execution_observed_diagnostics_failed`; it is execution evidence but not a
+response table. The benchmark cannot enter transport execution until the four
+failed nuclides are investigated, the archive drift is resolved at the response
+level, generated KERMA tables pass the ADR 0007 gates, the processed OpenMC
+distribution is inspected, and the required independent review is complete.
+Changing any frozen quantity creates a new benchmark specification version and
+cannot silently replace earlier results.

@@ -1,6 +1,6 @@
 # ADR 0007: Partial-KERMA Response Generation
 
-**Status:** Method and canonical inputs accepted; tables pending processing and review
+**Status:** Method and canonical inputs accepted; first processing evidence rejected
 
 **Date:** 2026-08-31
 
@@ -35,9 +35,11 @@ The first response-generation method is frozen as
   nitrogen responses.
 
 ADR 0011 implements the content-bound, byte-stable NJOY input generator and
-freezes the ten canonical decks. This raises the evidence state only to
-`input_preparation_only`; processor execution, output parsing, and every gate
-below remain pending.
+freezes the ten canonical decks. ADR 0012 implements controlled execution and
+artifact verification. The first complete run produced all expected sections,
+but HEATR reported 72 MT 301 kinematic-limit violations across N-15, O-16,
+O-17, and O-18. The preserved receipt is therefore
+`execution_observed_diagnostics_failed`; no response table was generated.
 
 The response generator uses the exact material weight fractions and the atomic
 weight ratios in the selected OpenMC HDF5 tables, matching OpenMC's conversion
@@ -70,8 +72,9 @@ normalized physical-dose bundle binds the exact response set it used.
 
 ## Qualification gates
 
-The checked-in method is deliberately marked `method_frozen_tables_pending`.
-No response value is qualified until all of the following evidence exists:
+The checked-in method remains deliberately marked
+`method_frozen_tables_pending`. The first execution fails gate 3 below. No
+response value is qualified until all of the following evidence exists:
 
 1. every source ENDF evaluation, generated PENDF, NJOY input, log, selected
    HDF5 table, and output table is SHA-256 bound;

@@ -8,7 +8,7 @@
 
 #![forbid(unsafe_code)]
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs::{self, OpenOptions};
 use std::io::{self, Write};
 use std::path::{Component, Path, PathBuf};
@@ -25,6 +25,17 @@ use nctforge_transport::{
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use thiserror::Error;
+
+mod execution;
+
+pub use execution::{
+    DEFAULT_NJOY_TIMEOUT_SECONDS, NJOY_EXECUTION_RECEIPT_FILENAME, NJOY_EXECUTION_RECEIPT_SCHEMA,
+    NjoyExecutionArtifact, NjoyExecutionEnvironment, NjoyExecutionError, NjoyExecutionOptions,
+    NjoyExecutionQualification, NjoyExecutionReceipt, NjoyExecutionReceiptDocument,
+    NjoyExecutionResult, NjoyExecutionRun, NjoyExecutionTape, NjoyKinematicDirection,
+    NjoyKinematicViolation, NjoyProcessorArtifact, NjoyProcessorExecutionIdentity,
+    NjoyRunDiagnosticStatus, NjoyTapePurpose,
+};
 
 pub const NJOY_INPUT_MANIFEST_SCHEMA: &str = "nctforge.njoy-input-manifest/0.1.0";
 pub const TARGET_NJOY_NAME: &str = "NJOY2016";
@@ -373,6 +384,105 @@ impl NjoyInputBundle {
         }
         Ok(())
     }
+
+    /// Require a directory to contain exactly the generated bundle bytes, with
+    /// no symlinks, missing files, extra files, or extra directories.
+    pub fn verify_directory(&self, root: &Path) -> Result<(), NjoyPreparationError> {
+        let root_metadata =
+            fs::symlink_metadata(root).map_err(|source| NjoyPreparationError::Io {
+                path: root.to_path_buf(),
+                source,
+            })?;
+        if root_metadata.file_type().is_symlink() || !root_metadata.is_dir() {
+            return Err(NjoyPreparationError::InputBundleRootNotDirectory(
+                root.to_path_buf(),
+            ));
+        }
+
+        let expected = self
+            .files
+            .iter()
+            .map(|file| (file.relative_path.as_str(), file))
+            .collect::<BTreeMap<_, _>>();
+        if expected.len() != self.files.len() {
+            return Err(NjoyPreparationError::DuplicateGeneratedOutputPath);
+        }
+        let mut observed = BTreeSet::new();
+        collect_bundle_files(root, root, &expected, &mut observed)?;
+        if observed != expected.keys().copied().collect::<BTreeSet<_>>() {
+            return Err(NjoyPreparationError::InputBundleFileSetMismatch);
+        }
+
+        for (relative_path, generated) in expected {
+            let path = root.join(relative_path);
+            let bytes = fs::read(&path).map_err(|source| NjoyPreparationError::Io {
+                path: path.clone(),
+                source,
+            })?;
+            if bytes != generated.bytes || sha256_bytes(&bytes) != generated.sha256 {
+                return Err(NjoyPreparationError::InputBundleArtifactMismatch(
+                    relative_path.into(),
+                ));
+            }
+        }
+        Ok(())
+    }
+}
+
+fn collect_bundle_files<'a>(
+    root: &Path,
+    directory: &Path,
+    expected: &BTreeMap<&'a str, &'a GeneratedNjoyFile>,
+    observed: &mut BTreeSet<&'a str>,
+) -> Result<(), NjoyPreparationError> {
+    let entries = fs::read_dir(directory).map_err(|source| NjoyPreparationError::Io {
+        path: directory.to_path_buf(),
+        source,
+    })?;
+    for entry in entries {
+        let entry = entry.map_err(|source| NjoyPreparationError::Io {
+            path: directory.to_path_buf(),
+            source,
+        })?;
+        let path = entry.path();
+        let relative = path
+            .strip_prefix(root)
+            .map_err(|_| NjoyPreparationError::UnexpectedInputBundleEntry(path.clone()))?;
+        let relative_text = relative.to_str().ok_or_else(|| {
+            NjoyPreparationError::UnexpectedInputBundleEntry(relative.to_path_buf())
+        })?;
+        let metadata = fs::symlink_metadata(&path).map_err(|source| NjoyPreparationError::Io {
+            path: path.clone(),
+            source,
+        })?;
+        if metadata.file_type().is_symlink() {
+            return Err(NjoyPreparationError::UnexpectedInputBundleEntry(
+                relative.to_path_buf(),
+            ));
+        }
+        if metadata.is_file() {
+            let expected_path = expected
+                .get_key_value(relative_text)
+                .map(|(key, _)| *key)
+                .ok_or_else(|| {
+                    NjoyPreparationError::UnexpectedInputBundleEntry(relative.to_path_buf())
+                })?;
+            observed.insert(expected_path);
+        } else if metadata.is_dir() {
+            let prefix = format!("{relative_text}/");
+            if !expected.keys().any(|path| path.starts_with(&prefix)) {
+                return Err(NjoyPreparationError::UnexpectedInputBundleEntry(
+                    relative.to_path_buf(),
+                ));
+            }
+            collect_bundle_files(root, &path, expected, observed)?;
+        } else {
+            return Err(NjoyPreparationError::UnexpectedInputBundleEntry(
+                relative.to_path_buf(),
+            ));
+        }
+    }
+    Ok(())
 }
 
 fn render_deck(
@@ -485,6 +595,16 @@ pub enum NjoyPreparationError {
     UnsupportedHeatrSettings,
     #[error("generated output path is not normalized and relative: {0:?}")]
     InvalidOutputPath(String),
+    #[error("NJOY input-bundle root is not a real directory: {0}")]
+    InputBundleRootNotDirectory(PathBuf),
+    #[error("generated NJOY bundle contains a duplicate output path")]
+    DuplicateGeneratedOutputPath,
+    #[error("unexpected or unsafe NJOY input-bundle entry: {0}")]
+    UnexpectedInputBundleEntry(PathBuf),
+    #[error("NJOY input bundle does not contain exactly the generated file set")]
+    InputBundleFileSetMismatch,
+    #[error("NJOY input-bundle artifact does not match generated bytes: {0}")]
+    InputBundleArtifactMismatch(String),
     #[error("I/O operation failed for {path}: {source}")]
     Io {
         path: PathBuf,
@@ -612,6 +732,35 @@ mod tests {
         assert!(matches!(
             bundle.write_new(output.path()),
             Err(NjoyPreparationError::Io { .. })
+        ));
+    }
+
+    #[test]
+    fn exact_input_bundle_verifier_rejects_extra_files() {
+        let bundle = frozen_bundle();
+        let temporary = tempfile::tempdir().unwrap();
+        let output = temporary.path().join("bundle");
+        bundle.write_new(&output).unwrap();
+        bundle.verify_directory(&output).unwrap();
+
+        fs::write(output.join("unexpected.txt"), b"unexpected\n").unwrap();
+        assert!(matches!(
+            bundle.verify_directory(&output),
+            Err(NjoyPreparationError::UnexpectedInputBundleEntry(_))
+        ));
+    }
+
+    #[test]
+    fn exact_input_bundle_verifier_rejects_changed_bytes() {
+        let bundle = frozen_bundle();
+        let temporary = tempfile::tempdir().unwrap();
+        let output = temporary.path().join("bundle");
+        bundle.write_new(&output).unwrap();
+
+        fs::write(output.join("B10/input.njoy"), b"changed\n").unwrap();
+        assert!(matches!(
+            bundle.verify_directory(&output),
+            Err(NjoyPreparationError::InputBundleArtifactMismatch(path)) if path == "B10/input.njoy"
         ));
     }
 }
