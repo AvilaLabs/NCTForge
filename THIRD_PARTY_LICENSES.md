@@ -13,6 +13,7 @@ The current direct third-party packages are:
 | dicom-dictionary-std | 0.10.0 | MIT OR Apache-2.0 |
 | dicom-object | 0.10.0 | MIT OR Apache-2.0 |
 | eframe | 0.36.1 | MIT OR Apache-2.0 |
+| quick-xml | 0.42.0 | MIT |
 | serde | 1.0.229 | MIT OR Apache-2.0 |
 | serde_json | 1.0.151 | MIT OR Apache-2.0 |
 | sha2 | 0.10.9 | MIT OR Apache-2.0 |
@@ -23,6 +24,12 @@ The current direct third-party packages are:
 CI installs, but does not vendor, link, or redistribute, dicom3tools snapshot
 `20240118131615` under BSD-3-Clause solely to run `dciodvfy` and `dcentvfy` as
 independent DICOM validation tools.
+
+The optional nuclear-data inspection script requires a user-supplied Python,
+NumPy (BSD-3-Clause and compatible notices), h5py (BSD-3-Clause), and HDF5
+(BSD-style) environment. Its Python packages are pinned in a dedicated
+requirements file, and all exact runtime versions are recorded in every
+generated manifest; they are not bundled by NCTForge.
 
 This table records direct packages, not a substitute for the complete
 transitive license and notice bundle. CI must generate and review that bundle

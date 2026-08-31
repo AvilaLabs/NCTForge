@@ -24,6 +24,8 @@ contains:
   reproducible NJOY partial-KERMA response-generation method;
 - a fail-closed neutron response-set contract binding material, nuclear data,
   generation method, pointwise closure, and independent-review evidence;
+- a case-scoped OpenMC nuclear-data inspector and preflight that bind table
+  hashes and reject missing temperatures, reactions, heating, or photon data;
 - an intentionally non-functional OpenMC adapter;
 - a strict DICOM CT geometry and RT Structure Set import boundary;
 - a deterministic generator and independent verifier for `NF-BNCT-001`;

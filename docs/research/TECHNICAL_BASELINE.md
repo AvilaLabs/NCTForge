@@ -263,6 +263,11 @@ result exists. Cross-code agreement alone remains `cross_code_research_only`.
 - Complete: validate the response-set grid, units, interpolation, content
   references, pointwise neutron-KERMA closure, and review state; pending: create
   a table only after its derivation and evaluated inputs pass independent review.
+- Complete: inspect and validate a case-scoped OpenMC nuclear-data manifest,
+  including exact file hashes, cross-sections mappings, HDF5 format,
+  temperatures, MT 301, required reaction MTs, photon production, photoatomic
+  data, atomic relaxation, and Compton profiles; pending: run it on and freeze
+  the official ENDF/B-VIII.1 archive selection.
 - Complete: freeze the NJOY2016.78 MT 407/403 partial-KERMA method and MT 301
   residual classification in ADR 0007; pending: bind evaluated inputs, generate
   tables, and pass every declared review gate.

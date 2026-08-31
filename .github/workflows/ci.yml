@@ -12,6 +12,11 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14.4"
+          cache: pip
+          cache-dependency-path: scripts/requirements-openmc-data-inspector.txt
       - name: Install pinned Rust toolchain
         run: rustup show
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
@@ -21,6 +26,11 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Test
         run: cargo test --workspace --all-targets
+      - name: Test OpenMC nuclear-data inspector
+        run: |
+          python3 -m pip install --requirement \
+            scripts/requirements-openmc-data-inspector.txt
+          python3 -m unittest scripts/tests/test_inspect_openmc_data.py
       - name: Install independent DICOM validators
         run: |
           sudo apt-get update

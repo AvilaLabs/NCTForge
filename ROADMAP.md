@@ -85,9 +85,12 @@ Implementation status:
   generation method, explicitly held at `method_frozen_tables_pending`;
 - complete: fail-closed response-set envelope and physical-dose-bundle binding,
   including pointwise neutron-KERMA closure and review-state enforcement;
+- complete: case-scoped OpenMC nuclear-data manifest, HDF5 capability
+  inspection, artifact verification, and cross-sections mapping preflight;
 - in progress: evaluated-data binding, response-table generation, and
   independent method checks;
-- pending: deterministic OpenMC input preparation and nuclear-data preflight;
+- pending: inspect and freeze the official ENDF/B-VIII.1 data selection, then
+  enable deterministic OpenMC input preparation;
 - pending: smoke execution, statepoint import, and independent estimator
   comparison.
 

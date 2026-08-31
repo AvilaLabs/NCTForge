@@ -10,6 +10,15 @@ use nctforge_transport::{
 };
 use thiserror::Error;
 
+mod data;
+
+pub use data::{
+    DataArtifact, DataDistributionIdentity, DataInspectionIdentity, NeutronTableCapability,
+    NuclearDataError, NuclearDataManifest, PhotonTableCapability, TARGET_DATA_HDF5_VERSION,
+    TARGET_EVALUATED_DATA_RELEASE, TARGET_INSPECTION_METHOD, TARGET_OPENMC_SOURCE_COMMIT,
+    TARGET_OPENMC_VERSION, TEMPERATURE_TOLERANCE_K,
+};
+
 #[derive(Debug, Clone)]
 pub struct OpenMcBackend {
     executable: PathBuf,
