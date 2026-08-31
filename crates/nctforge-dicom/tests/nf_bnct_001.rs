@@ -101,6 +101,35 @@ fn generated_dicom_is_byte_deterministic() {
 }
 
 #[test]
+fn generated_instances_retain_validator_required_metadata() {
+    let temp = tempdir().expect("temporary directory");
+    let generated = generate_nf_bnct_001(&temp.path().join("case")).expect("generate");
+
+    let ct = open_file(&generated.ct_files[0]).expect("open CT");
+    assert_eq!(
+        ct.element(tags::IMAGE_LATERALITY)
+            .expect("CT Image Laterality")
+            .to_str()
+            .expect("CT Image Laterality string"),
+        "U"
+    );
+
+    let rtstruct = open_file(&generated.rtstruct_file).expect("open RTSTRUCT");
+    assert!(rtstruct.element(tags::OPERATORS_NAME).is_ok());
+    assert_eq!(
+        rtstruct
+            .element(tags::FRAME_OF_REFERENCE_UID)
+            .expect("RTSTRUCT Frame of Reference UID")
+            .to_str()
+            .expect("RTSTRUCT Frame of Reference UID string"),
+        FRAME_OF_REFERENCE_UID
+    );
+    assert!(rtstruct.element(tags::POSITION_REFERENCE_INDICATOR).is_ok());
+    assert!(rtstruct.element(tags::CONTENT_DATE).is_err());
+    assert!(rtstruct.element(tags::CONTENT_TIME).is_err());
+}
+
+#[test]
 fn manifest_detects_semantically_accepted_file_tampering() {
     let temp = tempdir().expect("temporary directory");
     let generated = generate_nf_bnct_001(&temp.path().join("case")).expect("generate");

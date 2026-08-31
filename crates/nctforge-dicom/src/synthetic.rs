@@ -169,6 +169,9 @@ fn write_ct_slice(path: &Path, slice_index: usize, sop_instance_uid: &str) -> Re
         VR::CS,
         "ORIGINAL\\PRIMARY\\AXIAL",
     );
+    // The synthetic cube is unpaired. An explicit image-level value prevents
+    // a series-level right/left assertion from being invented for the phantom.
+    put_str(&mut obj, tags::IMAGE_LATERALITY, VR::CS, "U");
     put_str(
         &mut obj,
         tags::SOP_CLASS_UID,
@@ -305,10 +308,8 @@ fn write_rtstruct(path: &Path, slice_uids: &[String]) -> Result<()> {
     );
     put_str(&mut obj, tags::STUDY_DATE, VR::DA, FROZEN_DATE);
     put_str(&mut obj, tags::SERIES_DATE, VR::DA, FROZEN_DATE);
-    put_str(&mut obj, tags::CONTENT_DATE, VR::DA, FROZEN_DATE);
     put_str(&mut obj, tags::STUDY_TIME, VR::TM, FROZEN_TIME);
     put_str(&mut obj, tags::SERIES_TIME, VR::TM, FROZEN_TIME);
-    put_str(&mut obj, tags::CONTENT_TIME, VR::TM, FROZEN_TIME);
     put_str(&mut obj, tags::ACCESSION_NUMBER, VR::SH, "");
     put_str(&mut obj, tags::MODALITY, VR::CS, "RTSTRUCT");
     put_str(&mut obj, tags::MANUFACTURER, VR::LO, "Avila Labs");
@@ -352,6 +353,19 @@ fn write_rtstruct(path: &Path, slice_uids: &[String]) -> Result<()> {
     put_str(&mut obj, tags::STUDY_ID, VR::SH, "NFBNCT001");
     put_str(&mut obj, tags::SERIES_NUMBER, VR::IS, "2");
     put_str(&mut obj, tags::INSTANCE_NUMBER, VR::IS, "1");
+    put_str(&mut obj, tags::OPERATORS_NAME, VR::PN, "");
+    put_str(
+        &mut obj,
+        tags::FRAME_OF_REFERENCE_UID,
+        VR::UI,
+        FRAME_OF_REFERENCE_UID,
+    );
+    put_str(
+        &mut obj,
+        tags::POSITION_REFERENCE_INDICATOR,
+        VR::LO,
+        "SYNTHETIC_ORIGIN",
+    );
     put_str(&mut obj, tags::STRUCTURE_SET_LABEL, VR::SH, "NFBNCT001");
     put_str(&mut obj, tags::STRUCTURE_SET_NAME, VR::LO, CASE_ID);
     put_str(

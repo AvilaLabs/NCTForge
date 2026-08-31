@@ -32,6 +32,14 @@ qualification must include:
 
 A successful build is not evidence of physical correctness.
 
+Changes to generated DICOM metadata must also pass the external validator gate:
+
+```text
+scripts/validate-dicom-iod.sh PATH-TO-GENERATED-NF-BNCT-001
+```
+
+CI supplies the pinned `dciodvfy` and `dcentvfy` binaries.
+
 ## Patent-sensitive contributions
 
 Read `docs/IP_BOUNDARY.md` before opening an issue or contribution related to

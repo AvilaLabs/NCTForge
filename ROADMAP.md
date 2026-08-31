@@ -2,8 +2,7 @@
 
 **Adopted:** 2026-08-31
 
-**Status:** R1 in progress; deterministic DICOM generator, strict importer,
-independent geometry oracle, and linked geometry viewer implemented
+**Status:** R1 complete; transport work remains gated at R2
 
 **Style:** Evidence-gated, not feature-count or calendar driven
 
@@ -54,7 +53,8 @@ Implementation status:
   crosshair and independent edge-orientation tests;
 - complete: integrity-gated egui viewer with linked axial, sagittal, and coronal
   views, LPS cursor, window/level controls, and RT structure overlays;
-- pending: external DICOM CT and RT Structure Set IOD validation in CI.
+- complete: warning-free external CT/RT Structure Set IOD validation with
+  `dciodvfy`, plus cross-instance consistency validation with `dcentvfy`, in CI.
 
 ## R2 — Physical component truth case
 

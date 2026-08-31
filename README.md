@@ -30,15 +30,17 @@ contains:
 - a researched technical baseline and frozen first synthetic conformance-case
   specification.
 
-R1 geometry work is in progress. CT slices are ordered from DICOM patient-space
-geometry rather than filenames or Instance Number; affine, frame, native pixel,
-and rescale invariants are validated; and the frozen RTSTRUCT is rasterized to
-exact masks. The desktop viewer opens only an integrity-verified `NF-BNCT-001`
-case and provides linked axial, coronal, and sagittal views, window/level,
-structure overlays, patient-edge labels, and an LPS cursor readout. An external
-DICOM IOD-validator gate, material mapping, particle transport, biological
-modeling, and dose calculation are not implemented yet. Transport capability
-flags remain false until their acceptance gates pass.
+The R1 geometry milestone is implemented. CT slices are ordered from DICOM
+patient-space geometry rather than filenames or Instance Number; affine, frame,
+native pixel, and rescale invariants are validated; and the frozen RTSTRUCT is
+rasterized to exact masks. The desktop viewer opens only an integrity-verified
+`NF-BNCT-001` case and provides linked axial, coronal, and sagittal views,
+window/level, structure overlays, patient-edge labels, and an LPS cursor
+readout. CI also requires all 41 generated DICOM instances to pass independent
+IOD and cross-instance consistency validation without errors or warnings.
+Material mapping, particle transport, biological modeling, and dose calculation
+are not implemented yet. Transport capability flags remain false until their
+acceptance gates pass.
 
 The first implementation target is
 [`NF-BNCT-001`](benchmarks/synthetic/nf-bnct-001/SPECIFICATION.md). Its geometry,
@@ -104,6 +106,20 @@ cargo run --bin nctforge-gui -- /tmp/nf-bnct-001
 
 Generation refuses to overwrite an existing destination. Generated DICOM files
 are ignored by default and contain visibly synthetic identity values only.
+
+### Independent DICOM validation
+
+CI pins Ubuntu 24.04's `dicom3tools` snapshot `20240118131615` and runs both
+`dciodvfy` and `dcentvfy` against a newly generated case. With those tools on
+your path, the same strict gate is:
+
+```text
+scripts/validate-dicom-iod.sh /tmp/nf-bnct-001
+```
+
+The gate rejects validator warnings as well as errors. Passing these tools is
+useful interoperability evidence, not a DICOM certification or a guarantee of
+clinical fitness.
 
 ## License and use boundary
 

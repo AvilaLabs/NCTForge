@@ -49,8 +49,9 @@ The first and last derived CT SOP Instance UIDs are respectively
 `2.25.224181827055039319855832006853907618875`. Part 10 files use the frozen
 implementation-class UID `2.25.265222385035053258666337852178839144876`,
 implementation version `NCTFORGE_0_1`, and synthetic content date/time
-`20260101 / 000000`. These values make independently generated artifacts
-byte-comparable; they do not assert clinical acquisition history.
+`20260101 / 000000` where those attributes belong to the IOD. These values make
+independently generated artifacts byte-comparable; they do not assert clinical
+acquisition history.
 
 ## Canonical coordinate system
 
@@ -78,6 +79,7 @@ P_mm(i,j,k) = [-97.5 + 5i, -97.5 + 5j, -97.5 + 5k]
 | Slice thickness | `5.0 mm` |
 | Image Orientation (Patient) | `1\\0\\0\\0\\1\\0` |
 | Image Position (Patient), slice `k` | `-97.5\\-97.5\\(-97.5 + 5k) mm` |
+| Image Laterality | `U` (unpaired synthetic phantom) |
 | Rescale slope/intercept | `1 / 0` |
 | Pixel representation | signed 16-bit |
 | Stored pixel value | `0` everywhere |
@@ -102,6 +104,14 @@ SHA-256 for all 40 CT instances plus the RT Structure Set. The verifier rejects
 missing, modified, duplicated, path-escaping, or unexpected DICOM artifacts.
 The R1 desktop viewer consumes this same verified case boundary; it does not
 provide a bypass for opening individual or unverified DICOM files.
+
+The generated files are checked with dicom3tools snapshot `20240118131615`:
+`dciodvfy -new` must report neither errors nor warnings for any of the 40 CT
+instances or the RT Structure Set, and `dcentvfy` must accept the 41-instance
+collection without entity-consistency findings. See
+`scripts/validate-dicom-iod.sh`. This external mechanical check is intentionally
+in addition to NCTForge's semantic geometry oracle and is not described as
+DICOM certification.
 
 ## RTSTRUCT
 

@@ -20,6 +20,10 @@ The current direct third-party packages are:
 | uuid | 1.26.0 | Apache-2.0 OR MIT |
 | tempfile (development only) | 3.27.0 | MIT OR Apache-2.0 |
 
+CI installs, but does not vendor, link, or redistribute, dicom3tools snapshot
+`20240118131615` under BSD-3-Clause solely to run `dciodvfy` and `dcentvfy` as
+independent DICOM validation tools.
+
 This table records direct packages, not a substitute for the complete
 transitive license and notice bundle. CI must generate and review that bundle
 from `Cargo.lock` before the first binary or archival release.

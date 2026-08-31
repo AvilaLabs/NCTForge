@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   rust:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: Install pinned Rust toolchain
@@ -21,3 +21,14 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Test
         run: cargo test --workspace --all-targets
+      - name: Install independent DICOM validators
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends \
+            dicom3tools=1.00~20240118131615-1
+      - name: Validate generated DICOM IODs and entity consistency
+        run: |
+          validation_root="$(mktemp -d)"
+          cargo run --bin nctforge -- benchmark generate \
+            "$validation_root/nf-bnct-001"
+          scripts/validate-dicom-iod.sh "$validation_root/nf-bnct-001"

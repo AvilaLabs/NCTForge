@@ -105,3 +105,9 @@ RTSTRUCT input by relative path and SHA-256. Artifact verification rejects path
 traversal, symlink escape from the case root, missing files, and hash changes.
 The manifest intentionally does not hash itself; archival releases bind the
 manifest from a higher-level release or run manifest.
+
+R1 also generates the case afresh in CI and runs `dciodvfy` on every instance
+and `dcentvfy` across the complete CT/RT Structure Set collection. The validator
+snapshot and runner image are pinned, and warnings fail the gate. This is an
+independent mechanical check of DICOM PS3 IOD, encoding, dictionary, and entity
+consistency rules; it is not a certification claim.
