@@ -15,13 +15,15 @@ contains:
 
 - a Rust workspace divided at the transport boundary;
 - a validated four-component physical-dose data model with canonical component
-  names, content-hashed profile identity, absolute voxel uncertainty, and a
-  separately estimated physical total;
+  names, content-hashed profile and response-set identities, absolute voxel
+  uncertainty, and a separately estimated physical total;
 - a transport-backend trait;
 - validated, backend-neutral material and fixed-source contracts with frozen
   machine inputs for `NF-BNCT-001`;
 - a machine-validated four-component contributor ledger and an unqualified,
   reproducible NJOY partial-KERMA response-generation method;
+- a fail-closed neutron response-set contract binding material, nuclear data,
+  generation method, pointwise closure, and independent-review evidence;
 - an intentionally non-functional OpenMC adapter;
 - a strict DICOM CT geometry and RT Structure Set import boundary;
 - a deterministic generator and independent verifier for `NF-BNCT-001`;

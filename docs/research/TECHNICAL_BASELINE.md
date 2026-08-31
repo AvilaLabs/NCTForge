@@ -258,10 +258,11 @@ result exists. Cross-code agreement alone remains `cross_code_research_only`.
   but explicitly defined `hydrogen` component.
 - Complete: store absolute uncertainty, derive relative uncertainty only for a
   nonzero mean, and retain independently estimated physical-total uncertainty.
-- Complete: bind the interchange bundle to a content-hashed component profile;
-  pending: freeze that profile's contributor ledger before transport.
-- Do not freeze KERMA response tables until their derivation, units, interpolation,
-  and hashes are independently reviewed.
+- Complete: bind the interchange bundle to content-hashed component-profile and
+  neutron-response-set identities, and freeze the profile's contributor ledger.
+- Complete: validate the response-set grid, units, interpolation, content
+  references, pointwise neutron-KERMA closure, and review state; pending: create
+  a table only after its derivation and evaluated inputs pass independent review.
 - Complete: freeze the NJOY2016.78 MT 407/403 partial-KERMA method and MT 301
   residual classification in ADR 0007; pending: bind evaluated inputs, generate
   tables, and pass every declared review gate.

@@ -83,6 +83,8 @@ Implementation status:
   contracts, including frozen machine inputs for `NF-BNCT-001`;
 - complete: machine-validated contributor ledger and NJOY partial-KERMA
   generation method, explicitly held at `method_frozen_tables_pending`;
+- complete: fail-closed response-set envelope and physical-dose-bundle binding,
+  including pointwise neutron-KERMA closure and review-state enforcement;
 - in progress: evaluated-data binding, response-table generation, and
   independent method checks;
 - pending: deterministic OpenMC input preparation and nuclear-data preflight;

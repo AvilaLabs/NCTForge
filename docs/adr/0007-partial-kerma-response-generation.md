@@ -54,6 +54,15 @@ Photon dose remains the coupled photon `heating` estimator at the deposition
 location. The dedicated physical total remains coupled `heating` without a
 particle filter.
 
+The backend-neutral response-set contract binds the component profile,
+material, nuclear-data manifest, and generation method by SHA-256. It requires
+a strictly increasing pointwise grid covering the declared transport domain,
+finite non-negative curves, and pointwise closure of boron, nitrogen, and
+hydrogen against retained material MT 301. A table may be represented as
+`generated_unreviewed` for inspection, but dose folding requires the
+`independently_reviewed` state and a content-bound review artifact. Every
+normalized physical-dose bundle binds the exact response set it used.
+
 ## Qualification gates
 
 The checked-in method is deliberately marked `method_frozen_tables_pending`.

@@ -2,29 +2,11 @@
 
 use std::collections::BTreeSet;
 
-use nctforge_core::DoseComponent;
+use nctforge_core::{ContentReference, DoseComponent};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 const JOULE_PER_EV: f64 = 1.602_176_634e-19;
-
-/// A content-addressed artifact used as a scientific input.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct ContentHashReference {
-    pub id: String,
-    pub sha256: String,
-}
-
-impl ContentHashReference {
-    fn validate(&self, label: &'static str) -> Result<(), ResponseMethodError> {
-        validate_identifier(label, &self.id)?;
-        if !is_canonical_sha256(&self.sha256) {
-            return Err(ResponseMethodError::InvalidContentHash(label));
-        }
-        Ok(())
-    }
-}
 
 /// Stable semantic and contributor profile for the four physical components.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -153,8 +135,8 @@ pub struct ResponseGenerationMethod {
     pub schema_version: String,
     pub id: String,
     pub qualification: MethodQualification,
-    pub component_profile: ContentHashReference,
-    pub material: ContentHashReference,
+    pub component_profile: ContentReference,
+    pub material: ContentReference,
     pub evaluated_data_release: String,
     pub processor: ToolIdentity,
     pub temperature_k: f64,
@@ -175,8 +157,12 @@ impl ResponseGenerationMethod {
             "response_method.evaluated_data_release",
             &self.evaluated_data_release,
         )?;
-        self.component_profile.validate("component_profile")?;
-        self.material.validate("material")?;
+        self.component_profile
+            .validate()
+            .map_err(|_| ResponseMethodError::InvalidContentReference("component_profile"))?;
+        self.material
+            .validate()
+            .map_err(|_| ResponseMethodError::InvalidContentReference("material"))?;
         self.processor.validate()?;
         if !self.temperature_k.is_finite() || self.temperature_k <= 0.0 {
             return Err(ResponseMethodError::InvalidTemperature);
@@ -321,6 +307,175 @@ pub enum GridPolicy {
     FullPointwiseUnionWithoutDownsampling,
 }
 
+/// Material-specific neutron fluence-to-absorbed-dose response functions.
+///
+/// This object is transport-neutral. A backend may fold the three component
+/// curves with neutron fluence only after verifying the content references and
+/// ensuring that its transported energy domain is contained in
+/// `transport_energy_range_ev`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct NeutronResponseSet {
+    pub schema_version: String,
+    pub id: String,
+    pub qualification: ResponseSetQualification,
+    pub component_profile: ContentReference,
+    pub material: ContentReference,
+    pub nuclear_data_manifest: ContentReference,
+    pub generation_method: ContentReference,
+    pub independent_review: Option<ContentReference>,
+    pub transport_energy_range_ev: [f64; 2],
+    pub energy_ev: Vec<f64>,
+    pub unit: ResponseUnit,
+    pub interpolation: ResponseInterpolation,
+    pub boron_gy_cm2: Vec<f64>,
+    pub nitrogen_gy_cm2: Vec<f64>,
+    pub hydrogen_gy_cm2: Vec<f64>,
+    /// Independently retained material MT=301 response used for closure.
+    pub total_neutron_gy_cm2: Vec<f64>,
+}
+
+impl NeutronResponseSet {
+    pub fn validate(&self) -> Result<(), ResponseSetError> {
+        validate_response_set_identifier("response_set.schema_version", &self.schema_version)?;
+        validate_response_set_identifier("response_set.id", &self.id)?;
+
+        for (label, reference) in [
+            ("component_profile", &self.component_profile),
+            ("material", &self.material),
+            ("nuclear_data_manifest", &self.nuclear_data_manifest),
+            ("generation_method", &self.generation_method),
+        ] {
+            reference
+                .validate()
+                .map_err(|_| ResponseSetError::InvalidContentReference(label))?;
+        }
+
+        match (&self.qualification, &self.independent_review) {
+            (ResponseSetQualification::GeneratedUnreviewed, None) => {}
+            (ResponseSetQualification::IndependentlyReviewed, Some(reference)) => reference
+                .validate()
+                .map_err(|_| ResponseSetError::InvalidContentReference("independent_review"))?,
+            _ => return Err(ResponseSetError::InconsistentReviewState),
+        }
+
+        let [lower, upper] = self.transport_energy_range_ev;
+        if !lower.is_finite() || !upper.is_finite() || lower < 0.0 || lower >= upper {
+            return Err(ResponseSetError::InvalidTransportEnergyRange);
+        }
+        if self.energy_ev.len() < 2 {
+            return Err(ResponseSetError::InsufficientEnergyGrid);
+        }
+        if self
+            .energy_ev
+            .iter()
+            .any(|energy| !energy.is_finite() || *energy < 0.0)
+        {
+            return Err(ResponseSetError::InvalidEnergyGridValue);
+        }
+        if self.energy_ev.windows(2).any(|pair| pair[0] >= pair[1]) {
+            return Err(ResponseSetError::NonIncreasingEnergyGrid);
+        }
+        if self.energy_ev[0] > lower || self.energy_ev[self.energy_ev.len() - 1] < upper {
+            return Err(ResponseSetError::EnergyDomainNotCovered);
+        }
+
+        for (label, values) in [
+            ("boron_gy_cm2", &self.boron_gy_cm2),
+            ("nitrogen_gy_cm2", &self.nitrogen_gy_cm2),
+            ("hydrogen_gy_cm2", &self.hydrogen_gy_cm2),
+            ("total_neutron_gy_cm2", &self.total_neutron_gy_cm2),
+        ] {
+            if values.len() != self.energy_ev.len() {
+                return Err(ResponseSetError::ResponseLength {
+                    curve: label,
+                    expected: self.energy_ev.len(),
+                    actual: values.len(),
+                });
+            }
+            if values
+                .iter()
+                .any(|value| !value.is_finite() || *value < 0.0)
+            {
+                return Err(ResponseSetError::InvalidResponseValue(label));
+            }
+        }
+
+        for (index, total) in self.total_neutron_gy_cm2.iter().copied().enumerate() {
+            let classified = self.boron_gy_cm2[index]
+                + self.nitrogen_gy_cm2[index]
+                + self.hydrogen_gy_cm2[index];
+            let scale = classified.abs().max(total.abs());
+            let tolerance = 64.0 * f64::EPSILON * scale.max(f64::MIN_POSITIVE);
+            if (classified - total).abs() > tolerance {
+                return Err(ResponseSetError::NeutronKermaClosure { index });
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Validate the table and require recorded independent review before it is
+    /// folded into a reported transport result.
+    pub fn validate_for_folding(&self) -> Result<(), ResponseSetError> {
+        self.validate()?;
+        if self.qualification != ResponseSetQualification::IndependentlyReviewed {
+            return Err(ResponseSetError::ResponseSetNotIndependentlyReviewed);
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ResponseSetQualification {
+    GeneratedUnreviewed,
+    IndependentlyReviewed,
+}
+
+fn validate_response_set_identifier(
+    label: &'static str,
+    value: &str,
+) -> Result<(), ResponseSetError> {
+    if value.trim().is_empty() {
+        Err(ResponseSetError::EmptyIdentifier(label))
+    } else {
+        Ok(())
+    }
+}
+
+#[derive(Debug, Error, PartialEq)]
+pub enum ResponseSetError {
+    #[error("required identifier {0} is empty")]
+    EmptyIdentifier(&'static str),
+    #[error("{0} must have a nonempty ID and canonical lowercase SHA-256 digest")]
+    InvalidContentReference(&'static str),
+    #[error("response-set qualification and independent-review evidence are inconsistent")]
+    InconsistentReviewState,
+    #[error("an independently reviewed response set is required for dose folding")]
+    ResponseSetNotIndependentlyReviewed,
+    #[error("transport energy range must be finite, non-negative, and increasing")]
+    InvalidTransportEnergyRange,
+    #[error("response energy grid must contain at least two knots")]
+    InsufficientEnergyGrid,
+    #[error("response energy-grid values must be finite and non-negative")]
+    InvalidEnergyGridValue,
+    #[error("response energy grid must be strictly increasing")]
+    NonIncreasingEnergyGrid,
+    #[error("response energy grid does not cover the declared transport energy range")]
+    EnergyDomainNotCovered,
+    #[error("{curve} contains {actual} values; expected {expected}")]
+    ResponseLength {
+        curve: &'static str,
+        expected: usize,
+        actual: usize,
+    },
+    #[error("{0} contains a negative or non-finite response")]
+    InvalidResponseValue(&'static str),
+    #[error("classified neutron responses do not close to total neutron KERMA at knot {index}")]
+    NeutronKermaClosure { index: usize },
+}
+
 fn validate_component_rule(rule: &ComponentRule) -> Result<(), ResponseMethodError> {
     match (rule.component, &rule.estimator) {
         (
@@ -366,19 +521,12 @@ fn validate_identifier(label: &'static str, value: &str) -> Result<(), ResponseM
     }
 }
 
-fn is_canonical_sha256(value: &str) -> bool {
-    value.len() == 64
-        && value
-            .bytes()
-            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
-}
-
 #[derive(Debug, Error, PartialEq)]
 pub enum ResponseMethodError {
     #[error("required identifier {0} is empty")]
     EmptyIdentifier(&'static str),
     #[error("{0} must have a canonical lowercase SHA-256 digest")]
-    InvalidContentHash(&'static str),
+    InvalidContentReference(&'static str),
     #[error("component {0:?} occurs more than once")]
     DuplicateComponent(DoseComponent),
     #[error("component {0:?} is missing")]
@@ -438,6 +586,34 @@ mod tests {
         format!("{:x}", Sha256::digest(content.as_bytes()))
     }
 
+    fn reference(id: &str, digit: char) -> ContentReference {
+        ContentReference {
+            id: id.into(),
+            sha256: digit.to_string().repeat(64),
+        }
+    }
+
+    fn response_set() -> NeutronResponseSet {
+        NeutronResponseSet {
+            schema_version: "nctforge.neutron-response-set/0.1.0".into(),
+            id: "nctforge.synthetic-response-set.v1".into(),
+            qualification: ResponseSetQualification::GeneratedUnreviewed,
+            component_profile: reference("profile", 'a'),
+            material: reference("material", 'b'),
+            nuclear_data_manifest: reference("nuclear-data", 'c'),
+            generation_method: reference("method", 'd'),
+            independent_review: None,
+            transport_energy_range_ev: [0.0, 20.0],
+            energy_ev: vec![0.0, 1.0, 20.0],
+            unit: ResponseUnit::GraySquareCentimeter,
+            interpolation: ResponseInterpolation::LinearLinear,
+            boron_gy_cm2: vec![1.0, 2.0, 3.0],
+            nitrogen_gy_cm2: vec![2.0, 3.0, 4.0],
+            hydrogen_gy_cm2: vec![3.0, 4.0, 5.0],
+            total_neutron_gy_cm2: vec![6.0, 9.0, 12.0],
+        }
+    }
+
     #[test]
     fn frozen_component_profile_is_valid() {
         let profile = profile();
@@ -474,6 +650,69 @@ mod tests {
         assert_eq!(
             method.validate(),
             Err(ResponseMethodError::LocalPhotonDoubleCounting)
+        );
+    }
+
+    #[test]
+    fn validates_closed_material_response_set() {
+        let mut response_set = response_set();
+        assert_eq!(response_set.validate(), Ok(()));
+        assert_eq!(
+            response_set.validate_for_folding(),
+            Err(ResponseSetError::ResponseSetNotIndependentlyReviewed)
+        );
+
+        response_set.qualification = ResponseSetQualification::IndependentlyReviewed;
+        response_set.independent_review = Some(reference("review", 'e'));
+        assert_eq!(response_set.validate_for_folding(), Ok(()));
+    }
+
+    #[test]
+    fn rejects_unclosed_material_response_set() {
+        let mut response_set = response_set();
+        response_set.total_neutron_gy_cm2[1] += 1.0e-6;
+
+        assert_eq!(
+            response_set.validate(),
+            Err(ResponseSetError::NeutronKermaClosure { index: 1 })
+        );
+    }
+
+    #[test]
+    fn rejects_response_grid_that_does_not_cover_transport_domain() {
+        let mut response_set = response_set();
+        response_set.transport_energy_range_ev[1] = 21.0;
+
+        assert_eq!(
+            response_set.validate(),
+            Err(ResponseSetError::EnergyDomainNotCovered)
+        );
+    }
+
+    #[test]
+    fn requires_review_evidence_for_reviewed_response_set() {
+        let mut response_set = response_set();
+        response_set.qualification = ResponseSetQualification::IndependentlyReviewed;
+
+        assert_eq!(
+            response_set.validate(),
+            Err(ResponseSetError::InconsistentReviewState)
+        );
+
+        response_set.independent_review = Some(reference("review", 'e'));
+        assert_eq!(response_set.validate(), Ok(()));
+    }
+
+    #[test]
+    fn rejects_noncanonical_response_set_reference() {
+        let mut response_set = response_set();
+        response_set.nuclear_data_manifest.sha256 = "C".repeat(64);
+
+        assert_eq!(
+            response_set.validate(),
+            Err(ResponseSetError::InvalidContentReference(
+                "nuclear_data_manifest"
+            ))
         );
     }
 }

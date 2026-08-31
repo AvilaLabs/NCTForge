@@ -130,13 +130,28 @@ pub enum DoseUnit {
     GrayPerSourceParticle,
 }
 
-/// Immutable identity of the component-definition and contributor ledger.
+/// Immutable identity of a scientific input artifact.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct ComponentProfileReference {
+pub struct ContentReference {
     pub id: String,
     pub sha256: String,
 }
+
+impl ContentReference {
+    pub fn validate(&self) -> Result<(), ContentReferenceError> {
+        if self.id.trim().is_empty() {
+            return Err(ContentReferenceError::EmptyId);
+        }
+        if !is_canonical_sha256(&self.sha256) {
+            return Err(ContentReferenceError::InvalidSha256);
+        }
+        Ok(())
+    }
+}
+
+/// Content reference used specifically for the component-definition profile.
+pub type ComponentProfileReference = ContentReference;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -210,6 +225,8 @@ pub struct PhysicalDoseBundle {
     pub frame_of_reference_uid: Option<String>,
     pub geometry: GridGeometry,
     pub component_profile: ComponentProfileReference,
+    /// Material- and nuclear-data-specific neutron response curves.
+    pub response_set: ContentReference,
     pub components: Vec<DoseVolume>,
     /// A dedicated physical total, retained separately from component means.
     pub physical_total: PhysicalTotalDoseVolume,
@@ -223,16 +240,18 @@ impl PhysicalDoseBundle {
         for (label, value) in [
             ("schema_version", self.schema_version.as_str()),
             ("case_id", self.case_id.as_str()),
-            ("component_profile.id", self.component_profile.id.as_str()),
             ("provenance_id", self.provenance_id.as_str()),
         ] {
             if value.trim().is_empty() {
                 return Err(ValidationError::EmptyIdentifier(label));
             }
         }
-        if !is_canonical_sha256(&self.component_profile.sha256) {
-            return Err(ValidationError::InvalidComponentProfileHash);
-        }
+        self.component_profile
+            .validate()
+            .map_err(|_| ValidationError::InvalidContentReference("component_profile"))?;
+        self.response_set
+            .validate()
+            .map_err(|_| ValidationError::InvalidContentReference("response_set"))?;
 
         let mut observed = BTreeSet::new();
 
@@ -371,8 +390,8 @@ pub enum ValidationError {
     DoseIndexOutOfBounds { index: usize, length: usize },
     #[error("required identifier {0} is empty")]
     EmptyIdentifier(&'static str),
-    #[error("component profile SHA-256 must be 64 lowercase hexadecimal characters")]
-    InvalidComponentProfileHash,
+    #[error("{0} must have a nonempty ID and canonical lowercase SHA-256 digest")]
+    InvalidContentReference(&'static str),
     #[error("{component:?} uses {component_unit:?}, but the physical total uses {total_unit:?}")]
     DoseUnitMismatch {
         component: DoseComponent,
@@ -389,6 +408,14 @@ pub enum ValidationError {
     InvalidTotalUncertainty,
     #[error("physical-total uncertainty and its method are inconsistent")]
     InconsistentTotalUncertainty,
+}
+
+#[derive(Debug, Error, PartialEq, Eq)]
+pub enum ContentReferenceError {
+    #[error("content reference ID is empty")]
+    EmptyId,
+    #[error("content reference SHA-256 must be 64 lowercase hexadecimal characters")]
+    InvalidSha256,
 }
 
 #[cfg(test)]
@@ -422,6 +449,10 @@ mod tests {
             component_profile: ComponentProfileReference {
                 id: "nctforge.macroscopic-absorbed-dose.v1".into(),
                 sha256: "a".repeat(64),
+            },
+            response_set: ContentReference {
+                id: "nctforge.synthetic-response-set.v1".into(),
+                sha256: "b".repeat(64),
             },
             components: DoseComponent::REQUIRED.into_iter().map(volume).collect(),
             physical_total: PhysicalTotalDoseVolume {
@@ -516,7 +547,20 @@ mod tests {
 
         assert_eq!(
             bundle.validate(),
-            Err(ValidationError::InvalidComponentProfileHash)
+            Err(ValidationError::InvalidContentReference(
+                "component_profile"
+            ))
+        );
+    }
+
+    #[test]
+    fn rejects_noncanonical_response_set_hash() {
+        let mut bundle = valid_bundle();
+        bundle.response_set.sha256 = "B".repeat(64);
+
+        assert_eq!(
+            bundle.validate(),
+            Err(ValidationError::InvalidContentReference("response_set"))
         );
     }
 }

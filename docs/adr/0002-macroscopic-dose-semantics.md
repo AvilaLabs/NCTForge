@@ -44,7 +44,8 @@ charged-particle/KERMA approximation. It does not define cellular dose.
 Implemented at the start of R2:
 
 1. migrated `DoseComponent::HydrogenRecoil` to a serialized `hydrogen` value;
-2. bound every bundle to a content-hashed component-definition profile;
+2. bound every bundle to a content-hashed component-definition profile and
+   material- and nuclear-data-specific neutron response set;
 3. stored absolute one-sigma uncertainty, allowing uncertainty to be absent;
 4. represented relative uncertainty as derived and undefined when the mean is
    zero; and

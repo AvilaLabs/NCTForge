@@ -19,7 +19,9 @@ invoke the same implementation rather than reproduce scientific logic.
 The application must not pass OpenMC-specific objects beyond
 `nctforge-openmc`. Transport adapters consume a `TransportCase` and produce a
 `PhysicalDoseBundle`. Backends may prepare and execute a calculation, import an
-external result, or both.
+external result, or both. Each normalized bundle binds both its component
+semantics and its material- and nuclear-data-specific neutron response set by
+content hash.
 
 Initial adapters are expected to be:
 
@@ -71,7 +73,9 @@ OpenMC-specific estimator behavior remains inside `nctforge-openmc`. In the
 0.16.0 adapter, reaction-filtered neutron heating is diagnostic only because it
 does not expose reaction-wise KERMA. Reported component definitions and their
 hashed response ledger stay backend-neutral. See
-`docs/adr/0005-openmc-016-estimator-boundary.md`.
+`docs/adr/0005-openmc-016-estimator-boundary.md`. A response set cannot be
+folded into reported dose until its table is internally valid and its
+independent review artifact is content-bound.
 
 ## GUI process model
 
