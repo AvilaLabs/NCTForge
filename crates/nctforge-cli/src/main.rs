@@ -12,12 +12,15 @@ use clap::{Args, Parser, Subcommand};
 use nctforge_dicom::synthetic::generate_nf_bnct_001;
 use nctforge_dicom::verify_nf_bnct_001;
 use nctforge_njoy::{
-    DEFAULT_NJOY_TIMEOUT_SECONDS, EndfPhotonProductionInventory,
+    DEFAULT_NJOY_PRINT_RELATIVE_TOLERANCE, DEFAULT_NJOY_TIMEOUT_SECONDS,
+    DEFAULT_SPECTRUM_NORMALIZATION_TOLERANCE, EndfContinuumPhotonMomentReport,
+    EndfContinuumPhotonMomentReportDocument, EndfPhotonProductionInventory,
     EndfPhotonProductionInventoryDocument, NjoyExecutionOptions, NjoyExecutionReceipt,
-    NjoyExecutionReceiptDocument, NjoyInputArtifacts, NjoyInputBundle,
-    NjoySourceAwareSuitabilityReport, NjoySourceAwareSuitabilityReportDocument,
-    NjoySuitabilityComparison, NjoySuitabilityComparisonDocument,
-    NjoySuitabilityComparisonQualification, NjoySuitabilityReport, NjoySuitabilityReportDocument,
+    NjoyExecutionReceiptDocument, NjoyInputArtifacts, NjoyInputBundle, NjoyPhotonMomentComparison,
+    NjoyPhotonMomentComparisonDocument, NjoySourceAwareSuitabilityReport,
+    NjoySourceAwareSuitabilityReportDocument, NjoySuitabilityComparison,
+    NjoySuitabilityComparisonDocument, NjoySuitabilityComparisonQualification,
+    NjoySuitabilityReport, NjoySuitabilityReportDocument,
 };
 use nctforge_openmc::{
     DataAcquisitionClient, DataAcquisitionProfileDocument, DataAcquisitionReceiptDocument,
@@ -142,6 +145,72 @@ enum NjoyCommand {
         /// Inventory to validate and regenerate.
         #[arg(long)]
         inventory: PathBuf,
+    },
+    /// Independently integrate File 15 spectra and fold them with File 13 cross sections.
+    CalculatePhotonMoments {
+        /// Case-scoped evaluated-neutron source-selection manifest.
+        #[arg(long)]
+        selection: PathBuf,
+        /// Directory containing exactly the selected extracted ENDF files.
+        #[arg(long)]
+        evaluations_directory: PathBuf,
+        /// Verified source-bound photon-production inventory.
+        #[arg(long)]
+        photon_inventory: PathBuf,
+        /// Maximum accepted absolute error in weighted spectrum normalization.
+        #[arg(long, default_value_t = DEFAULT_SPECTRUM_NORMALIZATION_TOLERANCE)]
+        normalization_tolerance: f64,
+        /// New source-moment JSON report path; it must not already exist.
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Regenerate and verify an independent continuum photon-moment report.
+    VerifyPhotonMoments {
+        /// Case-scoped evaluated-neutron source-selection manifest.
+        #[arg(long)]
+        selection: PathBuf,
+        /// Directory containing exactly the selected extracted ENDF files.
+        #[arg(long)]
+        evaluations_directory: PathBuf,
+        /// Verified source-bound photon-production inventory.
+        #[arg(long)]
+        photon_inventory: PathBuf,
+        /// Continuum photon-moment report to validate and regenerate.
+        #[arg(long)]
+        moment_report: PathBuf,
+    },
+    /// Compare independent source moments with NJOY's diagnostic print tables.
+    ComparePhotonMoments {
+        /// Independently calculated continuum photon-moment report.
+        #[arg(long)]
+        moment_report: PathBuf,
+        /// External execution receipt used as the trust anchor.
+        #[arg(long)]
+        receipt: PathBuf,
+        /// Complete execution directory bound by the receipt.
+        #[arg(long)]
+        execution_directory: PathBuf,
+        /// Relative tolerance appropriate to NJOY's five-significant-digit printout.
+        #[arg(long, default_value_t = DEFAULT_NJOY_PRINT_RELATIVE_TOLERANCE)]
+        relative_tolerance: f64,
+        /// New content-bound comparison JSON path; it must not already exist.
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Regenerate and verify an NJOY photon-moment print comparison.
+    VerifyPhotonMomentComparison {
+        /// Independently calculated continuum photon-moment report.
+        #[arg(long)]
+        moment_report: PathBuf,
+        /// External execution receipt used as the trust anchor.
+        #[arg(long)]
+        receipt: PathBuf,
+        /// Complete execution directory bound by the receipt.
+        #[arg(long)]
+        execution_directory: PathBuf,
+        /// Comparison report to validate and regenerate.
+        #[arg(long)]
+        comparison_report: PathBuf,
     },
     /// Execute a verified input bundle and emit an unreviewed evidence receipt.
     Execute {
@@ -585,6 +654,160 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                     document.inventory.format_finding_count
                 );
                 println!("qualification: source_inventory_unreviewed");
+            }
+            NjoyCommand::CalculatePhotonMoments {
+                selection,
+                evaluations_directory,
+                photon_inventory,
+                normalization_tolerance,
+                output,
+            } => {
+                let selection = EvaluatedNeutronSourceSelectionDocument::from_path(&selection)?;
+                let inventory =
+                    EndfPhotonProductionInventoryDocument::from_path(&photon_inventory)?;
+                let report = EndfContinuumPhotonMomentReport::calculate(
+                    &selection,
+                    &evaluations_directory,
+                    &inventory,
+                    normalization_tolerance,
+                )?;
+                let result = report.write_new(&output)?;
+                println!("calculated independent ENDF continuum photon moments");
+                println!("report: {}", result.report_path.display());
+                println!("report SHA-256: {}", result.report_sha256);
+                println!("reactions: {}", result.report.reaction_count);
+                println!("incident-energy samples: {}", result.report.sample_count);
+                println!(
+                    "maximum absolute normalization error: {:.12e}",
+                    result.report.maximum_absolute_normalization_error
+                );
+                if result.report.failed_sample_count == 0 {
+                    println!("qualification: source_moments_checked_unreviewed");
+                } else {
+                    println!("qualification: spectrum_normalization_rejected");
+                    return Err(io::Error::other(format!(
+                        "{} continuum spectrum sample(s) failed normalization; report was preserved",
+                        result.report.failed_sample_count
+                    ))
+                    .into());
+                }
+            }
+            NjoyCommand::VerifyPhotonMoments {
+                selection,
+                evaluations_directory,
+                photon_inventory,
+                moment_report,
+            } => {
+                let selection = EvaluatedNeutronSourceSelectionDocument::from_path(&selection)?;
+                let inventory =
+                    EndfPhotonProductionInventoryDocument::from_path(&photon_inventory)?;
+                let report = EndfContinuumPhotonMomentReportDocument::from_path(&moment_report)?;
+                report.verify_against_sources(&selection, &evaluations_directory, &inventory)?;
+                println!(
+                    "verified continuum photon moments {}",
+                    moment_report.display()
+                );
+                println!("report SHA-256: {}", report.sha256);
+                println!("reactions: {}", report.report.reaction_count);
+                println!("incident-energy samples: {}", report.report.sample_count);
+                println!(
+                    "failed normalization samples: {}",
+                    report.report.failed_sample_count
+                );
+                println!(
+                    "qualification: {}",
+                    if report.report.failed_sample_count == 0 {
+                        "source_moments_checked_unreviewed"
+                    } else {
+                        "spectrum_normalization_rejected"
+                    }
+                );
+            }
+            NjoyCommand::ComparePhotonMoments {
+                moment_report,
+                receipt,
+                execution_directory,
+                relative_tolerance,
+                output,
+            } => {
+                let moments = EndfContinuumPhotonMomentReportDocument::from_path(&moment_report)?;
+                let execution = NjoyExecutionReceiptDocument::from_path(&receipt)?;
+                let comparison = NjoyPhotonMomentComparison::compare(
+                    &moments,
+                    &execution,
+                    &execution_directory,
+                    relative_tolerance,
+                )?;
+                let result = comparison.write_new(&output)?;
+                println!("compared independent photon moments with NJOY diagnostics");
+                println!("comparison: {}", result.comparison_path.display());
+                println!("comparison SHA-256: {}", result.comparison_sha256);
+                println!(
+                    "compared diagnostic samples: {}",
+                    result.comparison.compared_sample_count
+                );
+                println!(
+                    "uncompared independent samples: {}",
+                    result.comparison.uncompared_independent_sample_count
+                );
+                println!(
+                    "skipped processor-only samples: {}",
+                    result.comparison.skipped_interpolated_sample_count
+                );
+                println!(
+                    "maximum relative difference: {:.12e}",
+                    result.comparison.maximum_relative_difference
+                );
+                if result.comparison.failed_sample_count == 0 {
+                    println!("qualification: independent_moments_match_processor_print_unreviewed");
+                } else {
+                    println!("qualification: processor_print_mismatch_rejected");
+                    return Err(io::Error::other(format!(
+                        "{} photon-moment sample(s) disagree with NJOY diagnostics; comparison was preserved",
+                        result.comparison.failed_sample_count
+                    ))
+                    .into());
+                }
+            }
+            NjoyCommand::VerifyPhotonMomentComparison {
+                moment_report,
+                receipt,
+                execution_directory,
+                comparison_report,
+            } => {
+                let moments = EndfContinuumPhotonMomentReportDocument::from_path(&moment_report)?;
+                let execution = NjoyExecutionReceiptDocument::from_path(&receipt)?;
+                let comparison = NjoyPhotonMomentComparisonDocument::from_path(&comparison_report)?;
+                comparison.verify_against_evidence(&moments, &execution, &execution_directory)?;
+                println!(
+                    "verified NJOY photon-moment comparison {}",
+                    comparison_report.display()
+                );
+                println!("comparison SHA-256: {}", comparison.sha256);
+                println!(
+                    "compared diagnostic samples: {}",
+                    comparison.comparison.compared_sample_count
+                );
+                println!(
+                    "uncompared independent samples: {}",
+                    comparison.comparison.uncompared_independent_sample_count
+                );
+                println!(
+                    "skipped processor-only samples: {}",
+                    comparison.comparison.skipped_interpolated_sample_count
+                );
+                println!(
+                    "failed samples: {}",
+                    comparison.comparison.failed_sample_count
+                );
+                println!(
+                    "qualification: {}",
+                    if comparison.comparison.failed_sample_count == 0 {
+                        "independent_moments_match_processor_print_unreviewed"
+                    } else {
+                        "processor_print_mismatch_rejected"
+                    }
+                );
             }
             NjoyCommand::Execute {
                 selection,

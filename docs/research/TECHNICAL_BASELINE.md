@@ -304,9 +304,11 @@ result exists. Cross-code agreement alone remains `cross_code_research_only`.
   official OpenMC tables that O-17 and O-18 retain effective local-photon
   fallback. Complete: bind an exact MF=6/12/13/14/15 source inventory and
   correct the log-only File 12 false-positive through a source-aware v0.2
-  report; JEFF N-15 clears, but both selections remain rejected. Pending:
-  independently reproduce the photon-energy and reaction-balance terms, then
-  define, justify, and review a passing versioned response treatment.
+  report; JEFF N-15 clears, but both selections remain rejected. Complete:
+  independently reproduce all eight supported N-15 File 13/File 15 continuum
+  energy moments and match NJOY at 58 shared source nodes. Pending: close the
+  full MF=6, recoil, Q-value, and reaction-balance terms, then define, justify,
+  and review a passing versioned response treatment.
 - Do not use reaction-filtered neutron heating as a component partition; retain
   it only as a diagnostic under ADR 0005.
 - Do not publish “golden” OpenMC dose arrays before an independent calculation is

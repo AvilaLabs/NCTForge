@@ -1,0 +1,1122 @@
+{
+  "schema_version": "nctforge.endf-continuum-photon-energy-moment/0.1.0",
+  "id": "nctforge.nf-bnct-001.endfb81-neutron-source-selection.v1.endf-continuum-photon-energy-moments",
+  "case_id": "nf-bnct-001",
+  "scope": "single_component_file13_continuum_with_file15",
+  "qualification": "source_moments_checked_unreviewed",
+  "evaluated_source_selection": {
+    "id": "nctforge.nf-bnct-001.endfb81-neutron-source-selection.v1",
+    "sha256": "3ed52248a0a201b638b5c78663f781f9354f619d76bee290831ff6311233b65d"
+  },
+  "photon_production_inventory": {
+    "id": "nctforge.nf-bnct-001.endfb81-neutron-source-selection.v1.endf-photon-production-inventory",
+    "sha256": "8ccf4da3f29d879e473b49f72fc14f979d002a05cb09947be21ba7624ec697cc"
+  },
+  "normalization_tolerance": 0.0001,
+  "reactions": [
+    {
+      "nuclide": "N15",
+      "endf_mat": 728,
+      "reaction_mt": 4,
+      "file13_section_sha256": "911d31f245430f3ae88f97d387107b9cf9934544490de5eb5ce63a1d54ce3431",
+      "file15_section_sha256": "9ad2f693e91f68074a1c8bdb888c8963c0b2424a313bfd388cd7fd2e8bed5cb0",
+      "samples": [
+        {
+          "incident_energy_ev": 5624500.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0,
+          "weighted_normalization": 1.0,
+          "absolute_normalization_error": 0.0,
+          "mean_photon_energy_ev": 5250000.0,
+          "continuum_cross_section_barns": 0.0,
+          "photon_energy_release_ev_barns": 0.0,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 6000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0,
+          "weighted_normalization": 1.0,
+          "absolute_normalization_error": 0.0,
+          "mean_photon_energy_ev": 5250000.0,
+          "continuum_cross_section_barns": 0.11522,
+          "photon_energy_release_ev_barns": 604905.0,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 6500000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0,
+          "weighted_normalization": 1.0,
+          "absolute_normalization_error": 0.0,
+          "mean_photon_energy_ev": 5250000.0,
+          "continuum_cross_section_barns": 0.25467,
+          "photon_energy_release_ev_barns": 1337017.5,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 7000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0,
+          "weighted_normalization": 1.0,
+          "absolute_normalization_error": 0.0,
+          "mean_photon_energy_ev": 5313675.0,
+          "continuum_cross_section_barns": 0.3692,
+          "photon_energy_release_ev_barns": 1961808.8099999998,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 7500000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0000075,
+          "weighted_normalization": 1.0000075,
+          "absolute_normalization_error": 7.499999999938112e-6,
+          "mean_photon_energy_ev": 5399306.380202149,
+          "continuum_cross_section_barns": 0.44324,
+          "photon_energy_release_ev_barns": 2393188.5599608007,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 8000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 0.99999,
+          "weighted_normalization": 0.99999,
+          "absolute_normalization_error": 9.99999999995449e-6,
+          "mean_photon_energy_ev": 5316061.910619106,
+          "continuum_cross_section_barns": 0.53995,
+          "photon_energy_release_ev_barns": 2870407.6286387867,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 8500000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 0.999999325,
+          "weighted_normalization": 0.999999325,
+          "absolute_normalization_error": 6.750000000055323e-7,
+          "mean_photon_energy_ev": 5080585.241895039,
+          "continuum_cross_section_barns": 0.67857,
+          "photon_energy_release_ev_barns": 3447532.7275927165,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 9000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0000009425,
+          "weighted_normalization": 1.0000009425,
+          "absolute_normalization_error": 9.425000000451433e-7,
+          "mean_photon_energy_ev": 4971519.939342457,
+          "continuum_cross_section_barns": 0.77284,
+          "photon_energy_release_ev_barns": 3842189.469921424,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 9500000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 0.9999992325000001,
+          "weighted_normalization": 0.9999992325000001,
+          "absolute_normalization_error": 7.674999998874554e-7,
+          "mean_photon_energy_ev": 4927496.166228307,
+          "continuum_cross_section_barns": 0.823,
+          "photon_energy_release_ev_barns": 4055329.3448058967,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 10000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.000009425,
+          "weighted_normalization": 1.000009425,
+          "absolute_normalization_error": 9.425000000007344e-6,
+          "mean_photon_energy_ev": 4926863.439312085,
+          "continuum_cross_section_barns": 0.85252,
+          "photon_energy_release_ev_barns": 4200249.619282338,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 10500000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0000069075,
+          "weighted_normalization": 1.0000069075,
+          "absolute_normalization_error": 6.9074999999863e-6,
+          "mean_photon_energy_ev": 4951927.179563007,
+          "continuum_cross_section_barns": 0.87344,
+          "photon_energy_release_ev_barns": 4325211.275717513,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 11000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.000012725,
+          "weighted_normalization": 1.000012725,
+          "absolute_normalization_error": 0.000012724999999935704,
+          "mean_photon_energy_ev": 5037310.31272627,
+          "continuum_cross_section_barns": 0.87962,
+          "photon_energy_release_ev_barns": 4430918.897280281,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 11500000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 0.9999947372477501,
+          "weighted_normalization": 0.9999947372477501,
+          "absolute_normalization_error": 5.262752249879377e-6,
+          "mean_photon_energy_ev": 5129974.196566807,
+          "continuum_cross_section_barns": 0.87742,
+          "photon_energy_release_ev_barns": 4501141.959551648,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 12000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0000026297149025,
+          "weighted_normalization": 1.0000026297149025,
+          "absolute_normalization_error": 2.6297149025023003e-6,
+          "mean_photon_energy_ev": 5255128.567682167,
+          "continuum_cross_section_barns": 0.8777,
+          "photon_energy_release_ev_barns": 4612426.343854638,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 12500000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 0.9999990978807503,
+          "weighted_normalization": 0.9999990978807503,
+          "absolute_normalization_error": 9.021192497460362e-7,
+          "mean_photon_energy_ev": 5267185.150820117,
+          "continuum_cross_section_barns": 0.8281,
+          "photon_energy_release_ev_barns": 4361756.023394139,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 13000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 0.9999929913154999,
+          "weighted_normalization": 0.9999929913154999,
+          "absolute_normalization_error": 7.008684500098283e-6,
+          "mean_photon_energy_ev": 5299546.801280961,
+          "continuum_cross_section_barns": 0.7627,
+          "photon_energy_release_ev_barns": 4041964.3453369895,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 13500000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0000109268484998,
+          "weighted_normalization": 1.0000109268484998,
+          "absolute_normalization_error": 0.00001092684849979264,
+          "mean_photon_energy_ev": 5284684.055549768,
+          "continuum_cross_section_barns": 0.7179,
+          "photon_energy_release_ev_barns": 3793874.683479178,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 14000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 0.999992328504875,
+          "weighted_normalization": 0.999992328504875,
+          "absolute_normalization_error": 7.671495125038952e-6,
+          "mean_photon_energy_ev": 5267579.94577325,
+          "continuum_cross_section_barns": 0.6425,
+          "photon_energy_release_ev_barns": 3384420.115159313,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 14500000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0000056410632503,
+          "weighted_normalization": 1.0000056410632503,
+          "absolute_normalization_error": 5.6410632502945646e-6,
+          "mean_photon_energy_ev": 5270299.655095204,
+          "continuum_cross_section_barns": 0.5812,
+          "photon_energy_release_ev_barns": 3063098.1595413326,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 15000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 0.9999885730366248,
+          "weighted_normalization": 0.9999885730366248,
+          "absolute_normalization_error": 0.000011426963375194,
+          "mean_photon_energy_ev": 5270089.217561255,
+          "continuum_cross_section_barns": 0.5019,
+          "photon_energy_release_ev_barns": 2645057.7782939943,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 15500000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 0.999990304623,
+          "weighted_normalization": 0.999990304623,
+          "absolute_normalization_error": 9.695377000018546e-6,
+          "mean_photon_energy_ev": 5292709.334579598,
+          "continuum_cross_section_barns": 0.4414,
+          "photon_energy_release_ev_barns": 2336201.900283435,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 16000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 0.9999921678075003,
+          "weighted_normalization": 0.9999921678075003,
+          "absolute_normalization_error": 7.832192499668267e-6,
+          "mean_photon_energy_ev": 5295960.459784416,
+          "continuum_cross_section_barns": 0.3864,
+          "photon_energy_release_ev_barns": 2046359.1216606982,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 17000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 0.9999916613435003,
+          "weighted_normalization": 0.9999916613435003,
+          "absolute_normalization_error": 8.338656499740082e-6,
+          "mean_photon_energy_ev": 5343768.992657889,
+          "continuum_cross_section_barns": 0.299,
+          "photon_energy_release_ev_barns": 1597786.9288047086,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 18000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0000058595972503,
+          "weighted_normalization": 1.0000058595972503,
+          "absolute_normalization_error": 5.859597250301718e-6,
+          "mean_photon_energy_ev": 5296204.994585714,
+          "continuum_cross_section_barns": 0.2192,
+          "photon_energy_release_ev_barns": 1160928.1348131886,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 19000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 0.9999909771854997,
+          "weighted_normalization": 0.9999909771854997,
+          "absolute_normalization_error": 9.022814500325715e-6,
+          "mean_photon_energy_ev": 5262886.47067036,
+          "continuum_cross_section_barns": 0.1597,
+          "photon_energy_release_ev_barns": 840482.9693660566,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 20000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0000040372145,
+          "weighted_normalization": 1.0000040372145,
+          "absolute_normalization_error": 4.037214500041131e-6,
+          "mean_photon_energy_ev": 5289391.371696831,
+          "continuum_cross_section_barns": 0.114,
+          "photon_energy_release_ev_barns": 602990.6163734387,
+          "status": "within_tolerance"
+        }
+      ],
+      "failed_sample_count": 0,
+      "maximum_absolute_normalization_error": 0.000012724999999935704
+    },
+    {
+      "nuclide": "N15",
+      "endf_mat": 728,
+      "reaction_mt": 16,
+      "file13_section_sha256": "64c6f9de5a6d45fed04fbbfaf5c95af6db82330ad431e9ad4697afd47ab7c6ca",
+      "file15_section_sha256": "0e46404336020ed6c697f64fb6022667a134e31da08ac66d18b3e8a336b8f223",
+      "samples": [
+        {
+          "incident_energy_ev": 11561000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0,
+          "weighted_normalization": 1.0,
+          "absolute_normalization_error": 0.0,
+          "mean_photon_energy_ev": 2250000.0,
+          "continuum_cross_section_barns": 0.0,
+          "photon_energy_release_ev_barns": 0.0,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 14500000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0,
+          "weighted_normalization": 1.0,
+          "absolute_normalization_error": 0.0,
+          "mean_photon_energy_ev": 2250000.0,
+          "continuum_cross_section_barns": 0.00005565,
+          "photon_energy_release_ev_barns": 125.21249999999999,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 15000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0,
+          "weighted_normalization": 1.0,
+          "absolute_normalization_error": 0.0,
+          "mean_photon_energy_ev": 2250000.0,
+          "continuum_cross_section_barns": 0.0003908,
+          "photon_energy_release_ev_barns": 879.3000000000001,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 15500000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0,
+          "weighted_normalization": 1.0,
+          "absolute_normalization_error": 0.0,
+          "mean_photon_energy_ev": 2250000.0,
+          "continuum_cross_section_barns": 0.001191,
+          "photon_energy_release_ev_barns": 2679.75,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 16000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 0.9999934625000001,
+          "weighted_normalization": 0.9999934625000001,
+          "absolute_normalization_error": 6.5374999999034955e-6,
+          "mean_photon_energy_ev": 2248632.0504320296,
+          "continuum_cross_section_barns": 0.002439,
+          "photon_energy_release_ev_barns": 5484.413571003721,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 17000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.000008222175,
+          "weighted_normalization": 1.000008222175,
+          "absolute_normalization_error": 8.22217499996114e-6,
+          "mean_photon_energy_ev": 2195234.577572137,
+          "continuum_cross_section_barns": 0.007371,
+          "photon_energy_release_ev_barns": 16181.074071284223,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 18000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 0.9999897074999999,
+          "weighted_normalization": 0.9999897074999999,
+          "absolute_normalization_error": 0.000010292500000064209,
+          "mean_photon_energy_ev": 2242260.1847129515,
+          "continuum_cross_section_barns": 0.01746,
+          "photon_energy_release_ev_barns": 39149.86282508813,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 19000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 0.9999975874999998,
+          "weighted_normalization": 0.9999975874999998,
+          "absolute_normalization_error": 2.41250000021509e-6,
+          "mean_photon_energy_ev": 2482931.115071316,
+          "continuum_cross_section_barns": 0.03365,
+          "photon_energy_release_ev_barns": 83550.63202214977,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 20000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.000003679,
+          "weighted_normalization": 1.000003679,
+          "absolute_normalization_error": 3.6789999999786716e-6,
+          "mean_photon_energy_ev": 2738237.8629604024,
+          "continuum_cross_section_barns": 0.0545,
+          "photon_energy_release_ev_barns": 149233.96353134193,
+          "status": "within_tolerance"
+        }
+      ],
+      "failed_sample_count": 0,
+      "maximum_absolute_normalization_error": 0.000010292500000064209
+    },
+    {
+      "nuclide": "N15",
+      "endf_mat": 728,
+      "reaction_mt": 22,
+      "file13_section_sha256": "c9f7c63112eea2ddb3f900a8d0f3b844efcc2df538e556e0ee06a5356d828638",
+      "file15_section_sha256": "8af7b82414690c5fd0c69d914386da868b982a3c75f8209115140ab3d03dfff6",
+      "samples": [
+        {
+          "incident_energy_ev": 11730000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0,
+          "weighted_normalization": 1.0,
+          "absolute_normalization_error": 0.0,
+          "mean_photon_energy_ev": 2000000.0,
+          "continuum_cross_section_barns": 0.0,
+          "photon_energy_release_ev_barns": 0.0,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 14500000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0,
+          "weighted_normalization": 1.0,
+          "absolute_normalization_error": 0.0,
+          "mean_photon_energy_ev": 2000000.0,
+          "continuum_cross_section_barns": 1.152e-9,
+          "photon_energy_release_ev_barns": 0.002304,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 15000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0,
+          "weighted_normalization": 1.0,
+          "absolute_normalization_error": 0.0,
+          "mean_photon_energy_ev": 2000000.0,
+          "continuum_cross_section_barns": 1.237e-6,
+          "photon_energy_release_ev_barns": 2.4739999999999998,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 15500000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0,
+          "weighted_normalization": 1.0,
+          "absolute_normalization_error": 0.0,
+          "mean_photon_energy_ev": 2000000.0,
+          "continuum_cross_section_barns": 0.00004445,
+          "photon_energy_release_ev_barns": 88.9,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 16000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0,
+          "weighted_normalization": 1.0,
+          "absolute_normalization_error": 0.0,
+          "mean_photon_energy_ev": 2000000.0,
+          "continuum_cross_section_barns": 0.0003436,
+          "photon_energy_release_ev_barns": 687.2,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 17000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0000002684,
+          "weighted_normalization": 1.0000002684,
+          "absolute_normalization_error": 2.684000000030551e-7,
+          "mean_photon_energy_ev": 2000000.6709998199,
+          "continuum_cross_section_barns": 0.004086,
+          "photon_energy_release_ev_barns": 8172.002741705264,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 18000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0000063295,
+          "weighted_normalization": 1.0000063295,
+          "absolute_normalization_error": 6.329499999901955e-6,
+          "mean_photon_energy_ev": 2010709.7717125,
+          "continuum_cross_section_barns": 0.01274,
+          "photon_energy_release_ev_barns": 25616.442491617247,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 19000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.000001375,
+          "weighted_normalization": 1.000001375,
+          "absolute_normalization_error": 1.3750000000811724e-6,
+          "mean_photon_energy_ev": 2161104.153481789,
+          "continuum_cross_section_barns": 0.02527,
+          "photon_energy_release_ev_barns": 54611.10195848481,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 20000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0000048707328648,
+          "weighted_normalization": 1.0000048707328648,
+          "absolute_normalization_error": 4.870732864814542e-6,
+          "mean_photon_energy_ev": 2483470.446171257,
+          "continuum_cross_section_barns": 0.0405,
+          "photon_energy_release_ev_barns": 100580.55306993592,
+          "status": "within_tolerance"
+        }
+      ],
+      "failed_sample_count": 0,
+      "maximum_absolute_normalization_error": 6.329499999901955e-6
+    },
+    {
+      "nuclide": "N15",
+      "endf_mat": 728,
+      "reaction_mt": 28,
+      "file13_section_sha256": "7a026f9b8a86ccdcda946949c468ef4d7c2c669f3e1e78ab528e129378324746",
+      "file15_section_sha256": "fabbc71b581ddf43e60448c52e65dd52cd33d7fd6fe38a5bc10681d0516bd7fa",
+      "samples": [
+        {
+          "incident_energy_ev": 10893000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0,
+          "weighted_normalization": 1.0,
+          "absolute_normalization_error": 0.0,
+          "mean_photon_energy_ev": 6000000.0,
+          "continuum_cross_section_barns": 0.0,
+          "photon_energy_release_ev_barns": 0.0,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 18000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0,
+          "weighted_normalization": 1.0,
+          "absolute_normalization_error": 0.0,
+          "mean_photon_energy_ev": 6000000.0,
+          "continuum_cross_section_barns": 2.305e-6,
+          "photon_energy_release_ev_barns": 13.83,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 19000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.00000043775,
+          "weighted_normalization": 1.00000043775,
+          "absolute_normalization_error": 4.377500000263268e-7,
+          "mean_photon_energy_ev": 5826407.336927688,
+          "continuum_cross_section_barns": 0.0004585,
+          "photon_energy_release_ev_barns": 2671.4077639813445,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 20000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 0.999998525,
+          "weighted_normalization": 0.999998525,
+          "absolute_normalization_error": 1.4750000000285368e-6,
+          "mean_photon_energy_ev": 5617171.347827738,
+          "continuum_cross_section_barns": 0.00393,
+          "photon_energy_release_ev_barns": 22075.483396963013,
+          "status": "within_tolerance"
+        }
+      ],
+      "failed_sample_count": 0,
+      "maximum_absolute_normalization_error": 1.4750000000285368e-6
+    },
+    {
+      "nuclide": "N15",
+      "endf_mat": 728,
+      "reaction_mt": 103,
+      "file13_section_sha256": "8175156e2ca4c86af9f2dbce16858a409256c64bb5489d257fc0f3b758f34cea",
+      "file15_section_sha256": "b61dd89e6ec51a4e7d9663be238058938a949f9a084495a43163b60008907a19",
+      "samples": [
+        {
+          "incident_energy_ev": 9593800.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0,
+          "weighted_normalization": 1.0,
+          "absolute_normalization_error": 0.0,
+          "mean_photon_energy_ev": 750000.0,
+          "continuum_cross_section_barns": 0.0,
+          "photon_energy_release_ev_barns": 0.0,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 11000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0,
+          "weighted_normalization": 1.0,
+          "absolute_normalization_error": 0.0,
+          "mean_photon_energy_ev": 750000.0,
+          "continuum_cross_section_barns": 0.002068,
+          "photon_energy_release_ev_barns": 1551.0,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 11500000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0,
+          "weighted_normalization": 1.0,
+          "absolute_normalization_error": 0.0,
+          "mean_photon_energy_ev": 750000.0,
+          "continuum_cross_section_barns": 0.0073077,
+          "photon_energy_release_ev_barns": 5480.775000000001,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 12000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0,
+          "weighted_normalization": 1.0,
+          "absolute_normalization_error": 0.0,
+          "mean_photon_energy_ev": 750000.0,
+          "continuum_cross_section_barns": 0.01004,
+          "photon_energy_release_ev_barns": 7530.0,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 12500000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0,
+          "weighted_normalization": 1.0,
+          "absolute_normalization_error": 0.0,
+          "mean_photon_energy_ev": 750000.0,
+          "continuum_cross_section_barns": 0.01217,
+          "photon_energy_release_ev_barns": 9127.5,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 13000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0,
+          "weighted_normalization": 1.0,
+          "absolute_normalization_error": 0.0,
+          "mean_photon_energy_ev": 750000.0,
+          "continuum_cross_section_barns": 0.01309,
+          "photon_energy_release_ev_barns": 9817.5,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 13500000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0,
+          "weighted_normalization": 1.0,
+          "absolute_normalization_error": 0.0,
+          "mean_photon_energy_ev": 750000.0,
+          "continuum_cross_section_barns": 0.01386,
+          "photon_energy_release_ev_barns": 10395.0,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 14000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0,
+          "weighted_normalization": 1.0,
+          "absolute_normalization_error": 0.0,
+          "mean_photon_energy_ev": 750000.0,
+          "continuum_cross_section_barns": 0.01381,
+          "photon_energy_release_ev_barns": 10357.5,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 14500000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0,
+          "weighted_normalization": 1.0,
+          "absolute_normalization_error": 0.0,
+          "mean_photon_energy_ev": 750000.0,
+          "continuum_cross_section_barns": 0.01304,
+          "photon_energy_release_ev_barns": 9780.0,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 15000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0,
+          "weighted_normalization": 1.0,
+          "absolute_normalization_error": 0.0,
+          "mean_photon_energy_ev": 750000.0,
+          "continuum_cross_section_barns": 0.01175,
+          "photon_energy_release_ev_barns": 8812.5,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 15500000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0,
+          "weighted_normalization": 1.0,
+          "absolute_normalization_error": 0.0,
+          "mean_photon_energy_ev": 750000.0,
+          "continuum_cross_section_barns": 0.01072,
+          "photon_energy_release_ev_barns": 8040.0,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 16000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0,
+          "weighted_normalization": 1.0,
+          "absolute_normalization_error": 0.0,
+          "mean_photon_energy_ev": 750000.0,
+          "continuum_cross_section_barns": 0.009544,
+          "photon_energy_release_ev_barns": 7158.0,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 17000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0,
+          "weighted_normalization": 1.0,
+          "absolute_normalization_error": 0.0,
+          "mean_photon_energy_ev": 750000.0,
+          "continuum_cross_section_barns": 0.007412,
+          "photon_energy_release_ev_barns": 5559.0,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 18000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0000000016225041,
+          "weighted_normalization": 1.0000000016225041,
+          "absolute_normalization_error": 1.6225041310491406e-9,
+          "mean_photon_energy_ev": 750000.0095072535,
+          "continuum_cross_section_barns": 0.005809,
+          "photon_energy_release_ev_barns": 4356.750055227636,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 19000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.000000663009651,
+          "weighted_normalization": 1.000000663009651,
+          "absolute_normalization_error": 6.63009650958557e-7,
+          "mean_photon_energy_ev": 750003.8430561813,
+          "continuum_cross_section_barns": 0.004437,
+          "photon_energy_release_ev_barns": 3327.7670516402763,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 20000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0000033259305716,
+          "weighted_normalization": 1.0000033259305716,
+          "absolute_normalization_error": 3.3259305716182297e-6,
+          "mean_photon_energy_ev": 750020.2266907938,
+          "continuum_cross_section_barns": 0.003352,
+          "photon_energy_release_ev_barns": 2514.0677998675405,
+          "status": "within_tolerance"
+        }
+      ],
+      "failed_sample_count": 0,
+      "maximum_absolute_normalization_error": 3.3259305716182297e-6
+    },
+    {
+      "nuclide": "N15",
+      "endf_mat": 728,
+      "reaction_mt": 104,
+      "file13_section_sha256": "e4d939950112b91bbfd4fd1477d7ab648968a70a87b6d6b5e9253b3aa870a521",
+      "file15_section_sha256": "0a72203c819dc0bdcd56194421482a662551adda1cddcfaf52e06be19c88fad4",
+      "samples": [
+        {
+          "incident_energy_ev": 8519600.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0000068425000002,
+          "weighted_normalization": 1.0000068425000002,
+          "absolute_normalization_error": 6.842500000159291e-6,
+          "mean_photon_energy_ev": 5950917.4277225,
+          "continuum_cross_section_barns": 0.0,
+          "photon_energy_release_ev_barns": 0.0,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 16000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0000068425000002,
+          "weighted_normalization": 1.0000068425000002,
+          "absolute_normalization_error": 6.842500000159291e-6,
+          "mean_photon_energy_ev": 5950917.4277225,
+          "continuum_cross_section_barns": 0.001004,
+          "photon_energy_release_ev_barns": 5974.721097433389,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 18000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.000005025,
+          "weighted_normalization": 1.000005025,
+          "absolute_normalization_error": 5.025000000102864e-6,
+          "mean_photon_energy_ev": 5448657.320496964,
+          "continuum_cross_section_barns": 0.02383,
+          "photon_energy_release_ev_barns": 129841.50394744266,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 20000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 0.999983925,
+          "weighted_normalization": 0.999983925,
+          "absolute_normalization_error": 0.00001607500000000428,
+          "mean_photon_energy_ev": 5299482.276677598,
+          "continuum_cross_section_barns": 0.02712,
+          "photon_energy_release_ev_barns": 143721.95934349645,
+          "status": "within_tolerance"
+        }
+      ],
+      "failed_sample_count": 0,
+      "maximum_absolute_normalization_error": 0.00001607500000000428
+    },
+    {
+      "nuclide": "N15",
+      "endf_mat": 728,
+      "reaction_mt": 105,
+      "file13_section_sha256": "9e0e7426b6a6c330f821b2305819bb336e97f2344f46c951a8a89d4619291313",
+      "file15_section_sha256": "dd3992243c199b458f0f7bff61b0a8040ac585c594fa567aa0ebd206a3821565",
+      "samples": [
+        {
+          "incident_energy_ev": 10568000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0000101024999999,
+          "weighted_normalization": 1.0000101024999999,
+          "absolute_normalization_error": 0.00001010249999988666,
+          "mean_photon_energy_ev": 3035459.5720821735,
+          "continuum_cross_section_barns": 0.0,
+          "photon_energy_release_ev_barns": 0.0,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 15000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0000101024999999,
+          "weighted_normalization": 1.0000101024999999,
+          "absolute_normalization_error": 0.00001010249999988666,
+          "mean_photon_energy_ev": 3035459.5720821735,
+          "continuum_cross_section_barns": 0.001572,
+          "photon_energy_release_ev_barns": 4771.742447313177,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 16000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 0.99999075,
+          "weighted_normalization": 0.99999075,
+          "absolute_normalization_error": 9.249999999960679e-6,
+          "mean_photon_energy_ev": 3102784.638257904,
+          "continuum_cross_section_barns": 0.01453,
+          "photon_energy_release_ev_barns": 45083.460793887345,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 18000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.000008,
+          "weighted_normalization": 1.000008,
+          "absolute_normalization_error": 8.000000000008e-6,
+          "mean_photon_energy_ev": 3082541.7302911575,
+          "continuum_cross_section_barns": 0.02526,
+          "photon_energy_release_ev_barns": 77865.00410715464,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 20000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 0.9999947499999999,
+          "weighted_normalization": 0.9999947499999999,
+          "absolute_normalization_error": 5.2500000000677005e-6,
+          "mean_photon_energy_ev": 3085547.2772482056,
+          "continuum_cross_section_barns": 0.01867,
+          "photon_energy_release_ev_barns": 57607.167666224,
+          "status": "within_tolerance"
+        }
+      ],
+      "failed_sample_count": 0,
+      "maximum_absolute_normalization_error": 0.00001010249999988666
+    },
+    {
+      "nuclide": "N15",
+      "endf_mat": 728,
+      "reaction_mt": 107,
+      "file13_section_sha256": "9d670888ecb0947476ca51c3491338d63d870db5552b1b05b8db64586004233d",
+      "file15_section_sha256": "809c83e70b59db4e4706c13b6b11e0c54a3b021a9877071e430bbe0dc7aee5b1",
+      "samples": [
+        {
+          "incident_energy_ev": 8134000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0,
+          "weighted_normalization": 1.0,
+          "absolute_normalization_error": 0.0,
+          "mean_photon_energy_ev": 1000000.0,
+          "continuum_cross_section_barns": 0.0,
+          "photon_energy_release_ev_barns": 0.0,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 9500000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0,
+          "weighted_normalization": 1.0,
+          "absolute_normalization_error": 0.0,
+          "mean_photon_energy_ev": 1000000.0,
+          "continuum_cross_section_barns": 3.4474e-8,
+          "photon_energy_release_ev_barns": 0.034474000000000005,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 10000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0,
+          "weighted_normalization": 1.0,
+          "absolute_normalization_error": 0.0,
+          "mean_photon_energy_ev": 1000000.0,
+          "continuum_cross_section_barns": 0.00010803,
+          "photon_energy_release_ev_barns": 108.02999999999999,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 10500000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 0.9999914349999999,
+          "weighted_normalization": 0.9999914349999999,
+          "absolute_normalization_error": 8.565000000126943e-6,
+          "mean_photon_energy_ev": 1000568.2461170281,
+          "continuum_cross_section_barns": 0.0033267,
+          "photon_energy_release_ev_barns": 3328.5903843575175,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 11000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 0.9999916750000001,
+          "weighted_normalization": 0.9999916750000001,
+          "absolute_normalization_error": 8.324999999920202e-6,
+          "mean_photon_energy_ev": 1022701.0202359934,
+          "continuum_cross_section_barns": 0.013727,
+          "photon_energy_release_ev_barns": 14038.616904779481,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 11500000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.000003050775,
+          "weighted_normalization": 1.000003050775,
+          "absolute_normalization_error": 3.0507749999575395e-6,
+          "mean_photon_energy_ev": 1105391.3770933715,
+          "continuum_cross_section_barns": 0.025934,
+          "photon_energy_release_ev_barns": 28667.219973539493,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 12000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 0.9999929500000001,
+          "weighted_normalization": 0.9999929500000001,
+          "absolute_normalization_error": 7.049999999897416e-6,
+          "mean_photon_energy_ev": 1192026.1725345163,
+          "continuum_cross_section_barns": 0.03222,
+          "photon_energy_release_ev_barns": 38407.08327906211,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 12500000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 0.9999964250000002,
+          "weighted_normalization": 0.9999964250000002,
+          "absolute_normalization_error": 3.574999999811368e-6,
+          "mean_photon_energy_ev": 1265149.0229077567,
+          "continuum_cross_section_barns": 0.03908,
+          "photon_energy_release_ev_barns": 49442.02381523513,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 13000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 0.9999867499999999,
+          "weighted_normalization": 0.9999867499999999,
+          "absolute_normalization_error": 0.000013250000000075701,
+          "mean_photon_energy_ev": 1329803.3698946512,
+          "continuum_cross_section_barns": 0.04558,
+          "photon_energy_release_ev_barns": 60612.437599798206,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 13500000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.00000075,
+          "weighted_normalization": 1.00000075,
+          "absolute_normalization_error": 7.500000001048335e-7,
+          "mean_photon_energy_ev": 1400102.6374230217,
+          "continuum_cross_section_barns": 0.05569,
+          "photon_energy_release_ev_barns": 77971.71587808809,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 14000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.00001225,
+          "weighted_normalization": 1.00001225,
+          "absolute_normalization_error": 0.000012249999999935923,
+          "mean_photon_energy_ev": 1453058.8875286279,
+          "continuum_cross_section_barns": 0.06401,
+          "photon_energy_release_ev_barns": 93010.29939070747,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 14500000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 0.99999525,
+          "weighted_normalization": 0.99999525,
+          "absolute_normalization_error": 4.7499999999978115e-6,
+          "mean_photon_energy_ev": 1485134.116887055,
+          "continuum_cross_section_barns": 0.074,
+          "photon_energy_release_ev_barns": 109899.92464964207,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 15000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.00000125,
+          "weighted_normalization": 1.00000125,
+          "absolute_normalization_error": 1.2499999999526779e-6,
+          "mean_photon_energy_ev": 1526240.9046988692,
+          "continuum_cross_section_barns": 0.08392,
+          "photon_energy_release_ev_barns": 128082.1367223291,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 15500000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0000020000595429,
+          "weighted_normalization": 1.0000020000595429,
+          "absolute_normalization_error": 2.000059542872634e-6,
+          "mean_photon_energy_ev": 1540092.7950504874,
+          "continuum_cross_section_barns": 0.0828,
+          "photon_energy_release_ev_barns": 127519.68343018035,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 16000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 0.9999950008325484,
+          "weighted_normalization": 0.9999950008325484,
+          "absolute_normalization_error": 4.999167451558151e-6,
+          "mean_photon_energy_ev": 1549308.9998521232,
+          "continuum_cross_section_barns": 0.07841,
+          "photon_energy_release_ev_barns": 121481.31867840498,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 17000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 0.9999988095922914,
+          "weighted_normalization": 0.9999988095922914,
+          "absolute_normalization_error": 1.1904077086288822e-6,
+          "mean_photon_energy_ev": 1605500.6857741864,
+          "continuum_cross_section_barns": 0.07071,
+          "photon_energy_release_ev_barns": 113524.95349109272,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 18000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 0.9999960763252319,
+          "weighted_normalization": 0.9999960763252319,
+          "absolute_normalization_error": 3.923674768091523e-6,
+          "mean_photon_energy_ev": 1586483.1035762692,
+          "continuum_cross_section_barns": 0.0533,
+          "photon_energy_release_ev_barns": 84559.54942061515,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 19000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 1.0000112161128514,
+          "weighted_normalization": 1.0000112161128514,
+          "absolute_normalization_error": 0.00001121611285137547,
+          "mean_photon_energy_ev": 1602685.216160993,
+          "continuum_cross_section_barns": 0.04197,
+          "photon_energy_release_ev_barns": 67264.69852227689,
+          "status": "within_tolerance"
+        },
+        {
+          "incident_energy_ev": 20000000.0,
+          "component_probability": 1.0,
+          "spectrum_integral": 0.9999946751000395,
+          "weighted_normalization": 0.9999946751000395,
+          "absolute_normalization_error": 5.324899960523766e-6,
+          "mean_photon_energy_ev": 1607296.235064457,
+          "continuum_cross_section_barns": 0.03166,
+          "photon_energy_release_ev_barns": 50886.998802140704,
+          "status": "within_tolerance"
+        }
+      ],
+      "failed_sample_count": 0,
+      "maximum_absolute_normalization_error": 0.000013250000000075701
+    }
+  ],
+  "reaction_count": 8,
+  "sample_count": 92,
+  "failed_sample_count": 0,
+  "maximum_absolute_normalization_error": 0.00001607500000000428
+}

@@ -95,8 +95,9 @@ Evidence hashes:
   production.
 - The ADR 0013 reports remain reproducible historical evidence; source-aware
   v0.2 reports supersede only their File 12 interpretation.
-- Whole-library screening remains useful, but the next causal step is an
-  independent photon-energy moment and reaction energy-balance calculation.
+- Whole-library screening remains useful. ADR 0018 completes the first
+  independent File 13/File 15 continuum moment calculation; the remaining
+  causal step is the complete per-reaction energy balance.
 - No table may be clipped, warning suppressed, or promoted because this
   format-level inventory is clean.
 
@@ -105,3 +106,4 @@ Evidence hashes:
 - [ENDF-6 Formats Manual, 2023](https://www.nndc.bnl.gov/endfdocs/ENDF-102-2023.pdf)
 - [NJOY2016.78 HEATR implementation](https://github.com/njoy/NJOY2016/blob/71a76bc6345fa15f36bacc816ae7900714345d97/src/heatr.f90)
 - [NJOY2016 HEATR manual](https://github.com/njoy/NJOY2016-manual/blob/master/heatx.tex)
+- [Independent continuum photon moments](0018-independent-continuum-photon-moments.md)

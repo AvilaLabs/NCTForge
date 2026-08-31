@@ -47,6 +47,18 @@ cargo run -p nctforge-cli -- njoy verify-source-aware \
   --input-manifest benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/njoy/nctforge-njoy-input-manifest.json \
   --photon-inventory benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-endf-photon-production-inventory.json \
   --source-aware-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/njoy2016-78-transported-photon-source-aware-suitability.json
+
+cargo run -p nctforge-cli -- njoy verify-photon-moments \
+  --selection benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/evaluated-neutron-source-selection.json \
+  --evaluations-directory PATH_TO_EXACT_JEFF40_SELECTION \
+  --photon-inventory benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-endf-photon-production-inventory.json \
+  --moment-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-file13-continuum-photon-moments.json
+
+cargo run -p nctforge-cli -- njoy verify-photon-moment-comparison \
+  --moment-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-file13-continuum-photon-moments.json \
+  --receipt benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/njoy2016-78-execution-receipt.json \
+  --execution-directory PATH_TO_JEFF40_EXECUTION \
+  --comparison-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-vs-njoy2016-78-continuum-photon-moments.json
 ```
 
 The checked comparison is self-contained over the two content-addressed
@@ -61,4 +73,5 @@ cargo run -p nctforge-cli -- njoy verify-comparison \
 
 See [the detailed finding](../../../../../../docs/research/JEFF40_RESPONSE_TREATMENT_FINDINGS.md)
 and [ADR 0016](../../../../../../docs/adr/0016-versioned-response-treatment-candidates.md)
-plus [ADR 0017](../../../../../../docs/adr/0017-source-aware-photon-production-suitability.md).
+plus [ADR 0017](../../../../../../docs/adr/0017-source-aware-photon-production-suitability.md)
+and [ADR 0018](../../../../../../docs/adr/0018-independent-continuum-photon-moments.md).

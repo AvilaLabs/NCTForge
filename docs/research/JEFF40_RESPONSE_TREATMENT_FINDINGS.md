@@ -75,7 +75,11 @@ not energy-balance validity.
 - JEFF-4.0 photon inventory SHA-256:
   `8e03f3f9ca894a3e6aafae59f3568a8c5b1f09d9c890279e15e4407c760bdd92`;
 - JEFF-4.0 source-aware suitability SHA-256:
-  `3bc909a8285f8654fd62d776c427d7b7ef0825f5608b19744740bcbbc8babe92`.
+  `3bc909a8285f8654fd62d776c427d7b7ef0825f5608b19744740bcbbc8babe92`;
+- JEFF-4.0 independent continuum-moment SHA-256:
+  `6dac7055c0b970addfa1aa9bd89e5fa0f95ce87ffc4901e8a0c817ea2b4c455f`;
+- JEFF-4.0 NJOY moment-comparison SHA-256:
+  `c69ae5e033571cc7526fb4c66456370ef596bebb88c451be7bd4a990cd40d555`.
 
 The baseline-comparison artifact is intentionally the immutable v0.1
 log-only comparison. ADR 0017 and the v0.2 report supersede only its treatment
@@ -93,10 +97,16 @@ O-17 loses the local-fallback warning but increases to 45 violations. That
 separates “photon records exist” from “the energy-balance response passes.”
 
 The exact MF=6/12/13/14/15 inventory and source-aware interpretation are now
-complete. The next high-value work is the independent photon-energy moment and
-reaction energy-release balance calculation that does not reuse HEATR's
-implementation. Further whole-library candidates remain useful controls, but
-they should not displace that causal investigation.
+complete. NCTForge has also independently integrated all eight supported N-15
+File 13/File 15 continuum reactions: both selections produce the same 92
+source-node samples, and 58 shared nodes agree with NJOY's printed diagnostics
+within `4.827186715582159e-5`. This rules out that supported continuum term as
+the cause of N-15's different outcome; it does not by itself prove the cause.
+
+The next high-value work is the complete reaction energy-release balance,
+starting with the MF=6/MT=102 photon and recoil treatment present in the JEFF
+candidate. Further whole-library candidates remain useful controls, but they
+should not displace that causal investigation.
 
 ## Primary sources
 
@@ -104,3 +114,4 @@ they should not displace that causal investigation.
 - [NJOY2016.78 HEATR source](https://github.com/njoy/NJOY2016/blob/71a76bc6345fa15f36bacc816ae7900714345d97/src/heatr.f90)
 - [NJOY2016 HEATR manual](https://github.com/njoy/NJOY2016-manual/blob/master/heatx.tex)
 - [Source-aware photon-production decision](../adr/0017-source-aware-photon-production-suitability.md)
+- [Independent continuum photon-moment decision](../adr/0018-independent-continuum-photon-moments.md)

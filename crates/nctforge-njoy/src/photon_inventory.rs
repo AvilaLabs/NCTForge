@@ -535,12 +535,12 @@ struct ReactionBuilder {
 }
 
 #[derive(Debug, Clone)]
-struct ParsedSection {
-    file_number: u16,
-    reaction_mt: u16,
-    record_count: u64,
-    sha256: String,
-    records: Vec<EndfRecord>,
+pub(crate) struct ParsedSection {
+    pub(crate) file_number: u16,
+    pub(crate) reaction_mt: u16,
+    pub(crate) record_count: u64,
+    pub(crate) sha256: String,
+    pub(crate) records: Vec<EndfRecord>,
 }
 
 impl ParsedSection {
@@ -562,16 +562,17 @@ impl ParsedSection {
 }
 
 #[derive(Debug, Clone, Copy)]
-struct EndfRecord {
-    c1: f64,
-    l1: i64,
-    l2: i64,
-    n1: i64,
-    n2: i64,
-    is_control: bool,
+pub(crate) struct EndfRecord {
+    pub(crate) values: [Option<f64>; 6],
+    pub(crate) c1: f64,
+    pub(crate) l1: i64,
+    pub(crate) l2: i64,
+    pub(crate) n1: i64,
+    pub(crate) n2: i64,
+    pub(crate) is_control: bool,
 }
 
-fn parse_evaluation(
+pub(crate) fn parse_evaluation(
     bytes: &[u8],
     expected_mat: u16,
 ) -> Result<Vec<ParsedSection>, EndfPhotonInventoryError> {
@@ -1026,7 +1027,14 @@ fn parse_control_record(
     line: &[u8],
     line_number: usize,
 ) -> Result<EndfRecord, EndfPhotonInventoryError> {
-    parse_endf_float(&line[11..22], line_number, "C2")?;
+    let values = [
+        parse_optional_endf_float(&line[0..11], line_number, "field 1")?,
+        parse_optional_endf_float(&line[11..22], line_number, "field 2")?,
+        parse_optional_endf_float(&line[22..33], line_number, "field 3")?,
+        parse_optional_endf_float(&line[33..44], line_number, "field 4")?,
+        parse_optional_endf_float(&line[44..55], line_number, "field 5")?,
+        parse_optional_endf_float(&line[55..66], line_number, "field 6")?,
+    ];
     let integer_fields = [
         parse_optional_i64_field(&line[22..33]),
         parse_optional_i64_field(&line[33..44]),
@@ -1035,13 +1043,33 @@ fn parse_control_record(
     ];
     let is_control = integer_fields.iter().all(Option::is_some);
     Ok(EndfRecord {
-        c1: parse_endf_float(&line[0..11], line_number, "C1")?,
+        values,
+        c1: values[0].ok_or(EndfPhotonInventoryError::InvalidField {
+            line: line_number,
+            label: "C1",
+        })?,
         l1: integer_fields[0].unwrap_or(0),
         l2: integer_fields[1].unwrap_or(0),
         n1: integer_fields[2].unwrap_or(0),
         n2: integer_fields[3].unwrap_or(0),
         is_control,
     })
+}
+
+fn parse_optional_endf_float(
+    field: &[u8],
+    line: usize,
+    label: &'static str,
+) -> Result<Option<f64>, EndfPhotonInventoryError> {
+    if std::str::from_utf8(field)
+        .map_err(|_| EndfPhotonInventoryError::InvalidField { line, label })?
+        .trim()
+        .is_empty()
+    {
+        Ok(None)
+    } else {
+        parse_endf_float(field, line, label).map(Some)
+    }
 }
 
 fn parse_endf_float(
@@ -1176,9 +1204,19 @@ mod tests {
         "../../../benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-endf-photon-production-inventory.json"
     );
 
-    fn record(c1: &str, _c2: &str, l1: i64, l2: i64, n1: i64, n2: i64) -> EndfRecord {
+    fn record(c1: &str, c2: &str, l1: i64, l2: i64, n1: i64, n2: i64) -> EndfRecord {
+        let c1 = c1.parse().unwrap();
+        let c2 = c2.parse().unwrap();
         EndfRecord {
-            c1: c1.parse().unwrap(),
+            values: [
+                Some(c1),
+                Some(c2),
+                Some(l1 as f64),
+                Some(l2 as f64),
+                Some(n1 as f64),
+                Some(n2 as f64),
+            ],
+            c1,
             l1,
             l2,
             n1,

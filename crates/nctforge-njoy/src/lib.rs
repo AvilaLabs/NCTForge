@@ -29,6 +29,8 @@ use thiserror::Error;
 mod comparison;
 mod execution;
 mod photon_inventory;
+mod photon_moment;
+mod photon_moment_comparison;
 mod source_aware;
 mod suitability;
 
@@ -55,6 +57,20 @@ pub use photon_inventory::{
     EndfPhotonProductionInventory, EndfPhotonProductionInventoryDocument,
     EndfPhotonProductionInventoryResult, EndfPhotonReaction, EndfPhotonSection,
     EndfPhotonSectionHeader, HeatrPhotonSource,
+};
+pub use photon_moment::{
+    DEFAULT_SPECTRUM_NORMALIZATION_TOLERANCE, ENDF_CONTINUUM_PHOTON_MOMENT_SCHEMA,
+    EndfContinuumPhotonMomentReaction, EndfContinuumPhotonMomentReport,
+    EndfContinuumPhotonMomentReportDocument, EndfContinuumPhotonMomentResult,
+    EndfContinuumPhotonMomentSample, EndfPhotonMomentError, EndfPhotonMomentQualification,
+    EndfPhotonMomentSampleStatus, EndfPhotonMomentScope,
+};
+pub use photon_moment_comparison::{
+    DEFAULT_NJOY_PRINT_RELATIVE_TOLERANCE, NJOY_PHOTON_MOMENT_COMPARISON_SCHEMA,
+    NjoyPhotonMomentComparison, NjoyPhotonMomentComparisonDocument,
+    NjoyPhotonMomentComparisonError, NjoyPhotonMomentComparisonQualification,
+    NjoyPhotonMomentComparisonReaction, NjoyPhotonMomentComparisonResult,
+    NjoyPhotonMomentComparisonSample, NjoyPhotonMomentComparisonStatus,
 };
 pub use source_aware::{
     NJOY_SOURCE_AWARE_SUITABILITY_SCHEMA, NjoyProcessorFindingDisposition,
