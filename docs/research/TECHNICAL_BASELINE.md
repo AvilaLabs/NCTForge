@@ -288,9 +288,10 @@ result exists. Cross-code agreement alone remains `cross_code_research_only`.
   residual classification in ADR 0007, bind each evaluated ENDF material, and
   generate byte-stable production and diagnostic input decks. Complete: execute
   all ten nuclides through the controlled evidence path and preserve the
-  rejected receipt after four MT 301 diagnostic failures. Pending: investigate
-  those failures, generate tables only from a passing versioned profile, and
-  pass every declared review gate.
+  rejected receipt after four MT 301 diagnostic failures. Complete: structure
+  the matching photon-data fallback/incompleteness messages and reject the
+  source selection for transported-photon KERMA. Pending: identify and test a
+  passing versioned profile, then pass every declared review gate.
 - Do not use reaction-filtered neutron heating as a component partition; retain
   it only as a diagnostic under ADR 0005.
 - Do not publish “golden” OpenMC dose arrays before an independent calculation is

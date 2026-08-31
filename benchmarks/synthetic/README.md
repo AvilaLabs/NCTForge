@@ -23,7 +23,8 @@ are source-controlled.
   rules, and preregistered acceptance gates. Geometry, material, source,
   nuclear-data preflight, and deterministic OpenMC deck generation are
   implemented. Its first controlled NJOY execution is preserved as rejected
-  evidence; KERMA response tables and reference outputs remain intentionally
+  evidence, and its transported-photon suitability report rejects four source
+  evaluations; KERMA response tables and reference outputs remain intentionally
   unqualified.
 
 Generate and verify its DICOM geometry inputs with:

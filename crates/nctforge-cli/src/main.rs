@@ -13,7 +13,8 @@ use nctforge_dicom::synthetic::generate_nf_bnct_001;
 use nctforge_dicom::verify_nf_bnct_001;
 use nctforge_njoy::{
     DEFAULT_NJOY_TIMEOUT_SECONDS, NjoyExecutionOptions, NjoyExecutionReceipt,
-    NjoyExecutionReceiptDocument, NjoyInputArtifacts, NjoyInputBundle,
+    NjoyExecutionReceiptDocument, NjoyInputArtifacts, NjoyInputBundle, NjoySuitabilityReport,
+    NjoySuitabilityReportDocument,
 };
 use nctforge_openmc::{
     DataAcquisitionClient, DataAcquisitionProfileDocument, DataAcquisitionReceiptDocument,
@@ -158,6 +159,30 @@ enum NjoyCommand {
         /// Complete execution directory, including its byte-identical receipt.
         #[arg(long)]
         execution_directory: PathBuf,
+    },
+    /// Derive a transported-photon KERMA suitability report from verified logs.
+    AssessExecution {
+        /// External execution receipt used as the trust anchor.
+        #[arg(long)]
+        receipt: PathBuf,
+        /// Complete execution directory bound by the receipt.
+        #[arg(long)]
+        execution_directory: PathBuf,
+        /// New JSON report path; it must not already exist.
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Regenerate and compare a transported-photon suitability report.
+    VerifySuitability {
+        /// External execution receipt used as the trust anchor.
+        #[arg(long)]
+        receipt: PathBuf,
+        /// Complete execution directory bound by the receipt.
+        #[arg(long)]
+        execution_directory: PathBuf,
+        /// Suitability report to validate and regenerate.
+        #[arg(long)]
+        suitability_report: PathBuf,
     },
 }
 
@@ -463,6 +488,69 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                         "execution_observed_unreviewed"
                     } else {
                         "execution_observed_diagnostics_failed"
+                    }
+                );
+            }
+            NjoyCommand::AssessExecution {
+                receipt,
+                execution_directory,
+                output,
+            } => {
+                let execution = NjoyExecutionReceiptDocument::from_path(&receipt)?;
+                let report = NjoySuitabilityReport::assess(&execution, &execution_directory)?;
+                let result = report.write_new(&output)?;
+                println!("assessed transported-photon KERMA suitability");
+                println!("report: {}", result.report_path.display());
+                println!("report SHA-256: {}", result.report_sha256);
+                println!("nuclide runs: {}", result.report.runs.len());
+                println!(
+                    "rejected nuclide runs: {}",
+                    result.report.rejected_run_count
+                );
+                println!(
+                    "processor data findings: {} unique / {} occurrences",
+                    result.report.processor_finding_count,
+                    result.report.processor_finding_occurrence_count
+                );
+                println!(
+                    "kinematic violations: {}",
+                    result.report.kinematic_violation_count
+                );
+                if result.report.rejected_run_count == 0 {
+                    println!("qualification: transported_photon_kerma_candidate_unreviewed");
+                } else {
+                    println!("qualification: transported_photon_kerma_rejected");
+                    return Err(io::Error::other(format!(
+                        "{} NJOY run(s) are unsuitable for transported-photon KERMA; report was preserved",
+                        result.report.rejected_run_count
+                    ))
+                    .into());
+                }
+            }
+            NjoyCommand::VerifySuitability {
+                receipt,
+                execution_directory,
+                suitability_report,
+            } => {
+                let execution = NjoyExecutionReceiptDocument::from_path(&receipt)?;
+                let report = NjoySuitabilityReportDocument::from_path(&suitability_report)?;
+                report.verify_against_execution(&execution, &execution_directory)?;
+                println!(
+                    "verified transported-photon suitability report {}",
+                    suitability_report.display()
+                );
+                println!("report SHA-256: {}", report.sha256);
+                println!("nuclide runs: {}", report.report.runs.len());
+                println!(
+                    "rejected nuclide runs: {}",
+                    report.report.rejected_run_count
+                );
+                println!(
+                    "qualification: {}",
+                    if report.report.rejected_run_count == 0 {
+                        "transported_photon_kerma_candidate_unreviewed"
+                    } else {
+                        "transported_photon_kerma_rejected"
                     }
                 );
             }

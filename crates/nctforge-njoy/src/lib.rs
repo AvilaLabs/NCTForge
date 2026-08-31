@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
-//! Deterministic preparation of NJOY2016 partial-KERMA processing runs.
+//! Deterministic preparation, controlled execution, and evidence assessment
+//! for NJOY2016 partial-KERMA processing runs.
 //!
-//! This crate does not execute NJOY and does not qualify its outputs. It turns
-//! content-bound NCTForge inputs into byte-stable decks and an evidence
-//! manifest suitable for a separately controlled NJOY2016.78 execution.
+//! The crate keeps input generation, external-processor execution, and
+//! transported-photon suitability assessment as explicit qualification stages.
 
 #![forbid(unsafe_code)]
 
@@ -27,6 +27,7 @@ use sha2::{Digest, Sha256};
 use thiserror::Error;
 
 mod execution;
+mod suitability;
 
 pub use execution::{
     DEFAULT_NJOY_TIMEOUT_SECONDS, NJOY_EXECUTION_RECEIPT_FILENAME, NJOY_EXECUTION_RECEIPT_SCHEMA,
@@ -35,6 +36,12 @@ pub use execution::{
     NjoyExecutionResult, NjoyExecutionRun, NjoyExecutionTape, NjoyKinematicDirection,
     NjoyKinematicViolation, NjoyProcessorArtifact, NjoyProcessorExecutionIdentity,
     NjoyRunDiagnosticStatus, NjoyTapePurpose,
+};
+pub use suitability::{
+    NJOY_SUITABILITY_REPORT_SCHEMA, NjoyProcessorDataFinding, NjoySuitabilityError,
+    NjoySuitabilityFindingKind, NjoySuitabilityQualification, NjoySuitabilityReport,
+    NjoySuitabilityReportDocument, NjoySuitabilityResult, NjoySuitabilityRun,
+    NjoySuitabilityStatus, NjoyTransportRequirement,
 };
 
 pub const NJOY_INPUT_MANIFEST_SCHEMA: &str = "nctforge.njoy-input-manifest/0.1.0";

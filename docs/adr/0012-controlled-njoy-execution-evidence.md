@@ -80,6 +80,12 @@ The roughly 70 MiB raw execution root is retained outside Git and still needs a
 versioned release-artifact publication; the receipt alone does not pretend the
 raw outputs are already publicly archived.
 
+ADR 0013 derives a separate transported-photon suitability report from the
+receipt-bound processor logs. It structures the missing/incomplete photon-data
+messages for the same four nuclides and independently confirms that this source
+set cannot advance to response-table generation under the frozen component
+definition.
+
 A second controlled execution reproduced all 50 NJOY output tapes and all 72
 structured findings byte-for-byte. NJOY's standard output and report files
 were not byte-identical because they contain elapsed-time text, so each

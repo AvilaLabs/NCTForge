@@ -1563,6 +1563,11 @@ printf 'final kerma factors\\n' > output\n";
 
         let document = NjoyExecutionReceiptDocument::from_path(&result.receipt_path).unwrap();
         document.verify_execution_root(&output_root).unwrap();
+        let suitability = crate::NjoySuitabilityReport::assess(&document, &output_root).unwrap();
+        assert_eq!(
+            suitability.qualification,
+            crate::NjoySuitabilityQualification::TransportedPhotonKermaCandidateUnreviewed
+        );
         fs::write(output_root.join("B10/tape25"), b"tampered\n").unwrap();
         assert!(matches!(
             document.verify_execution_root(&output_root),

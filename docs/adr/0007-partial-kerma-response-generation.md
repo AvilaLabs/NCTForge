@@ -39,7 +39,9 @@ freezes the ten canonical decks. ADR 0012 implements controlled execution and
 artifact verification. The first complete run produced all expected sections,
 but HEATR reported 72 MT 301 kinematic-limit violations across N-15, O-16,
 O-17, and O-18. The preserved receipt is therefore
-`execution_observed_diagnostics_failed`; no response table was generated.
+`execution_observed_diagnostics_failed`; no response table was generated. ADR
+0013 also rejects the selection for transported-photon KERMA after structuring
+NJOY's missing or incomplete photon-data messages for the same four nuclides.
 
 The response generator uses the exact material weight fractions and the atomic
 weight ratios in the selected OpenMC HDF5 tables, matching OpenMC's conversion

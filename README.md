@@ -40,6 +40,9 @@ contains:
   binds the processor and declared runtime artifacts, requires exact output
   sections, parses kinematic findings, and emits an independently verifiable
   receipt even when scientific qualification fails;
+- a deterministic transported-photon KERMA suitability gate that structures
+  NJOY's photon-data fallback/incompleteness messages, combines them with
+  kinematic findings, and can be independently regenerated from the raw logs;
 - a byte-stable OpenMC 0.16 input-deck generator that verifies content
   bindings and selected nuclear-data files before emitting the complete tally
   ledger;
@@ -216,6 +219,20 @@ The first canonical receipt is intentionally
 `execution_observed_diagnostics_failed`, not a response table or reference
 result. See [ADR 0012](docs/adr/0012-controlled-njoy-execution-evidence.md) and
 the [structured finding summary](docs/research/NJOY2016_78_KINEMATIC_FINDINGS.md).
+
+Derive the separately versioned data-suitability gate from a verified root:
+
+```text
+cargo run --bin nctforge -- njoy assess-execution \
+  --receipt benchmarks/synthetic/nf-bnct-001/transport/provenance/njoy2016-78-execution-receipt.json \
+  --execution-directory PATH-TO-COMPLETE-EXECUTION-DIRECTORY \
+  --output NEW-SUITABILITY-REPORT.json
+```
+
+The canonical assessment is `transported_photon_kerma_rejected`: O-17 and O-18
+have no photon-production files, N-15 lacks File 12, and O-16 has a potentially
+incomplete discrete photon sequence. See [ADR
+0013](docs/adr/0013-transported-photon-kerma-suitability.md).
 
 ## License and use boundary
 

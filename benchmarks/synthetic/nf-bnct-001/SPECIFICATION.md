@@ -3,7 +3,8 @@
 **Specification version:** 0.1.0
 
 **Status:** Geometry, resolved material, and source frozen; first NJOY
-processing evidence rejected; response tables and reference results unqualified
+processing and transported-photon suitability evidence rejected; response
+tables and reference results unqualified
 
 **Qualification ceiling:** Synthetic research only
 
@@ -264,6 +265,14 @@ It is rejected evidence, not a result: N-15, O-16, O-17, and O-18 produced 72
 MT 301 kinematic-limit violations. ADR 0012 defines the execution boundary and
 the research finding note records every affected energy.
 
+The deterministic transported-photon suitability report is
+[`transport/provenance/njoy2016-78-transported-photon-suitability.json`](transport/provenance/njoy2016-78-transported-photon-suitability.json),
+with SHA-256
+`39f32c071e715d4b712a92a25faf1424ba99f548aeabe88c934e84b5d2e48e22`.
+It binds the execution receipt and raw-report hashes and rejects the same four
+nuclides on explicit missing or incomplete photon-data findings. Passing this
+gate would remain an unreviewed candidate state, not scientific approval.
+
 ## Execution profiles
 
 ### Smoke
@@ -384,6 +393,7 @@ data-acquisition-receipt.json
 evaluated-neutron-source-selection.json
 nctforge-njoy-input-manifest.json
 nctforge-njoy-execution-receipt.json
+nctforge-njoy-transported-photon-suitability.json
 njoy-inputs/
 njoy-outputs/
 nuclear-data-manifest.json
@@ -429,9 +439,11 @@ and receipt-bound as an unqualified candidate. The ten deterministic NJOY decks
 and their `input_preparation_only` manifest are also frozen. A controlled
 ten-nuclide execution receipt is now frozen as
 `execution_observed_diagnostics_failed`; it is execution evidence but not a
-response table. The benchmark cannot enter transport execution until the four
-failed nuclides are investigated, the archive drift is resolved at the response
-level, generated KERMA tables pass the ADR 0007 gates, the processed OpenMC
+response table. The source set is separately
+`transported_photon_kerma_rejected`. The benchmark cannot enter transport
+execution until the four failed nuclides are replaced or resolved through a
+versioned data profile, the archive drift is resolved at the response level,
+generated KERMA tables pass the ADR 0007 gates, the processed OpenMC
 distribution is inspected, and the required independent review is complete.
 Changing any frozen quantity creates a new benchmark specification version and
 cannot silently replace earlier results.
