@@ -35,3 +35,27 @@ cargo run -p nctforge-cli -- openmc data verify-selection \
 See [ADR 0010](../../docs/adr/0010-verifiable-nuclear-data-acquisition.md) and
 the [archive drift record](../../docs/research/ENDFB81_NEUTRON_ARCHIVE_DRIFT.md)
 for the qualification boundary.
+
+Verify a selectively extracted official processed-data selection against the
+checked case manifest and material contract with:
+
+```sh
+cargo run -p nctforge-cli -- openmc data verify-manifest \
+  --manifest benchmarks/synthetic/nf-bnct-001/transport/provenance/openmc-endfb81-processed-data-manifest.json \
+  --data-root PATH_TO_SELECTED_OPENMC_DATA \
+  --material benchmarks/synthetic/nf-bnct-001/transport/material.json
+```
+
+The checked comparison report was regenerated from that selection and the
+controlled NJOY execution using:
+
+```sh
+uv run --with-requirements scripts/requirements-openmc-data-inspector.txt \
+  scripts/compare-openmc-njoy-heating.py \
+  --manifest benchmarks/synthetic/nf-bnct-001/transport/provenance/openmc-endfb81-processed-data-manifest.json \
+  --data-root PATH_TO_SELECTED_OPENMC_DATA \
+  --execution-receipt benchmarks/synthetic/nf-bnct-001/transport/provenance/njoy2016-78-execution-receipt.json \
+  --execution-root PATH_TO_NJOY_EXECUTION \
+  --report-id nctforge.nf-bnct-001.openmc-endfb81-vs-njoy2016-78-mt301.v1 \
+  --output NEW_REPORT_PATH
+```

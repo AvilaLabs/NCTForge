@@ -1,6 +1,6 @@
 # ADR 0008: OpenMC Nuclear-Data Capability Preflight
 
-**Status:** Accepted and implemented; official archive inspection pending
+**Status:** Accepted and implemented; official case selection inspected
 
 **Date:** 2026-08-31
 
@@ -50,10 +50,13 @@ For `NF-BNCT-001`, preflight requires exactly its ten neutron nuclides and the
 H, B, C, N, and O photon tables. Every neutron table must contain MT 301 at a
 temperature within `0.5 K` of `293.6 K`; the tolerance matches OpenMC's
 integer-kelvin table selection and will be written explicitly to settings.
-B-10 must contain MT 107, N-14 MT 103, H-1 MT 102 photon production, and B-10
-MT 107 photon production. Photon tables must contain coherent MT 502,
-incoherent MT 504, and photoelectric MT 522 data, plus atomic-relaxation and
-Compton-profile structures.
+B-10 must contain MT 107, N-14 MT 103, and H-1 MT 102 photon production. B-10
+must carry photon production on either the redundant aggregate MT 107 or the
+discrete first-excited-state alpha branch MT 801. This alternative follows the
+ENDF definition of MT 107 as the sum of MT 800--849 and OpenMC's use of photon
+products attached to the nonredundant reactions. Photon tables must contain
+coherent MT 502, incoherent MT 504, and photoelectric MT 522 data, plus
+atomic-relaxation and Compton-profile structures.
 
 At the selected temperature, the preflight also calculates the common neutron
 transport interval in the same way as OpenMC: the maximum lower grid bound and
@@ -61,9 +64,13 @@ minimum upper grid bound across every loaded nuclide. Input generation requires
 the reviewed component-response functions to cover that complete interval, not
 only the monoenergetic source value.
 
-The manifest is deliberately not hand-authored. The first checked-in manifest
-will be generated from the downloaded archive, mechanically validated, and
-reviewed before it can be referenced by a response set or prepared run.
+The manifest is deliberately not hand-authored. The checked-in `NF-BNCT-001`
+manifest was generated from the downloaded archive and independently validated.
+It binds `cross_sections.xml`, ten neutron tables, and five element photon
+tables. Its SHA-256 is
+`3eaae09921172199c34f3fb236ae082ea5ace4567e0e04d2afcce357add73fb1`.
+The archive SHA-256 is
+`b7ad59cb4a3d76d8a291326093a98507f8d24b6e6af629116d3f7dc85f83c4cb`.
 The frozen processed archive has no published digest, so its acquisition
 receipt remains `acquisition_only`; see ADR 0010.
 
@@ -77,6 +84,11 @@ receipt remains `acquisition_only`; see ADR 0010.
   available to reproduce the response-generation normalization.
 - This preflight establishes data identity and declared capabilities; it does
   not validate evaluated nuclear physics or qualify a response table.
+- The official selection passes the transport capability preflight. A separate
+  pointwise comparison confirms its MT 301 tables agree with NCTForge's
+  NJOY2016.78 production outputs, while also showing effective local-photon
+  fallback for O-17 and O-18. That finding remains a response-generation
+  blocker rather than a transport-manifest failure.
 - HDF5 inspection remains an evidence-producing setup step. NCTForge's Rust
   runtime does not take a system HDF5 linkage dependency.
 
@@ -86,5 +98,7 @@ receipt remains `acquisition_only`; see ADR 0010.
 - [OpenMC ENDF/B-VIII.1 generation recipe](https://github.com/openmc-dev/data/blob/66cfe45ff7a3aa47a4d7805b92b3d5ab6ee018b6/generate_endf.py)
 - [OpenMC cross-sections listing format](https://docs.openmc.org/en/v0.16.0/io_formats/cross_sections.html)
 - [OpenMC 0.16.0 incident-neutron HDF5 reader](https://github.com/openmc-dev/openmc/blob/v0.16.0/openmc/data/neutron.py)
+- [OpenMC photon-production treatment](https://docs.openmc.org/en/v0.16.0/methods/photon_physics.html)
+- [NNDC ENDF reaction identifiers](https://www.nndc.bnl.gov/endf/help.html)
 - [OpenMC 0.16.0 photon HDF5 reader](https://github.com/openmc-dev/openmc/blob/v0.16.0/src/photon.cpp)
 - [OpenMC 0.16.0 data-format and temperature constants](https://github.com/openmc-dev/openmc/blob/v0.16.0/include/openmc/constants.h)

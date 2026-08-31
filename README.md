@@ -27,6 +27,8 @@ contains:
 - a case-scoped OpenMC nuclear-data inspector and preflight that bind table
   hashes and reject missing temperatures, energy coverage, reactions, heating,
   or photon data;
+- a frozen official OpenMC ENDF/B-VIII.1 selection and a reproducible,
+  pointwise MT 301 comparison against the controlled NJOY outputs;
 - a Rust nuclear-data acquisition path with HTTPS redirect confinement, exact
   byte-range resume, explicit large-transfer confirmation, publisher-digest
   checks when available, and content-addressed receipts;
@@ -71,14 +73,15 @@ readout. CI also requires all 41 generated DICOM instances to pass independent
 IOD and cross-instance consistency validation without errors or warnings.
 Material and source inputs are now explicit, validated, and transport-neutral.
 The first identity-oriented synthetic geometry can be translated into
-deterministic OpenMC XML. Its exact evaluated-neutron source files are frozen as
-an unqualified candidate; an upstream archive-digest change remains unresolved,
-and the processed OpenMC distribution and reviewed response tables have not yet
-been frozen. The first complete NJOY execution is preserved as rejected
-evidence because N-15 and three oxygen isotopes exceeded HEATR's MT 301
-kinematic limits. Material mapping from general DICOM cases, particle execution,
-statepoint import, biological modeling, and dose calculation are not implemented
-yet. Transport capability flags remain false until their acceptance gates pass.
+deterministic OpenMC XML. Its exact evaluated-neutron source files and the
+official processed OpenMC case selection are frozen. All ten generated MT 301
+curves agree pointwise with the official processed tables within `4.9e-7`, but
+the comparison also confirms effective local-photon fallback for O-17 and O-18.
+Reviewed response tables therefore remain blocked; the project does not hide or
+zero those contributions. Material mapping from general DICOM cases, particle
+execution, statepoint import, biological modeling, and dose calculation are not
+implemented yet. Transport capability flags remain false until their acceptance
+gates pass.
 
 The first implementation target is
 [`NF-BNCT-001`](benchmarks/synthetic/nf-bnct-001/SPECIFICATION.md). Its geometry,
@@ -177,6 +180,16 @@ overwriting completed output. The official processed archive currently has no
 published digest, so its receipt deliberately remains `acquisition_only`; a
 locally calculated SHA-256 is byte identity, not scientific qualification. See
 [ADR 0010](docs/adr/0010-verifiable-nuclear-data-acquisition.md).
+
+After selective extraction, independently verify the checked manifest and the
+material-specific capabilities with:
+
+```text
+cargo run --bin nctforge -- openmc data verify-manifest \
+  --manifest benchmarks/synthetic/nf-bnct-001/transport/provenance/openmc-endfb81-processed-data-manifest.json \
+  --data-root PATH-TO-SELECTED-OPENMC-DATA \
+  --material benchmarks/synthetic/nf-bnct-001/transport/material.json
+```
 
 ### NJOY input preparation
 

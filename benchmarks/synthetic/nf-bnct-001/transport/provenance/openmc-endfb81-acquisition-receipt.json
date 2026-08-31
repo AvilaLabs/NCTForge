@@ -1,0 +1,24 @@
+{
+  "schema_version": "nctforge.data-acquisition-receipt/0.1.0",
+  "profile_id": "openmc-endfb81-official-library-2025-12-18",
+  "profile_sha256": "237a45d81b7f57dbbb0f1acace641e5dcbda13757e9bfcef686b4daf145ecab7",
+  "artifact_role": "openmc_continuous_energy_library",
+  "artifact": {
+    "path": "endfb81.tar.xz",
+    "media_type": "application/x-xz",
+    "size_bytes": 9661406540,
+    "sha256": "b7ad59cb4a3d76d8a291326093a98507f8d24b6e6af629116d3f7dc85f83c4cb",
+    "publisher_digest": null
+  },
+  "transfer": {
+    "requested_uri": "https://anl.box.com/shared/static/6qr7jezzihkj9p9esl5jn19qgpujyjyz.xz",
+    "final_origin": "https://public.boxcloud.com",
+    "resumed_from_bytes": 0,
+    "content_disposition_filename": "endfb81.tar.xz",
+    "etag": null,
+    "last_modified": null
+  },
+  "publisher_digest_status": "unavailable",
+  "evidence_state": "acquisition_only",
+  "completed_at_unix_seconds": 1788183756
+}

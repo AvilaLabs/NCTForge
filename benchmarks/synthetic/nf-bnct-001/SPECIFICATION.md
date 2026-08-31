@@ -273,6 +273,29 @@ It binds the execution receipt and raw-report hashes and rejects the same four
 nuclides on explicit missing or incomplete photon-data findings. Passing this
 gate would remain an unreviewed candidate state, not scientific approval.
 
+The official OpenMC ENDF/B-VIII.1 acquisition receipt and case-scoped processed
+selection are frozen in
+[`transport/provenance/openmc-endfb81-acquisition-receipt.json`](transport/provenance/openmc-endfb81-acquisition-receipt.json)
+and
+[`transport/provenance/openmc-endfb81-processed-data-manifest.json`](transport/provenance/openmc-endfb81-processed-data-manifest.json),
+with SHA-256 values
+`71e5b7ded6e031f3c9b3c9f75b2f0cdc6f02428d1a5f8fa8a843e738d2ea7fb8`
+and
+`3eaae09921172199c34f3fb236ae082ea5ace4567e0e04d2afcce357add73fb1`.
+The manifest binds `cross_sections.xml`, ten neutron tables, and five element
+photon tables and passes the material-specific transport capability preflight.
+The publisher provides no archive digest, so the receipt remains
+`acquisition_only`.
+
+The pointwise official-OpenMC/NJOY MT 301 comparison is frozen in
+[`transport/provenance/openmc-njoy-mt301-comparison.json`](transport/provenance/openmc-njoy-mt301-comparison.json),
+with SHA-256
+`e9b1ffc5e70e3e489f23f9e185d12a5edeb7525161eb3b81470233d33f36f1e7`.
+All ten native grids correspond and every curve agrees within the declared
+`1e-6` relative tolerance. The report also identifies effective local-photon
+fallback for O-17 and O-18 and remains
+`comparison_only_not_response_qualification`.
+
 ## Execution profiles
 
 ### Smoke
@@ -394,6 +417,7 @@ evaluated-neutron-source-selection.json
 nctforge-njoy-input-manifest.json
 nctforge-njoy-execution-receipt.json
 nctforge-njoy-transported-photon-suitability.json
+openmc-njoy-mt301-comparison.json
 njoy-inputs/
 njoy-outputs/
 nuclear-data-manifest.json
@@ -442,8 +466,10 @@ ten-nuclide execution receipt is now frozen as
 response table. The source set is separately
 `transported_photon_kerma_rejected`. The benchmark cannot enter transport
 execution until the four failed nuclides are replaced or resolved through a
-versioned data profile, the archive drift is resolved at the response level,
-generated KERMA tables pass the ADR 0007 gates, the processed OpenMC
-distribution is inspected, and the required independent review is complete.
+versioned data profile or response treatment, generated KERMA tables pass the
+ADR 0007 gates, and the required independent review is complete. The archive
+drift is resolved at the MT 301 response level and the processed OpenMC
+selection is inspected; those findings do not clear the O-17/O-18 photon-data
+blocker.
 Changing any frozen quantity creates a new benchmark specification version and
 cannot silently replace earlier results.

@@ -1,6 +1,6 @@
 # ADR 0010: Verifiable Nuclear-Data Acquisition
 
-**Status:** Accepted and implemented; evaluated-source candidate acquired
+**Status:** Accepted and implemented; both source and processed candidates acquired
 
 **Date:** 2026-08-31
 
@@ -93,12 +93,13 @@ a self-authored profile while continuing to claim the frozen distribution.
   side effect.
 - Acquisition evidence establishes provenance and byte identity, not evaluated
   nuclear-data correctness, response-table qualification, or clinical fitness.
-- The current NNDC neutron archive is an unqualified source candidate until its
-  selected evaluations and generated responses are compared with the processed
-  OpenMC distribution; public evidence does not establish that the archive
-  change was packaging-only.
-- The processed archive remains an unqualified candidate until it is actually
-  acquired, inspected, reviewed, and bound to the case response evidence.
+- The current NNDC neutron archive remains a byte-distinct source candidate;
+  public evidence does not establish that the archive change was packaging-only.
+  Its generated MT 301 responses do, however, agree pointwise with the official
+  processed OpenMC tables within the declared tolerance.
+- The processed archive has been acquired, inspected, and bound to the case.
+  Its acquisition receipt remains `acquisition_only`, and neither that receipt
+  nor the successful transport preflight qualifies a response table.
 
 ## Primary sources
 

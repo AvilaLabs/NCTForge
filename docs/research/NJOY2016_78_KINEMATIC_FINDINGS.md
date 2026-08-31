@@ -91,14 +91,17 @@ The next work is diagnostic, not corrective. It must:
    nuclide and identify a candidate profile that does not require local fallback;
 2. determine which missing or inconsistent data cause each numerical limit and
    reproduce the result in a separately built processor;
-3. determine whether the official processed OpenMC ENDF/B-VIII.1 heating
-   tables show the same behavior after atomic-weight-ratio normalization;
-4. whether a newer evaluated-data release changes the result under a new,
-   explicitly versioned profile; and
+3. compare the official processed OpenMC ENDF/B-VIII.1 heating tables on their
+   corresponding native energy grids (complete: every MT 301 curve agrees
+   pointwise within `4.892060e-7`, and O-17/O-18 retain effective local-photon
+   fallback);
+4. determine whether a newer evaluated-data release changes the result under a
+   new, explicitly versioned profile; and
 5. which independent calculations can test the MT 301 behavior without
    sharing HEATR's implementation assumptions.
 
-Until those questions are resolved and independently reviewed, the benchmark
+The official-library comparison narrows but does not clear the blocker. Until a
+response treatment is justified and independently reviewed, the benchmark
 remains blocked before transport execution.
 
 ## Primary sources

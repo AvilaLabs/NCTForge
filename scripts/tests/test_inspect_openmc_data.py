@@ -175,6 +175,9 @@ class InspectorTest(unittest.TestCase):
                     f'<library materials="{element}" '
                     f'path="photon/{element}.h5" type="photon"/>'
                 )
+            libraries.append(
+                '<library materials="H3" path="neutron/H3.h5" type="neutron"/>'
+            )
             cross_sections = data_root / "cross_sections.xml"
             cross_sections.write_text(
                 "<cross_sections>\n  "

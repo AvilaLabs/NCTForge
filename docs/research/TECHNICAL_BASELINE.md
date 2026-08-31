@@ -133,6 +133,16 @@ The first candidate run is pinned to:
 - no thermal-scattering-law table in the baseline case, so that molecular model
   differences do not obscure the first cross-code comparison.
 
+The official processed distribution has now been acquired and its case-scoped
+selection frozen. The ten neutron and five photon tables pass the transport
+capability preflight. A pointwise, no-interpolation comparison of every MT 301
+table against NCTForge's NJOY2016.78 production outputs found corresponding
+grids and a maximum relative difference of `4.892060e-7`. O-17 and O-18 have no
+photon-production reactions and their MT 301 responses are effectively equal to
+local-heating MT 901; therefore this evidence confirms, rather than removes, the
+transported-photon KERMA qualification blocker. See
+[`OPENMC_ENDFB81_PROCESSED_DATA_FINDINGS.md`](OPENMC_ENDFB81_PROCESSED_DATA_FINDINGS.md).
+
 A later `NF-BNCT-001-SAB` variant will add hydrogen bound in water. A later
 nuclear-data sensitivity study will repeat the calculation with at least
 ENDF/B-VIII.0 and one non-ENDF evaluation. These variants must never overwrite
@@ -269,16 +279,16 @@ result exists. Cross-code agreement alone remains `cross_code_research_only`.
   temperatures, selected neutron energy bounds, MT 301, required reaction MTs,
   photon production, photoatomic data, atomic relaxation, and Compton profiles,
   and bind the acquisition profile, receipt, source URI, byte count, and archive
-  identity into manifest schema `0.3.0`; pending: run it on and freeze the
+  identity into manifest schema `0.3.0`. Complete: run it on and freeze the
   processed official OpenMC ENDF/B-VIII.1 distribution selection.
 - Complete: probe and safely acquire official data through a Rust path with
   HTTPS redirect confinement, exact resumable ranges, no overwrite, explicit
   size confirmation, publisher-digest verification when available, and an
   acquisition-only receipt.
 - Complete: acquire the current NNDC ENDF/B-VIII.1 neutron archive, bind its
-  receipt to the frozen material, and hash the exact ten selected evaluations;
-  pending: resolve the changed archive digest through processed-table and KERMA
-  comparisons before qualification.
+  receipt to the frozen material, and hash the exact ten selected evaluations.
+  Complete: demonstrate pointwise MT 301 equivalence to the official processed
+  library; source-container identity remains distinct and disclosed.
 - Complete: generate byte-stable OpenMC 0.16 geometry, material, source,
   settings, response, audit, spectrum, and leakage XML directly in Rust; verify
   all content bindings and selected nuclear-data files; reject incomplete
@@ -290,8 +300,10 @@ result exists. Cross-code agreement alone remains `cross_code_research_only`.
   all ten nuclides through the controlled evidence path and preserve the
   rejected receipt after four MT 301 diagnostic failures. Complete: structure
   the matching photon-data fallback/incompleteness messages and reject the
-  source selection for transported-photon KERMA. Pending: identify and test a
-  passing versioned profile, then pass every declared review gate.
+  source selection for transported-photon KERMA. Complete: confirm against the
+  official OpenMC tables that O-17 and O-18 retain effective local-photon
+  fallback. Pending: define, justify, and independently review a passing
+  versioned response treatment, then pass every declared review gate.
 - Do not use reaction-filtered neutron heating as a component partition; retain
   it only as a diagnostic under ADR 0005.
 - Do not publish “golden” OpenMC dose arrays before an independent calculation is
@@ -305,7 +317,6 @@ R1 is complete: one CLI command generates `NF-BNCT-001`, arbitrary file order
 does not change the imported geometry, every declared affine and ROI mask is
 reproduced, external DICOM IOD/entity validation is warning-free, and frozen
 malformed variants fail closed. R2 now contains the response ledger,
-transport-neutral material/source contracts, nuclear-data capability preflight,
-and deterministic OpenMC 0.16.0 deck generation. Adapter preparation remains
-disabled until official data and reviewed response artifacts satisfy the
-complete gate.
+transport-neutral material/source contracts, a verified official nuclear-data
+selection, and deterministic OpenMC 0.16.0 deck generation. Adapter preparation
+remains disabled until reviewed response artifacts satisfy the complete gate.

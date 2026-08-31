@@ -395,21 +395,24 @@ def read_cross_sections(path: Path) -> tuple[Path, list[dict[str, Any]]]:
     libraries = []
     for node in root.findall("library"):
         library_path = Path(node.attrib["path"])
-        resolved = (
+        candidate = (
             library_path if library_path.is_absolute() else base / library_path
-        ).resolve(strict=True)
+        )
         libraries.append(
             {
                 "type": node.attrib["type"],
                 "materials": node.attrib["materials"].split(),
-                "path": resolved,
+                "path": candidate,
             }
         )
     return base, libraries
 
 
 def select_library(
-    libraries: list[dict[str, Any]], library_type: str, material: str
+    libraries: list[dict[str, Any]],
+    library_type: str,
+    material: str,
+    data_root: Path,
 ) -> Path:
     matches = [
         library["path"]
@@ -421,7 +424,9 @@ def select_library(
             f"cross_sections.xml has {len(matches)} {library_type} mappings "
             f"for {material}; expected exactly one"
         )
-    return matches[0]
+    selected = matches[0].resolve(strict=True)
+    data_relative_path(selected, data_root)
+    return selected
 
 
 def material_requirements(path: Path) -> tuple[list[str], list[str]]:
@@ -470,13 +475,17 @@ def main() -> None:
     nuclides, elements = material_requirements(material)
     neutron_tables = [
         inspect_neutron(
-            select_library(libraries, "neutron", nuclide), nuclide, data_root
+            select_library(libraries, "neutron", nuclide, data_root),
+            nuclide,
+            data_root,
         )
         for nuclide in nuclides
     ]
     photon_tables = [
         inspect_photon(
-            select_library(libraries, "photon", element), element, data_root
+            select_library(libraries, "photon", element, data_root),
+            element,
+            data_root,
         )
         for element in elements
     ]

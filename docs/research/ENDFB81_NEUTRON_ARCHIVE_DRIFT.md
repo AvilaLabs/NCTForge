@@ -2,8 +2,8 @@
 
 **Observed:** 2026-08-31
 
-**Disposition:** Current publisher object accepted for acquisition as an
-unqualified candidate; equivalence to the OpenMC recipe object is unresolved
+**Disposition:** Archive-byte equivalence remains unresolved; generated MT 301
+responses match the official OpenMC processed tables within tolerance
 
 ## Finding
 
@@ -54,6 +54,12 @@ direct comparison is presently impossible.
 
 ## Qualification gate
 
+Steps 1--3 below are complete. The checked comparison binds the official
+processed-data manifest and the NJOY execution receipt, requires corresponding
+energy grids without interpolation, and reports a maximum MT 301 relative
+difference of `4.892060e-7` across all ten nuclides. This resolves the
+response-level total-heating question, not the historical archive-byte identity.
+
 Before a response set can leave `method_frozen_tables_pending`:
 
 1. bind every evaluation selected by `NF-BNCT-001` to its archive-relative
@@ -61,7 +67,7 @@ Before a response set can leave `method_frozen_tables_pending`:
 2. generate total and partial KERMA from those exact members with the frozen
    NJOY2016.78 method;
 3. compare the processed neutron tables and total KERMA against the official
-   OpenMC ENDF/B-VIII.1 HDF5 distribution;
+   OpenMC ENDF/B-VIII.1 HDF5 distribution (complete);
 4. investigate and disclose any material difference; and
 5. obtain the independent review required by ADR 0007.
 

@@ -87,6 +87,9 @@ Implementation status:
   including pointwise neutron-KERMA closure and review-state enforcement;
 - complete: case-scoped OpenMC nuclear-data manifest, HDF5 capability
   inspection, artifact verification, and cross-sections mapping preflight;
+- complete: acquire the official 9.66 GB OpenMC ENDF/B-VIII.1 distribution,
+  freeze its case-scoped acquisition receipt and 16 selected artifacts, and
+  pass the material-specific transport capability preflight;
 - complete: resumable, no-overwrite nuclear-data acquisition with frozen
   publisher profiles, redirect confinement, size and publisher-digest checks,
   and receipts bound into manifest schema `0.3.0`;
@@ -109,11 +112,14 @@ Implementation status:
 - complete: derive and independently regenerate a transported-photon KERMA
   suitability report that rejects the same four nuclides on explicit NJOY
   missing/incomplete photon-data findings;
-- in progress: inventory the rejected evaluations, identify a versioned
-  candidate data profile without local-photon fallback, and independently test
-  the affected total-heating responses;
-- pending: acquire and inspect the processed official OpenMC ENDF/B-VIII.1
-  distribution and compare it with the selected evaluated sources;
+- complete: compare all ten production MT 301 tables pointwise against the
+  official processed OpenMC tables with corresponding grids and no
+  interpolation; the maximum relative difference is `4.892060e-7`;
+- complete: establish that the official processed tables retain effective
+  local-photon fallback for O-17 and O-18, so official-library acquisition does
+  not by itself resolve the transported-photon KERMA blocker;
+- in progress: define and independently justify a versioned response treatment
+  for the O-17/O-18 photon-data gap, then repeat the complete review gates;
 - pending: generate the first reviewable response tables only after the
   diagnostic blocker is resolved through a versioned, reviewed data profile;
 - pending: smoke execution, statepoint import, and independent estimator

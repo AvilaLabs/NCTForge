@@ -75,6 +75,9 @@ physical checks remain separate qualification work.
 
 - The current ENDF/B-VIII.1 selection cannot supply response tables for the
   frozen transported-photon component definition.
+- The official OpenMC processed tables reproduce the selected MT 301 curves and
+  retain effective local-photon fallback for O-17 and O-18; using the official
+  transport distribution therefore does not clear this response gate.
 - A successful NJOY exit and a complete PENDF file set cannot bypass source
   suitability.
 - A future data profile must pass both kinematic diagnostics and this

@@ -5,7 +5,7 @@ use std::fs::File;
 use std::io::{self, Read};
 use std::path::{Component, Path, PathBuf};
 
-use nctforge_transport::TransportCase;
+use nctforge_transport::{MaterialDefinition, TransportCase};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use thiserror::Error;
@@ -26,6 +26,9 @@ pub const TARGET_DISTRIBUTION_SOURCE_URI: &str =
 pub const TARGET_DISTRIBUTION_ARCHIVE_SIZE_BYTES: u64 = 9_661_406_540;
 /// OpenMC rounds HDF5 kT values to integer kelvin when selecting tables.
 pub const TEMPERATURE_TOLERANCE_K: f64 = 0.5;
+/// ENDF permits B-10 alpha photon production on aggregate MT 107 or the
+/// first-excited-state component MT 801 (whose cross section contributes to 107).
+const B10_ALPHA_PHOTON_PRODUCTION_MTS: [u16; 2] = [107, 801];
 
 /// Case-scoped, content-addressed description of the OpenMC data actually used.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -266,14 +269,31 @@ impl NuclearDataManifest {
         Ok(())
     }
 
+    /// Check that this exact data selection can represent the supplied material.
+    pub fn validate_for_material(
+        &self,
+        material: &MaterialDefinition,
+    ) -> Result<(), NuclearDataError> {
+        self.validate()?;
+        material
+            .validate()
+            .map_err(|error| NuclearDataError::InvalidMaterial(error.to_string()))?;
+        self.validate_material_capabilities(material)
+    }
+
     /// Check that this exact data selection can represent the supplied case.
     pub fn validate_for_case(&self, case: &TransportCase) -> Result<(), NuclearDataError> {
         self.validate()?;
         case.validate()
             .map_err(|error| NuclearDataError::InvalidTransportCase(error.to_string()))?;
+        self.validate_material_capabilities(&case.material)
+    }
 
-        let required_nuclides = case
-            .material
+    fn validate_material_capabilities(
+        &self,
+        material: &MaterialDefinition,
+    ) -> Result<(), NuclearDataError> {
+        let required_nuclides = material
             .nuclides
             .iter()
             .map(|nuclide| nuclide.name.as_str())
@@ -292,12 +312,12 @@ impl NuclearDataManifest {
 
         for table in &self.neutron_tables {
             self.require_reaction(&table.nuclide, 301)?;
-            selected_temperature_index(table, case.material.temperature_k)?;
+            selected_temperature_index(table, material.temperature_k)?;
         }
         self.require_reaction("B10", 107)?;
         self.require_reaction("N14", 103)?;
         self.require_photon_production("H1", 102)?;
-        self.require_photon_production("B10", 107)?;
+        self.require_any_photon_production("B10", &B10_ALPHA_PHOTON_PRODUCTION_MTS)?;
 
         let required_elements = required_nuclides
             .iter()
@@ -444,6 +464,24 @@ impl NuclearDataManifest {
             });
         }
         Ok(())
+    }
+
+    fn require_any_photon_production(
+        &self,
+        nuclide: &str,
+        mts: &[u16],
+    ) -> Result<(), NuclearDataError> {
+        let table = self.table(nuclide)?;
+        if mts
+            .iter()
+            .any(|mt| table.photon_production_mts.binary_search(mt).is_ok())
+        {
+            return Ok(());
+        }
+        Err(NuclearDataError::MissingAlternativePhotonProduction {
+            nuclide: nuclide.into(),
+            mts: mts.to_vec(),
+        })
     }
 
     fn table(&self, nuclide: &str) -> Result<&NeutronTableCapability, NuclearDataError> {
@@ -743,6 +781,8 @@ pub enum NuclearDataError {
     ConflictingArtifactHash(String),
     #[error("transport case is invalid: {0}")]
     InvalidTransportCase(String),
+    #[error("material definition is invalid: {0}")]
+    InvalidMaterial(String),
     #[error("required neutron table {0} is missing")]
     MissingNuclide(String),
     #[error("unrequested neutron table {0} is present in the case-scoped manifest")]
@@ -759,6 +799,10 @@ pub enum NuclearDataError {
     MissingReaction { nuclide: String, mt: u16 },
     #[error("nuclide {nuclide} lacks transported photon production for MT {mt}")]
     MissingPhotonProduction { nuclide: String, mt: u16 },
+    #[error(
+        "nuclide {nuclide} lacks transported photon production for every acceptable MT in {mts:?}"
+    )]
+    MissingAlternativePhotonProduction { nuclide: String, mts: Vec<u16> },
     #[error("required photon table for element {0} is missing")]
     MissingPhotonElement(String),
     #[error("unrequested photon table for element {0} is present in the case-scoped manifest")]
@@ -814,6 +858,9 @@ mod tests {
         include_str!("../../../benchmarks/synthetic/nf-bnct-001/transport/material.json");
     const SOURCE_JSON: &str =
         include_str!("../../../benchmarks/synthetic/nf-bnct-001/transport/source.json");
+    const OFFICIAL_PROCESSED_MANIFEST_JSON: &str = include_str!(
+        "../../../benchmarks/synthetic/nf-bnct-001/transport/provenance/openmc-endfb81-processed-data-manifest.json"
+    );
 
     fn case() -> TransportCase {
         TransportCase {
@@ -920,6 +967,14 @@ mod tests {
     }
 
     #[test]
+    fn official_processed_manifest_passes_bnct_transport_capabilities() {
+        let manifest: NuclearDataManifest =
+            serde_json::from_str(OFFICIAL_PROCESSED_MANIFEST_JSON).unwrap();
+        assert!(manifest.validate().is_ok());
+        assert!(manifest.validate_for_material(&case().material).is_ok());
+    }
+
+    #[test]
     fn rejects_self_asserted_acquisition_provenance() {
         let mut wrong_hash_manifest = manifest();
         wrong_hash_manifest.distribution.acquisition_profile_sha256 = "0".repeat(64);
@@ -1006,6 +1061,24 @@ mod tests {
                 nuclide,
                 mt: 102
             }) if nuclide == "H1"
+        ));
+    }
+
+    #[test]
+    fn rejects_missing_b10_alpha_branch_photon_capability() {
+        let mut manifest = manifest();
+        manifest
+            .neutron_tables
+            .iter_mut()
+            .find(|table| table.nuclide == "B10")
+            .unwrap()
+            .photon_production_mts
+            .clear();
+
+        assert!(matches!(
+            manifest.validate_for_case(&case()),
+            Err(NuclearDataError::MissingAlternativePhotonProduction { nuclide, mts })
+                if nuclide == "B10" && mts == vec![107, 801]
         ));
     }
 
