@@ -18,6 +18,8 @@ contains:
   names, content-hashed profile identity, absolute voxel uncertainty, and a
   separately estimated physical total;
 - a transport-backend trait;
+- validated, backend-neutral material and fixed-source contracts with frozen
+  machine inputs for `NF-BNCT-001`;
 - an intentionally non-functional OpenMC adapter;
 - a strict DICOM CT geometry and RT Structure Set import boundary;
 - a deterministic generator and independent verifier for `NF-BNCT-001`;
@@ -40,9 +42,10 @@ rasterized to exact masks. The desktop viewer opens only an integrity-verified
 window/level, structure overlays, patient-edge labels, and an LPS cursor
 readout. CI also requires all 41 generated DICOM instances to pass independent
 IOD and cross-instance consistency validation without errors or warnings.
-Material mapping, particle transport, biological modeling, and dose calculation
-are not implemented yet. Transport capability flags remain false until their
-acceptance gates pass.
+Material and source inputs are now explicit, validated, and transport-neutral;
+material mapping from general DICOM cases, particle transport, biological
+modeling, and dose calculation are not implemented yet. Transport capability
+flags remain false until their acceptance gates pass.
 
 The first implementation target is
 [`NF-BNCT-001`](benchmarks/synthetic/nf-bnct-001/SPECIFICATION.md). Its geometry,

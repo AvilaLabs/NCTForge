@@ -79,7 +79,9 @@ Implementation status:
 - complete: canonical four-component physical-dose bundle with content-hashed
   profile identity, absolute voxel uncertainty, and independently derived
   physical-total uncertainty;
-- in progress: versioned material, source, and response-ledger contracts;
+- complete: versioned explicit-nuclide material and unit-weight fixed-source
+  contracts, including frozen machine inputs for `NF-BNCT-001`;
+- in progress: response-generation and contributor-ledger contract;
 - pending: deterministic OpenMC input preparation and nuclear-data preflight;
 - pending: smoke execution, statepoint import, and independent estimator
   comparison.

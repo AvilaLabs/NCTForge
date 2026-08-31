@@ -4,8 +4,16 @@
 
 use std::{error::Error, path::Path};
 
-use nctforge_core::{GridGeometry, PhysicalDoseBundle};
+use nctforge_core::PhysicalDoseBundle;
 use serde::{Deserialize, Serialize};
+
+mod model;
+
+pub use model::{
+    AngularDistribution, EnergyDistribution, FixedSourceDefinition, IntervalConvention,
+    MaterialDefinition, NeutronThermalTreatment, NuclideMassFraction, ParticleType,
+    SourceSpatialDistribution, TransportCase, TransportModelError,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -16,17 +24,6 @@ pub struct BackendDescriptor {
     pub can_prepare: bool,
     pub can_execute: bool,
     pub can_import: bool,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct TransportCase {
-    pub schema_version: String,
-    pub case_id: String,
-    pub geometry: GridGeometry,
-    pub material_model_id: String,
-    pub source_model_id: String,
-    pub requested_source_particles: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

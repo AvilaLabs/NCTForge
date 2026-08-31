@@ -12,3 +12,7 @@ publish.workspace = true
 [dependencies]
 nctforge-core = { path = "../nctforge-core" }
 serde.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true

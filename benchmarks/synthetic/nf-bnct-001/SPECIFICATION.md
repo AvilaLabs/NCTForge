@@ -2,8 +2,8 @@
 
 **Specification version:** 0.1.0
 
-**Status:** Geometry and source frozen; response tables and reference results
-are unqualified pending implementation and independent review
+**Status:** Geometry, resolved material, and source frozen; response tables and
+reference results are unqualified pending implementation and independent review
 
 **Qualification ceiling:** Synthetic research only
 
@@ -160,6 +160,35 @@ O; no B-11 is present. Temperature is `293.6 K`. The baseline deliberately uses
 the free-gas treatment for hydrogen. A bound-hydrogen variant receives a new
 case suffix and reference result.
 
+The transport contract does not ask a backend to interpret “natural.” It
+expands the elemental fractions once using the IUPAC 2013 representative atom
+fractions and AME2020 masses distributed with OpenMC 0.16.0:
+
+```text
+w_i = w_E * (a_i * m_i) / sum_j(a_j * m_j)
+```
+
+| Nuclide | Frozen transport mass fraction |
+| --- | ---: |
+| H-1 | `0.10113647042677168` |
+| H-2 | `0.00003148269322832` |
+| C-12 | `0.10966437305411902` |
+| C-13 | `0.00133118694588098` |
+| N-14 | `0.02589697162573985` |
+| N-15 | `0.00010198837426015` |
+| O-16 | `0.75977638114772760` |
+| O-17 | `0.00030676400854396` |
+| O-18 | `0.00171438172372844` |
+| B-10 | `0.00004000000000000` |
+
+These values again sum to one within the declared `1e-12` tolerance. The
+derivation is fixed by ADR 0006 to OpenMC tag commit
+`617d35a5063c57796b43428bc401e627d2011046`; its `mass_1.mas20.txt` input has
+SHA-256 `e8599c6d7f724fac91934e59f1b9de8fb8f63e820f4b39456b790665ed2a3307`.
+The machine input is [`transport/material.json`](transport/material.json).
+Every named isotope is mandatory: a backend must reject missing data rather
+than substitute a natural-element evaluation or silently merge an isotope.
+
 ## Source
 
 - Fixed source; exactly one unit-weight source neutron per source history.
@@ -174,6 +203,11 @@ is inside the OpenMC geometry. The offset is an implementation guard, not a
 physical air gap. The source is intentionally simple and is not a model of a
 beam-shaping assembly. Secondary photons originate only from interactions
 following the source neutron.
+
+The machine input is [`transport/source.json`](transport/source.json). Its
+contract distinguishes source histories, sites per history, and statistical
+weight so the `Gy/source neutron` normalization cannot be inferred from a
+backend-specific particle counter.
 
 ## Required component output
 
