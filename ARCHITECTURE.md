@@ -89,3 +89,10 @@ reviewed synthetic artifacts may enter the public benchmark corpus.
 Every result declares one of the bounded qualification states defined by
 `nctforge-evidence`. The software must never infer clinical fitness from a
 successful calculation or benchmark.
+
+The R1 case manifest binds its coordinate system, grid, DICOM identifiers,
+structure truth values, material/source model identifiers, and every CT or
+RTSTRUCT input by relative path and SHA-256. Artifact verification rejects path
+traversal, symlink escape from the case root, missing files, and hash changes.
+The manifest intentionally does not hash itself; archival releases bind the
+manifest from a higher-level release or run manifest.

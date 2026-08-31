@@ -14,6 +14,8 @@ dicom-core.workspace = true
 dicom-dictionary-std.workspace = true
 dicom-object.workspace = true
 nctforge-core = { path = "../nctforge-core" }
+nctforge-evidence = { path = "../nctforge-evidence" }
+serde_json.workspace = true
 thiserror.workspace = true
 uuid.workspace = true
 

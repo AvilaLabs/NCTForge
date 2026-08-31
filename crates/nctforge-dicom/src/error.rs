@@ -36,6 +36,8 @@ pub enum DicomError {
     StructureSet(String),
     #[error("NF-BNCT-001 verification failed: {0}")]
     Benchmark(String),
+    #[error(transparent)]
+    Manifest(#[from] nctforge_evidence::ManifestError),
     #[error("benchmark output path already exists: {0}")]
     OutputExists(PathBuf),
     #[error("I/O operation failed for {path}: {source}")]

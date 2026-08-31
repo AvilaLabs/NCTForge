@@ -48,8 +48,9 @@ Implementation status:
 - complete: exact frozen ROI masks, volumes, and LPS centroids;
 - complete: malformed frame, plane, spacing, and orientation rejection tests;
 - complete: one-command CLI generation and independent verification;
+- complete: backend-neutral `case.json` with traversal-safe SHA-256 artifact
+  verification;
 - pending: linked axial, sagittal, and coronal egui views;
-- pending: backend-neutral `case.json` manifest;
 - pending: external DICOM CT and RT Structure Set IOD validation in CI.
 
 ## R2 — Physical component truth case

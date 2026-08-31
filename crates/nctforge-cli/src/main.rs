@@ -81,12 +81,17 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                 println!("generated NF-BNCT-001 at {}", generated.root.display());
                 println!("CT slices: {}", generated.ct_files.len());
                 println!("RT Structure Set: {}", generated.rtstruct_file.display());
+                println!("Case manifest: {}", generated.manifest_file.display());
             }
             BenchmarkCommand::Verify { input } => {
                 let report = verify_nf_bnct_001(&input)?;
                 println!(
                     "verified {}: shape={:?}, spacing_mm={:?}, CT slices={}",
                     report.case_id, report.shape, report.spacing_mm, report.ct_slice_count
+                );
+                println!(
+                    "artifact integrity: {} files verified",
+                    report.verified_artifact_count
                 );
                 for roi in report.rois {
                     println!(

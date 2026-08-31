@@ -95,6 +95,12 @@ acceptance oracle is maintained separately in
 `crates/nctforge-dicom/src/benchmark.rs` so generation and verification do not
 share ROI mask calculations.
 
+Generation also writes `case.json` using schema identifier
+`nctforge.case-manifest/0.1.0`. It records the frozen coordinate system and
+geometry, DICOM UIDs, ROI truth values, material/source model identifiers, and
+SHA-256 for all 40 CT instances plus the RT Structure Set. The verifier rejects
+missing, modified, duplicated, path-escaping, or unexpected DICOM artifacts.
+
 ## RTSTRUCT
 
 Contours are `CLOSED_PLANAR`, lie on CT slice centres, use the frozen Frame of

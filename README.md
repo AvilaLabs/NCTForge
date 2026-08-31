@@ -19,6 +19,8 @@ contains:
 - an intentionally non-functional OpenMC adapter;
 - a strict DICOM CT geometry and RT Structure Set import boundary;
 - a deterministic generator and independent verifier for `NF-BNCT-001`;
+- a backend-neutral `case.json` binding geometry, structure truth values, DICOM
+  identifiers, and SHA-256 artifact integrity;
 - content-hash and run-manifest primitives;
 - CLI and egui desktop shells;
 - an evidence-gated development roadmap;
@@ -29,10 +31,10 @@ contains:
 R1 geometry work is in progress. CT slices are ordered from DICOM patient-space
 geometry rather than filenames or Instance Number; affine, frame, native pixel,
 and rescale invariants are validated; and the frozen RTSTRUCT is rasterized to
-exact masks. Linked egui views, an external DICOM IOD-validator gate, the case
-manifest, material mapping, particle transport, biological modeling, and dose
-calculation are not implemented yet. Transport capability flags remain false
-until their acceptance gates pass.
+exact masks. Linked egui views, an external DICOM IOD-validator gate, material
+mapping, particle transport, biological modeling, and dose calculation are not
+implemented yet. Transport capability flags remain false until their acceptance
+gates pass.
 
 The first implementation target is
 [`NF-BNCT-001`](benchmarks/synthetic/nf-bnct-001/SPECIFICATION.md). Its geometry,

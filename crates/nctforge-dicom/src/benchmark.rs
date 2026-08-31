@@ -2,14 +2,21 @@
 
 //! Independent oracle for the frozen `NF-BNCT-001` DICOM geometry case.
 
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::{DicomError, Result, import_ct_series, import_rtstruct};
+use nctforge_evidence::{
+    CaseManifest, PatientCoordinateSystem, QualificationBoundary, StructureRecord,
+};
+
+use crate::{CtVolume, DicomError, Result, import_ct_series, import_rtstruct};
 
 const EXPECTED_FRAME_UID: &str = "2.25.240883953911088373736134884257182446642";
 const EXPECTED_STUDY_UID: &str = "2.25.149214599444245138262873740736845471752";
 const EXPECTED_SERIES_UID: &str = "2.25.337319594251465962942344971245692083782";
+const EXPECTED_RTSTRUCT_SERIES_UID: &str = "2.25.50705181539640583496141175374452175263";
+const EXPECTED_RTSTRUCT_INSTANCE_UID: &str = "2.25.277528316852233615277963392913905893031";
 const EXPECTED_FIRST_SLICE_UID: &str = "2.25.43546999367060429143037900891741988095";
 const EXPECTED_LAST_SLICE_UID: &str = "2.25.224181827055039319855832006853907618875";
 
@@ -29,6 +36,7 @@ pub struct BenchmarkReport {
     pub spacing_mm: [f64; 3],
     pub origin_mm: [f64; 3],
     pub ct_slice_count: usize,
+    pub verified_artifact_count: usize,
     pub rois: Vec<RoiReport>,
 }
 
@@ -167,14 +175,135 @@ pub fn verify_nf_bnct_001(root: &Path) -> Result<BenchmarkReport> {
         });
     }
 
+    let verified_artifact_count = verify_manifest(root, &ct, &reports)?;
+
     Ok(BenchmarkReport {
         case_id: "NF-BNCT-001",
         shape: ct.geometry.shape,
         spacing_mm: ct.geometry.spacing_mm,
         origin_mm: ct.geometry.origin_mm,
         ct_slice_count: ct.slice_sop_instance_uids.len(),
+        verified_artifact_count,
         rois: reports,
     })
+}
+
+fn verify_manifest(root: &Path, ct: &CtVolume, rois: &[RoiReport]) -> Result<usize> {
+    let path = root.join("case.json");
+    let bytes = fs::read(&path).map_err(|source| DicomError::Io {
+        path: path.clone(),
+        source,
+    })?;
+    let manifest: CaseManifest = serde_json::from_slice(&bytes)
+        .map_err(|error| DicomError::Benchmark(format!("invalid case.json: {error}")))?;
+    manifest.validate()?;
+
+    expect_equal(
+        "manifest schema version",
+        &manifest.schema_version,
+        &"nctforge.case-manifest/0.1.0".to_owned(),
+    )?;
+    expect_equal(
+        "manifest case ID",
+        &manifest.case_id,
+        &"NF-BNCT-001".to_owned(),
+    )?;
+    expect_equal(
+        "manifest qualification",
+        &manifest.qualification,
+        &QualificationBoundary::SyntheticResearchOnly,
+    )?;
+    expect_equal(
+        "manifest coordinate system",
+        &manifest.coordinate_system,
+        &PatientCoordinateSystem::DicomLpsMillimeters,
+    )?;
+    expect_equal("manifest geometry", &manifest.geometry, &ct.geometry)?;
+    expect_equal(
+        "manifest Frame of Reference UID",
+        &manifest.frame_of_reference_uid,
+        &EXPECTED_FRAME_UID.to_owned(),
+    )?;
+    expect_equal(
+        "manifest Study Instance UID",
+        &manifest.study_instance_uid,
+        &EXPECTED_STUDY_UID.to_owned(),
+    )?;
+    expect_equal(
+        "manifest CT Series Instance UID",
+        &manifest.imaging_series_instance_uid,
+        &EXPECTED_SERIES_UID.to_owned(),
+    )?;
+    expect_equal(
+        "manifest RT Structure Set Series Instance UID",
+        &manifest.structure_set_series_instance_uid,
+        &EXPECTED_RTSTRUCT_SERIES_UID.to_owned(),
+    )?;
+    expect_equal(
+        "manifest RT Structure Set SOP Instance UID",
+        &manifest.structure_set_instance_uid,
+        &EXPECTED_RTSTRUCT_INSTANCE_UID.to_owned(),
+    )?;
+    expect_equal(
+        "manifest material model ID",
+        &manifest.material_model_id,
+        &"nctforge.nf-bnct-001.material.v1".to_owned(),
+    )?;
+    expect_equal(
+        "manifest source model ID",
+        &manifest.source_model_id,
+        &"nctforge.nf-bnct-001.source.v1".to_owned(),
+    )?;
+
+    let expected_structures: Vec<_> = rois
+        .iter()
+        .map(|roi| StructureRecord {
+            number: roi.number,
+            name: roi.name.clone(),
+            voxel_count: roi.voxel_count,
+            volume_cm3: roi.volume_cm3,
+            centroid_lps_mm: roi.centroid_lps_mm,
+        })
+        .collect();
+    expect_equal(
+        "manifest structures",
+        &manifest.structures,
+        &expected_structures,
+    )?;
+
+    let artifacts: BTreeMap<_, _> = manifest
+        .artifacts
+        .iter()
+        .map(|artifact| (artifact.path.as_str(), artifact))
+        .collect();
+    if artifacts.len() != 41 || artifacts.len() != manifest.artifacts.len() {
+        return mismatch(format!(
+            "manifest contains {} unique artifacts; expected 41",
+            artifacts.len()
+        ));
+    }
+    for slice_index in 0..40 {
+        let path = format!("ct/ct-{slice_index:03}.dcm");
+        let artifact = artifacts
+            .get(path.as_str())
+            .ok_or_else(|| DicomError::Benchmark(format!("manifest is missing {path}")))?;
+        if artifact.role != "dicom_ct_slice"
+            || artifact.media_type.as_deref() != Some("application/dicom")
+        {
+            return mismatch(format!("manifest metadata is invalid for {path}"));
+        }
+    }
+    let rtstruct = artifacts
+        .get("rtstruct.dcm")
+        .ok_or_else(|| DicomError::Benchmark("manifest is missing rtstruct.dcm".into()))?;
+    if rtstruct.role != "dicom_rt_structure_set"
+        || rtstruct.media_type.as_deref() != Some("application/dicom")
+    {
+        return mismatch("manifest metadata is invalid for rtstruct.dcm");
+    }
+
+    manifest.verify_artifacts(root)?;
+    Ok(manifest.artifacts.len())
 }
 
 fn dicom_files(directory: &Path) -> Result<Vec<PathBuf>> {

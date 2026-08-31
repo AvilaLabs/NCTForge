@@ -14,6 +14,11 @@ use dicom_core::{DataElement, Length, Tag, VR};
 use dicom_dictionary_std::{tags, uids};
 use dicom_object::meta::FileMetaTableBuilder;
 use dicom_object::{InMemDicomObject, open_file};
+use nctforge_core::GridGeometry;
+use nctforge_evidence::{
+    ArtifactRecord, CaseManifest, PatientCoordinateSystem, QualificationBoundary, StructureRecord,
+    sha256_file,
+};
 use uuid::Uuid;
 
 use crate::{DicomError, Result};
@@ -43,6 +48,7 @@ pub struct GeneratedCase {
     pub root: PathBuf,
     pub ct_files: Vec<PathBuf>,
     pub rtstruct_file: PathBuf,
+    pub manifest_file: PathBuf,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -123,11 +129,18 @@ pub fn generate_nf_bnct_001(output: &Path) -> Result<GeneratedCase> {
     let rtstruct_file = output.join("rtstruct.dcm");
     write_rtstruct(&rtstruct_file, &slice_uids)?;
 
-    Ok(GeneratedCase {
+    let manifest_file = output.join("case.json");
+    write_case_manifest(&manifest_file, &ct_files, &rtstruct_file)?;
+
+    let generated = GeneratedCase {
         root: output.to_path_buf(),
         ct_files,
         rtstruct_file,
-    })
+        manifest_file,
+    };
+    crate::verify_nf_bnct_001(output)?;
+
+    Ok(generated)
 }
 
 /// Deterministically derive one valid DICOM `2.25` UID from a UUIDv5 name.
@@ -374,6 +387,82 @@ fn write_rtstruct(path: &Path, slice_uids: &[String]) -> Result<()> {
     );
 
     write_file(path, obj)
+}
+
+fn write_case_manifest(path: &Path, ct_files: &[PathBuf], rtstruct_file: &Path) -> Result<()> {
+    let mut artifacts = Vec::with_capacity(ct_files.len() + 1);
+    for (slice_index, ct_file) in ct_files.iter().enumerate() {
+        artifacts.push(ArtifactRecord {
+            role: "dicom_ct_slice".into(),
+            path: format!("ct/ct-{slice_index:03}.dcm"),
+            sha256: hash_file(ct_file)?,
+            media_type: Some("application/dicom".into()),
+        });
+    }
+    artifacts.push(ArtifactRecord {
+        role: "dicom_rt_structure_set".into(),
+        path: "rtstruct.dcm".into(),
+        sha256: hash_file(rtstruct_file)?,
+        media_type: Some("application/dicom".into()),
+    });
+
+    let structures = ROIS
+        .iter()
+        .map(|roi| {
+            let voxel_count = [roi.x, roi.y, roi.z]
+                .into_iter()
+                .map(|bounds| ((bounds[1] - bounds[0]) / SPACING_MM).round() as usize)
+                .product();
+            StructureRecord {
+                number: roi.number,
+                name: roi.name.into(),
+                voxel_count,
+                volume_cm3: voxel_count as f64 * SPACING_MM.powi(3) / 1_000.0,
+                centroid_lps_mm: [
+                    (roi.x[0] + roi.x[1]) / 2.0,
+                    (roi.y[0] + roi.y[1]) / 2.0,
+                    (roi.z[0] + roi.z[1]) / 2.0,
+                ],
+            }
+        })
+        .collect();
+    let manifest = CaseManifest {
+        schema_version: "nctforge.case-manifest/0.1.0".into(),
+        case_id: CASE_ID.into(),
+        qualification: QualificationBoundary::SyntheticResearchOnly,
+        coordinate_system: PatientCoordinateSystem::DicomLpsMillimeters,
+        geometry: GridGeometry {
+            shape: [COLUMNS as u32, ROWS as u32, SLICES as u32],
+            spacing_mm: [SPACING_MM; 3],
+            origin_mm: [FIRST_CENTER_MM; 3],
+            direction: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
+        },
+        frame_of_reference_uid: FRAME_OF_REFERENCE_UID.into(),
+        study_instance_uid: STUDY_INSTANCE_UID.into(),
+        imaging_series_instance_uid: CT_SERIES_INSTANCE_UID.into(),
+        structure_set_series_instance_uid: RTSTRUCT_SERIES_INSTANCE_UID.into(),
+        structure_set_instance_uid: RTSTRUCT_INSTANCE_UID.into(),
+        material_model_id: "nctforge.nf-bnct-001.material.v1".into(),
+        source_model_id: "nctforge.nf-bnct-001.source.v1".into(),
+        structures,
+        artifacts,
+    };
+    manifest.validate()?;
+    let mut json = serde_json::to_vec_pretty(&manifest).map_err(|error| {
+        DicomError::Benchmark(format!("cannot serialize case manifest: {error}"))
+    })?;
+    json.push(b'\n');
+    fs::write(path, json).map_err(|source| DicomError::Io {
+        path: path.to_path_buf(),
+        source,
+    })
+}
+
+fn hash_file(path: &Path) -> Result<String> {
+    sha256_file(path).map_err(|source| DicomError::Io {
+        path: path.to_path_buf(),
+        source,
+    })
 }
 
 fn referenced_frame_item(slice_uids: &[String]) -> InMemDicomObject {

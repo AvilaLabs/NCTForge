@@ -74,6 +74,7 @@ fn generated_case_round_trips_with_exact_geometry_and_masks() {
     let report = verify_nf_bnct_001(&output).expect("independent frozen oracle");
     assert_eq!(report.case_id, "NF-BNCT-001");
     assert_eq!(report.shape, [40, 40, 40]);
+    assert_eq!(report.verified_artifact_count, 41);
     assert_eq!(report.rois.len(), 5);
 }
 
@@ -93,6 +94,27 @@ fn generated_dicom_is_byte_deterministic() {
         fs::read(first.rtstruct_file).expect("read first RTSTRUCT"),
         fs::read(second.rtstruct_file).expect("read second RTSTRUCT")
     );
+    assert_eq!(
+        fs::read(first.manifest_file).expect("read first manifest"),
+        fs::read(second.manifest_file).expect("read second manifest")
+    );
+}
+
+#[test]
+fn manifest_detects_semantically_accepted_file_tampering() {
+    let temp = tempdir().expect("temporary directory");
+    let generated = generate_nf_bnct_001(&temp.path().join("case")).expect("generate");
+    rewrite_string(
+        &generated.ct_files[5],
+        tags::STUDY_DESCRIPTION,
+        VR::LO,
+        "TAMPERED",
+    );
+    let error = verify_nf_bnct_001(&generated.root).expect_err("hash mismatch must fail");
+    assert!(matches!(
+        error,
+        DicomError::Manifest(nctforge_evidence::ManifestError::HashMismatch { .. })
+    ));
 }
 
 #[test]
