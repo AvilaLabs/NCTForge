@@ -41,7 +41,7 @@ source files are the intended independent variable.
 | C-12 | candidate | candidate | no recognized blocker |
 | C-13 | candidate | rejected | 32 kinematic violations; no-photon local fallback |
 | H-1 | candidate | candidate | no recognized blocker |
-| H-2 | candidate | rejected | 15 kinematic violations |
+| H-2 | candidate | rejected pending processor attribution | 15 kinematic violations; independent LAW=7 source balance passes all 53 active nodes |
 | N-14 | candidate | candidate | no recognized blocker |
 | N-15 | rejected | rejected by deeper gate | valid File 13/14/15 path plus MF=6/MT=102 clears the narrow processor check, but 33 of 37 capture-balance nodes fail independently |
 | O-16 | rejected | candidate under bound domain | sole finding is at 30 MeV, above the common 20 MeV OpenMC domain |
@@ -101,6 +101,8 @@ not energy-balance validity.
   `e270708da7aabf0be6246d8b89fabf031af4ec01c155b015432e2ee174eb9d09`;
 - JEFF-4.0 domain-aware suitability SHA-256:
   `6e46b627d9b766e596ad2219eaafca970bd9f3c5df1d5e400ad644397c44ce55`.
+- JEFF-4.0 H-2 LAW=7 implicit-residual report SHA-256:
+  `0cfaaf52c67f359b3fd2c70b147e92dd9e004e3495bb860f9ad5ab7707acd1d5`.
 
 The baseline-comparison artifact is intentionally the immutable v0.1
 log-only comparison. ADR 0017 and the v0.2 report supersede only its treatment
@@ -135,10 +137,13 @@ File 6 kinematic limits are set to the calculated File 6 result itself; that is
 not an independent conservation test.
 
 O-16's scope question is now resolved without deleting its full-range
-diagnostic. The next high-value causal targets are the 114 in-domain findings
-across C-13, H-2, O-17, and O-18. Further whole-library candidates remain
-useful controls, but they should not displace those reaction-level
-investigations.
+diagnostic. The first H-2 causal layer is also complete: all 53 active
+MF=6/MT=16 LAW=7 nodes normalize within `5.674e-8`, and every node leaves
+positive mean energy for the implicit proton. The minimum residual is 443.1
+keV. This rules out a source-level mean-energy overspend, but H-2 remains
+rejected until a receipt-bound comparison proves that each in-domain warning
+is caused by NJOY's missing-residual approximation and excluded
+energy-balance remainder. C-13, O-17, and O-18 remain untouched.
 
 ## Primary sources
 
@@ -149,3 +154,4 @@ investigations.
 - [Independent continuum photon-moment decision](../adr/0018-independent-continuum-photon-moments.md)
 - [Independent MF=6 capture-balance decision](../adr/0019-independent-mf6-capture-photon-balance.md)
 - [Content-bound transport-domain decision](../adr/0020-content-bound-transport-domain-suitability.md)
+- [Independent LAW=7 implicit-residual decision](../adr/0021-independent-law7-implicit-residual-balance.md)

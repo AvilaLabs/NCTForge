@@ -13,19 +13,21 @@ use nctforge_dicom::synthetic::generate_nf_bnct_001;
 use nctforge_dicom::verify_nf_bnct_001;
 use nctforge_njoy::{
     DEFAULT_CAPTURE_ENERGY_BALANCE_RELATIVE_TOLERANCE,
+    DEFAULT_LAW7_BREAKUP_NORMALIZATION_TOLERANCE, DEFAULT_LAW7_BREAKUP_RELATIVE_ENERGY_TOLERANCE,
     DEFAULT_NJOY_CAPTURE_PRINT_RELATIVE_TOLERANCE, DEFAULT_NJOY_PRINT_RELATIVE_TOLERANCE,
     DEFAULT_NJOY_TIMEOUT_SECONDS, DEFAULT_SPECTRUM_NORMALIZATION_TOLERANCE,
     EndfContinuumPhotonMomentReport, EndfContinuumPhotonMomentReportDocument,
     EndfMf6CapturePhotonBalanceQualification, EndfMf6CapturePhotonBalanceReport,
-    EndfMf6CapturePhotonBalanceReportDocument, EndfPhotonProductionInventory,
-    EndfPhotonProductionInventoryDocument, NjoyCapturePhotonMomentComparison,
-    NjoyCapturePhotonMomentComparisonDocument, NjoyDomainAwareSuitabilityReport,
-    NjoyDomainAwareSuitabilityReportDocument, NjoyExecutionOptions, NjoyExecutionReceipt,
-    NjoyExecutionReceiptDocument, NjoyInputArtifacts, NjoyInputBundle, NjoyPhotonMomentComparison,
-    NjoyPhotonMomentComparisonDocument, NjoySourceAwareSuitabilityReport,
-    NjoySourceAwareSuitabilityReportDocument, NjoySuitabilityComparison,
-    NjoySuitabilityComparisonDocument, NjoySuitabilityComparisonQualification,
-    NjoySuitabilityReport, NjoySuitabilityReportDocument,
+    EndfMf6CapturePhotonBalanceReportDocument, EndfMf6Law7ImplicitResidualQualification,
+    EndfMf6Law7ImplicitResidualReport, EndfMf6Law7ImplicitResidualReportDocument,
+    EndfPhotonProductionInventory, EndfPhotonProductionInventoryDocument,
+    NjoyCapturePhotonMomentComparison, NjoyCapturePhotonMomentComparisonDocument,
+    NjoyDomainAwareSuitabilityReport, NjoyDomainAwareSuitabilityReportDocument,
+    NjoyExecutionOptions, NjoyExecutionReceipt, NjoyExecutionReceiptDocument, NjoyInputArtifacts,
+    NjoyInputBundle, NjoyPhotonMomentComparison, NjoyPhotonMomentComparisonDocument,
+    NjoySourceAwareSuitabilityReport, NjoySourceAwareSuitabilityReportDocument,
+    NjoySuitabilityComparison, NjoySuitabilityComparisonDocument,
+    NjoySuitabilityComparisonQualification, NjoySuitabilityReport, NjoySuitabilityReportDocument,
 };
 use nctforge_openmc::{
     DataAcquisitionClient, DataAcquisitionProfileDocument, DataAcquisitionReceiptDocument,
@@ -255,6 +257,45 @@ enum NjoyCommand {
         /// Capture photon-balance report to validate and regenerate.
         #[arg(long)]
         balance_report: PathBuf,
+    },
+    /// Integrate deuterium MF=6/MT=16 LAW=7 and test the implicit proton energy.
+    CalculateLaw7ImplicitResidual {
+        /// Case-scoped evaluated-neutron source-selection manifest.
+        #[arg(long)]
+        selection: PathBuf,
+        /// Directory containing exactly the selected extracted ENDF files.
+        #[arg(long)]
+        evaluations_directory: PathBuf,
+        /// Verified source-bound photon-production inventory.
+        #[arg(long)]
+        photon_inventory: PathBuf,
+        /// Deuterium nuclide identifier in the source selection (H2).
+        #[arg(long, default_value = "H2")]
+        nuclide: String,
+        /// Maximum accepted absolute joint-distribution normalization error.
+        #[arg(long, default_value_t = DEFAULT_LAW7_BREAKUP_NORMALIZATION_TOLERANCE)]
+        normalization_tolerance: f64,
+        /// Maximum accepted relative negative implicit-residual energy.
+        #[arg(long, default_value_t = DEFAULT_LAW7_BREAKUP_RELATIVE_ENERGY_TOLERANCE)]
+        relative_energy_tolerance: f64,
+        /// New source-bound implicit-residual JSON report; it must not already exist.
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Regenerate and verify a deuterium LAW=7 implicit-residual report.
+    VerifyLaw7ImplicitResidual {
+        /// Case-scoped evaluated-neutron source-selection manifest.
+        #[arg(long)]
+        selection: PathBuf,
+        /// Directory containing exactly the selected extracted ENDF files.
+        #[arg(long)]
+        evaluations_directory: PathBuf,
+        /// Verified source-bound photon-production inventory.
+        #[arg(long)]
+        photon_inventory: PathBuf,
+        /// LAW=7 implicit-residual report to validate and regenerate.
+        #[arg(long)]
+        residual_report: PathBuf,
     },
     /// Compare independent capture moments with NJOY's photon and recoil print tables.
     CompareCapturePhotonMoments {
@@ -1094,6 +1135,101 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                     qualification_name(report.report.qualification)
                 );
             }
+            NjoyCommand::CalculateLaw7ImplicitResidual {
+                selection,
+                evaluations_directory,
+                photon_inventory,
+                nuclide,
+                normalization_tolerance,
+                relative_energy_tolerance,
+                output,
+            } => {
+                let selection = EvaluatedNeutronSourceSelectionDocument::from_path(&selection)?;
+                let inventory =
+                    EndfPhotonProductionInventoryDocument::from_path(&photon_inventory)?;
+                let report = EndfMf6Law7ImplicitResidualReport::calculate(
+                    &selection,
+                    &evaluations_directory,
+                    &inventory,
+                    &nuclide,
+                    normalization_tolerance,
+                    relative_energy_tolerance,
+                )?;
+                let result = report.write_new(&output)?;
+                println!("calculated deuterium MF=6/MT=16 LAW=7 implicit residual");
+                println!("report: {}", result.report_path.display());
+                println!("report SHA-256: {}", result.report_sha256);
+                println!(
+                    "source incident-energy nodes: {}",
+                    result.report.source_incident_node_count
+                );
+                println!("active samples: {}", result.report.sample_count);
+                println!(
+                    "failed normalization samples: {}",
+                    result.report.failed_normalization_sample_count
+                );
+                println!(
+                    "failed residual-energy samples: {}",
+                    result.report.failed_residual_energy_sample_count
+                );
+                println!(
+                    "maximum absolute normalization error: {:.12e}",
+                    result.report.maximum_absolute_normalization_error
+                );
+                println!(
+                    "minimum implicit residual energy: {:.12e} eV",
+                    result
+                        .report
+                        .samples
+                        .iter()
+                        .map(|sample| sample.implicit_residual_energy_ev)
+                        .fold(f64::INFINITY, f64::min)
+                );
+                println!(
+                    "qualification: {}",
+                    law7_qualification_name(result.report.qualification)
+                );
+                if result.report.failed_normalization_sample_count > 0
+                    || result.report.failed_residual_energy_sample_count > 0
+                    || result.report.sample_count == 0
+                {
+                    return Err(io::Error::other(
+                        "deuterium LAW=7 source did not pass the independent screening gate; report was preserved",
+                    )
+                    .into());
+                }
+            }
+            NjoyCommand::VerifyLaw7ImplicitResidual {
+                selection,
+                evaluations_directory,
+                photon_inventory,
+                residual_report,
+            } => {
+                let selection = EvaluatedNeutronSourceSelectionDocument::from_path(&selection)?;
+                let inventory =
+                    EndfPhotonProductionInventoryDocument::from_path(&photon_inventory)?;
+                let report =
+                    EndfMf6Law7ImplicitResidualReportDocument::from_path(&residual_report)?;
+                report.verify_against_sources(&selection, &evaluations_directory, &inventory)?;
+                println!(
+                    "verified deuterium LAW=7 implicit-residual report {}",
+                    residual_report.display()
+                );
+                println!("report SHA-256: {}", report.sha256);
+                println!("active samples: {}", report.report.sample_count);
+                println!(
+                    "failed normalization samples: {}",
+                    report.report.failed_normalization_sample_count
+                );
+                println!(
+                    "failed residual-energy samples: {}",
+                    report.report.failed_residual_energy_sample_count
+                );
+                println!(
+                    "qualification: {}",
+                    law7_qualification_name(report.report.qualification)
+                );
+            }
             NjoyCommand::CompareCapturePhotonMoments {
                 balance_report,
                 receipt,
@@ -1633,6 +1769,25 @@ fn qualification_name(qualification: EndfMf6CapturePhotonBalanceQualification) -
         }
         EndfMf6CapturePhotonBalanceQualification::CapturePhotonEnergyBalanceCheckedUnreviewed => {
             "capture_photon_energy_balance_checked_unreviewed"
+        }
+    }
+}
+
+fn law7_qualification_name(
+    qualification: EndfMf6Law7ImplicitResidualQualification,
+) -> &'static str {
+    match qualification {
+        EndfMf6Law7ImplicitResidualQualification::SpectrumNormalizationRejected => {
+            "spectrum_normalization_rejected"
+        }
+        EndfMf6Law7ImplicitResidualQualification::NegativeImplicitResidualEnergyRejected => {
+            "negative_implicit_residual_energy_rejected"
+        }
+        EndfMf6Law7ImplicitResidualQualification::SpectrumNormalizationAndResidualEnergyRejected => {
+            "spectrum_normalization_and_residual_energy_rejected"
+        }
+        EndfMf6Law7ImplicitResidualQualification::ImplicitResidualEnergyCheckedUnreviewed => {
+            "implicit_residual_energy_checked_unreviewed"
         }
     }
 }

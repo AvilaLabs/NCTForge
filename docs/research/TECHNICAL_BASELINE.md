@@ -313,9 +313,12 @@ result exists. Cross-code agreement alone remains `cross_code_research_only`.
   derive a content-bound common OpenMC transport domain from the exact
   manifest and material and apply it symmetrically; all baseline findings
   remain in domain, while O-16's sole JEFF finding is retained at 30 MeV but
-  no longer rejects the bounded 20 MeV calculation. Pending: diagnose the 114
-  in-domain JEFF findings across C-13, H-2, O-17, and O-18, then define,
-  justify, and review a passing versioned response treatment.
+  no longer rejects the bounded 20 MeV calculation. Complete: independently
+  integrate all 54 JEFF H-2 MF=6/MT=16 LAW=7 source nodes; all 53 active nodes
+  normalize and leave positive energy for the implicit proton. Pending: bind
+  that source result to NJOY's exact H-2 approximation and diagnostic excess,
+  diagnose C-13, O-17, and O-18, then define, justify, and review a passing
+  versioned response treatment.
 - Do not use reaction-filtered neutron heating as a component partition; retain
   it only as a diagnostic under ADR 0005.
 - Do not publish “golden” OpenMC dose arrays before an independent calculation is

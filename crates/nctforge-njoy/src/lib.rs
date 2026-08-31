@@ -31,6 +31,7 @@ mod capture_balance_comparison;
 mod comparison;
 mod domain_aware;
 mod execution;
+mod law7_breakup;
 mod photon_inventory;
 mod photon_moment;
 mod photon_moment_comparison;
@@ -71,6 +72,14 @@ pub use execution::{
     NjoyExecutionResult, NjoyExecutionRun, NjoyExecutionTape, NjoyKinematicDirection,
     NjoyKinematicViolation, NjoyProcessorArtifact, NjoyProcessorExecutionIdentity,
     NjoyRunDiagnosticStatus, NjoyTapePurpose,
+};
+pub use law7_breakup::{
+    DEFAULT_LAW7_BREAKUP_NORMALIZATION_TOLERANCE, DEFAULT_LAW7_BREAKUP_RELATIVE_ENERGY_TOLERANCE,
+    ENDF_MF6_LAW7_IMPLICIT_RESIDUAL_SCHEMA, EndfMf6Law7ImplicitResidualError,
+    EndfMf6Law7ImplicitResidualQualification, EndfMf6Law7ImplicitResidualReport,
+    EndfMf6Law7ImplicitResidualReportDocument, EndfMf6Law7ImplicitResidualResult,
+    EndfMf6Law7ImplicitResidualSample, EndfMf6Law7ImplicitResidualSampleStatus,
+    EndfMf6Law7ImplicitResidualScope, EndfMf6Law7ReferenceFrame,
 };
 pub use photon_inventory::{
     ENDF_PHOTON_PRODUCTION_INVENTORY_SCHEMA, EndfFile6PhotonProduct, EndfFile12Representation,

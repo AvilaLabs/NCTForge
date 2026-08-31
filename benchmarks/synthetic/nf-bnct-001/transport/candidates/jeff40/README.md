@@ -9,7 +9,10 @@ common OpenMC interval and clears O-16 because its sole finding is at 30 MeV,
 strictly above the 20 MeV domain; the finding remains preserved. The
 independent MF=6 capture-balance gate rejects N-15 again because 33 of 37
 source nodes miss the Q-value budget by more than 1%. The candidate therefore
-remains unsuitable for response-table generation.
+remains unsuitable for response-table generation. The independent H-2 LAW=7
+source calculation now shows that all 53 active nodes normalize and leave
+positive mean energy for the implicit proton. That narrows the H-2 problem to
+processor attribution, but does not yet override its v0.3 rejection.
 
 The repository retains only manifests, deterministic NJOY decks, and evidence
 receipts. It does not redistribute the 608 MB publisher archive, extracted
@@ -91,6 +94,12 @@ cargo run -p nctforge-cli -- njoy verify-domain-aware \
   --material benchmarks/synthetic/nf-bnct-001/transport/material.json \
   --transport-domain benchmarks/synthetic/nf-bnct-001/transport/provenance/openmc-neutron-transport-domain.json \
   --domain-aware-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/njoy2016-78-transported-photon-domain-aware-suitability.json
+
+cargo run -p nctforge-cli -- njoy verify-law7-implicit-residual \
+  --selection benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/evaluated-neutron-source-selection.json \
+  --evaluations-directory PATH_TO_EXACT_JEFF40_SELECTION \
+  --photon-inventory benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-endf-photon-production-inventory.json \
+  --residual-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-mf6-mt16-law7-implicit-residual.json
 ```
 
 The checked comparison is self-contained over the two content-addressed
@@ -108,4 +117,5 @@ and [ADR 0016](../../../../../../docs/adr/0016-versioned-response-treatment-cand
 plus [ADR 0017](../../../../../../docs/adr/0017-source-aware-photon-production-suitability.md)
 and [ADR 0018](../../../../../../docs/adr/0018-independent-continuum-photon-moments.md),
 then [ADR 0019](../../../../../../docs/adr/0019-independent-mf6-capture-photon-balance.md)
-and [ADR 0020](../../../../../../docs/adr/0020-content-bound-transport-domain-suitability.md).
+and [ADR 0020](../../../../../../docs/adr/0020-content-bound-transport-domain-suitability.md),
+followed by [ADR 0021](../../../../../../docs/adr/0021-independent-law7-implicit-residual-balance.md).
