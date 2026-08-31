@@ -262,6 +262,9 @@ result exists. Cross-code agreement alone remains `cross_code_research_only`.
   pending: freeze that profile's contributor ledger before transport.
 - Do not freeze KERMA response tables until their derivation, units, interpolation,
   and hashes are independently reviewed.
+- Complete: freeze the NJOY2016.78 MT 407/403 partial-KERMA method and MT 301
+  residual classification in ADR 0007; pending: bind evaluated inputs, generate
+  tables, and pass every declared review gate.
 - Do not use reaction-filtered neutron heating as a component partition; retain
   it only as a diagnostic under ADR 0005.
 - Do not publish “golden” OpenMC dose arrays before an independent calculation is

@@ -81,7 +81,10 @@ Implementation status:
   physical-total uncertainty;
 - complete: versioned explicit-nuclide material and unit-weight fixed-source
   contracts, including frozen machine inputs for `NF-BNCT-001`;
-- in progress: response-generation and contributor-ledger contract;
+- complete: machine-validated contributor ledger and NJOY partial-KERMA
+  generation method, explicitly held at `method_frozen_tables_pending`;
+- in progress: evaluated-data binding, response-table generation, and
+  independent method checks;
 - pending: deterministic OpenMC input preparation and nuclear-data preflight;
 - pending: smoke execution, statepoint import, and independent estimator
   comparison.

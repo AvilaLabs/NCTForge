@@ -20,6 +20,8 @@ contains:
 - a transport-backend trait;
 - validated, backend-neutral material and fixed-source contracts with frozen
   machine inputs for `NF-BNCT-001`;
+- a machine-validated four-component contributor ledger and an unqualified,
+  reproducible NJOY partial-KERMA response-generation method;
 - an intentionally non-functional OpenMC adapter;
 - a strict DICOM CT geometry and RT Structure Set import boundary;
 - a deterministic generator and independent verifier for `NF-BNCT-001`;

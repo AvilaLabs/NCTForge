@@ -246,6 +246,16 @@ Response-table files, grids, interpolation policy, reaction classification,
 and unit conversions are hashed benchmark inputs. They are not embedded as
 unreviewed constants in GUI code.
 
+The frozen semantic ledger is
+[`transport/component-profile.json`](transport/component-profile.json), with
+SHA-256 `a35b26c0134ae02d3b1b0ede5b8c6f38e86966e86c65e1727b4c7f38677ab41a`.
+The pending table-generation method is
+[`transport/response-generation-method.json`](transport/response-generation-method.json),
+with SHA-256
+`8b46fb1d624b986a1031c45d8869591a73c79e58cd3a354b33749fafd31d5519`.
+ADR 0007 defines its unit path and acceptance evidence. The method artifact is
+not a response table and does not raise the benchmark qualification ceiling.
+
 ## Execution profiles
 
 ### Smoke
@@ -387,8 +397,9 @@ profiles.
 
 ## Remaining freeze gate
 
-Geometry, material, and source are frozen by this version. The benchmark cannot
-enter candidate-reference execution until the KERMA response generation method,
-tables, interpolation, and classification ledger have been reviewed and hashed.
-Changing any frozen quantity creates a new benchmark specification version and
-cannot silently replace earlier results.
+Geometry, material, source, classification, and the response-generation method
+are frozen by this version. The benchmark cannot enter candidate-reference
+execution until evaluated inputs and generated KERMA tables have been hashed,
+checked against the ADR 0007 gates, and independently reviewed. Changing any
+frozen quantity creates a new benchmark specification version and cannot
+silently replace earlier results.
