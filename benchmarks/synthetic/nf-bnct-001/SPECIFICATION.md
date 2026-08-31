@@ -100,6 +100,8 @@ Generation also writes `case.json` using schema identifier
 geometry, DICOM UIDs, ROI truth values, material/source model identifiers, and
 SHA-256 for all 40 CT instances plus the RT Structure Set. The verifier rejects
 missing, modified, duplicated, path-escaping, or unexpected DICOM artifacts.
+The R1 desktop viewer consumes this same verified case boundary; it does not
+provide a bypass for opening individual or unverified DICOM files.
 
 ## RTSTRUCT
 

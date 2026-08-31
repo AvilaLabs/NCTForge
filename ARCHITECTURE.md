@@ -74,9 +74,11 @@ transport. It submits immutable jobs to a worker process or remote executor and
 observes structured progress events. A calculation crash must not corrupt the
 open case or terminate the viewer.
 
-The first GUI milestone contains linked axial, sagittal, and coronal views for
-a synthetic case, window/level controls, RT structure overlays, component-dose
-selection, and provenance inspection. Contour editing is explicitly deferred.
+The R1 GUI opens only a manifest- and artifact-verified `NF-BNCT-001` directory.
+It contains linked axial, sagittal, and coronal views, window/level controls, RT
+structure overlays, an LPS cursor readout, and visible transport-capability
+state. Component-dose selection arrives with qualified component data in R2;
+contour editing is explicitly deferred.
 
 Anatomical mapping lives in `nctforge-view`, not egui callbacks. R1 labels views
 as axial, coronal, or sagittal only when grid direction is aligned to canonical

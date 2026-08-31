@@ -10,7 +10,9 @@ mod error;
 mod rtstruct;
 pub mod synthetic;
 
-pub use benchmark::{BenchmarkReport, RoiReport, verify_nf_bnct_001};
+pub use benchmark::{
+    BenchmarkReport, RoiReport, VerifiedBenchmarkCase, load_nf_bnct_001, verify_nf_bnct_001,
+};
 pub use ct::{CtVolume, import_ct_series};
 pub use error::{DicomError, Result};
 pub use rtstruct::{RoiMask, StructureSet, import_rtstruct};

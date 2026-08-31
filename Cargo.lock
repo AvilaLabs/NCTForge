@@ -2220,8 +2220,10 @@ name = "nctforge-gui"
 version = "0.1.0"
 dependencies = [
  "eframe",
+ "nctforge-dicom",
  "nctforge-openmc",
  "nctforge-transport",
+ "nctforge-view",
 ]
 
 [[package]]

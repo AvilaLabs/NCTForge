@@ -40,6 +40,13 @@ pub struct BenchmarkReport {
     pub rois: Vec<RoiReport>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct VerifiedBenchmarkCase {
+    pub report: BenchmarkReport,
+    pub ct: CtVolume,
+    pub structures: crate::StructureSet,
+}
+
 struct ExpectedRoi {
     number: i32,
     name: &'static str,
@@ -88,6 +95,11 @@ const EXPECTED_ROIS: [ExpectedRoi; 5] = [
 
 /// Verify generated `NF-BNCT-001` files against an independent frozen oracle.
 pub fn verify_nf_bnct_001(root: &Path) -> Result<BenchmarkReport> {
+    Ok(load_nf_bnct_001(root)?.report)
+}
+
+/// Load `NF-BNCT-001` only after all geometry and artifact gates pass.
+pub fn load_nf_bnct_001(root: &Path) -> Result<VerifiedBenchmarkCase> {
     let ct_files = dicom_files(&root.join("ct"))?;
     if ct_files.len() != 40 {
         return mismatch(format!(
@@ -177,14 +189,18 @@ pub fn verify_nf_bnct_001(root: &Path) -> Result<BenchmarkReport> {
 
     let verified_artifact_count = verify_manifest(root, &ct, &reports)?;
 
-    Ok(BenchmarkReport {
-        case_id: "NF-BNCT-001",
-        shape: ct.geometry.shape,
-        spacing_mm: ct.geometry.spacing_mm,
-        origin_mm: ct.geometry.origin_mm,
-        ct_slice_count: ct.slice_sop_instance_uids.len(),
-        verified_artifact_count,
-        rois: reports,
+    Ok(VerifiedBenchmarkCase {
+        report: BenchmarkReport {
+            case_id: "NF-BNCT-001",
+            shape: ct.geometry.shape,
+            spacing_mm: ct.geometry.spacing_mm,
+            origin_mm: ct.geometry.origin_mm,
+            ct_slice_count: ct.slice_sop_instance_uids.len(),
+            verified_artifact_count,
+            rois: reports,
+        },
+        ct,
+        structures,
     })
 }
 

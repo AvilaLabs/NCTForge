@@ -24,7 +24,7 @@ contains:
 - an egui-independent, orientation-tested tri-planar view model with linked
   voxel crosshairs and explicit patient-side labels;
 - content-hash and run-manifest primitives;
-- CLI and egui desktop shells;
+- a CLI and a native egui geometry viewer for the verified synthetic case;
 - an evidence-gated development roadmap;
 - an explicit research and intellectual-property boundary;
 - a researched technical baseline and frozen first synthetic conformance-case
@@ -33,10 +33,12 @@ contains:
 R1 geometry work is in progress. CT slices are ordered from DICOM patient-space
 geometry rather than filenames or Instance Number; affine, frame, native pixel,
 and rescale invariants are validated; and the frozen RTSTRUCT is rasterized to
-exact masks. Linked egui views, an external DICOM IOD-validator gate, material
-mapping, particle transport, biological modeling, and dose calculation are not
-implemented yet. Transport capability flags remain false until their acceptance
-gates pass.
+exact masks. The desktop viewer opens only an integrity-verified `NF-BNCT-001`
+case and provides linked axial, coronal, and sagittal views, window/level,
+structure overlays, patient-edge labels, and an LPS cursor readout. An external
+DICOM IOD-validator gate, material mapping, particle transport, biological
+modeling, and dose calculation are not implemented yet. Transport capability
+flags remain false until their acceptance gates pass.
 
 The first implementation target is
 [`NF-BNCT-001`](benchmarks/synthetic/nf-bnct-001/SPECIFICATION.md). Its geometry,
@@ -97,6 +99,7 @@ Generate and independently verify the first synthetic DICOM case:
 ```text
 cargo run --bin nctforge -- benchmark generate /tmp/nf-bnct-001
 cargo run --bin nctforge -- benchmark verify /tmp/nf-bnct-001
+cargo run --bin nctforge-gui -- /tmp/nf-bnct-001
 ```
 
 Generation refuses to overwrite an existing destination. Generated DICOM files

@@ -157,6 +157,11 @@ impl PatientAlignedGrid {
         self.voxel_count
     }
 
+    pub fn linear_index(&self, voxel: [u32; 3]) -> Result<usize, ViewError> {
+        validate_voxel(&self.geometry, voxel)?;
+        Ok(linear_index(self.geometry.shape, voxel))
+    }
+
     pub fn slice(
         &self,
         plane: AnatomicalPlane,
@@ -173,16 +178,28 @@ impl PatientAlignedGrid {
             fixed_index: crosshair.voxel[plane.fixed_axis()],
             dimensions,
             volume_shape: self.geometry.shape,
+            pixel_spacing_mm: match plane {
+                AnatomicalPlane::Axial => {
+                    [self.geometry.spacing_mm[0], self.geometry.spacing_mm[1]]
+                }
+                AnatomicalPlane::Coronal => {
+                    [self.geometry.spacing_mm[0], self.geometry.spacing_mm[2]]
+                }
+                AnatomicalPlane::Sagittal => {
+                    [self.geometry.spacing_mm[1], self.geometry.spacing_mm[2]]
+                }
+            },
         })
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SliceView {
     plane: AnatomicalPlane,
     fixed_index: u32,
     dimensions: [u32; 2],
     volume_shape: [u32; 3],
+    pixel_spacing_mm: [f64; 2],
 }
 
 impl SliceView {
@@ -199,6 +216,11 @@ impl SliceView {
     #[must_use]
     pub const fn dimensions(self) -> [u32; 2] {
         self.dimensions
+    }
+
+    #[must_use]
+    pub const fn pixel_spacing_mm(self) -> [f64; 2] {
+        self.pixel_spacing_mm
     }
 
     #[must_use]
@@ -361,6 +383,7 @@ mod tests {
             .slice(AnatomicalPlane::Axial, crosshair)
             .expect("axial");
         assert_eq!(axial.dimensions(), [4, 6]);
+        assert_eq!(axial.pixel_spacing_mm(), [2.0, 3.0]);
         assert_eq!(axial.voxel_at([0, 0]), Ok([0, 0, 3]));
         assert_eq!(axial.voxel_at([3, 5]), Ok([3, 5, 3]));
         assert_eq!(
@@ -377,6 +400,7 @@ mod tests {
             .slice(AnatomicalPlane::Coronal, crosshair)
             .expect("coronal");
         assert_eq!(coronal.dimensions(), [4, 8]);
+        assert_eq!(coronal.pixel_spacing_mm(), [2.0, 4.0]);
         assert_eq!(coronal.voxel_at([0, 0]), Ok([0, 2, 7]));
         assert_eq!(coronal.voxel_at([3, 7]), Ok([3, 2, 0]));
         assert_eq!(
@@ -393,6 +417,7 @@ mod tests {
             .slice(AnatomicalPlane::Sagittal, crosshair)
             .expect("sagittal");
         assert_eq!(sagittal.dimensions(), [6, 8]);
+        assert_eq!(sagittal.pixel_spacing_mm(), [3.0, 4.0]);
         assert_eq!(sagittal.voxel_at([0, 0]), Ok([1, 0, 7]));
         assert_eq!(sagittal.voxel_at([5, 7]), Ok([1, 5, 0]));
         assert_eq!(
