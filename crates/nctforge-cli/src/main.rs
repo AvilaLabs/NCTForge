@@ -24,6 +24,7 @@ use nctforge_njoy::{
     EndfPhotonProductionInventory, EndfPhotonProductionInventoryDocument,
     NjoyCapturePhotonMomentComparison, NjoyCapturePhotonMomentComparisonDocument,
     NjoyDomainAwareSuitabilityReport, NjoyDomainAwareSuitabilityReportDocument,
+    NjoyEvidenceAwareSuitabilityReport, NjoyEvidenceAwareSuitabilityReportDocument,
     NjoyExecutionOptions, NjoyExecutionReceipt, NjoyExecutionReceiptDocument, NjoyInputArtifacts,
     NjoyInputBundle, NjoyLaw7ImplicitResidualComparison,
     NjoyLaw7ImplicitResidualComparisonDocument, NjoyLaw7ImplicitResidualComparisonQualification,
@@ -539,6 +540,48 @@ enum NjoyCommand {
         /// Domain-aware v0.3 report to validate and regenerate.
         #[arg(long)]
         domain_aware_report: PathBuf,
+    },
+    /// Apply reaction-level H-2 and N-15 evidence over immutable v0.3 suitability.
+    AssessEvidenceAware {
+        /// Verified domain-aware v0.3 transported-photon suitability report.
+        #[arg(long)]
+        domain_aware_report: PathBuf,
+        /// Independent H-2 LAW=7 implicit-residual report.
+        #[arg(long)]
+        law7_residual_report: PathBuf,
+        /// Receipt-bound H-2 LAW=7 processor attribution.
+        #[arg(long)]
+        law7_comparison_report: PathBuf,
+        /// Independent N-15 MF=6 capture-balance report.
+        #[arg(long)]
+        capture_balance_report: PathBuf,
+        /// Receipt-bound N-15 capture-moment comparison.
+        #[arg(long)]
+        capture_comparison_report: PathBuf,
+        /// New v0.4 JSON report path; it must not already exist.
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Regenerate and verify a reaction-evidence-aware v0.4 suitability report.
+    VerifyEvidenceAware {
+        /// Verified domain-aware v0.3 transported-photon suitability report.
+        #[arg(long)]
+        domain_aware_report: PathBuf,
+        /// Independent H-2 LAW=7 implicit-residual report.
+        #[arg(long)]
+        law7_residual_report: PathBuf,
+        /// Receipt-bound H-2 LAW=7 processor attribution.
+        #[arg(long)]
+        law7_comparison_report: PathBuf,
+        /// Independent N-15 MF=6 capture-balance report.
+        #[arg(long)]
+        capture_balance_report: PathBuf,
+        /// Receipt-bound N-15 capture-moment comparison.
+        #[arg(long)]
+        capture_comparison_report: PathBuf,
+        /// Evidence-aware v0.4 report to validate and regenerate.
+        #[arg(long)]
+        evidence_aware_report: PathBuf,
     },
     /// Compare a candidate suitability report against a rejected baseline.
     CompareSuitability {
@@ -1788,6 +1831,118 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                 println!(
                     "reclassified nuclide runs: {}",
                     report.report.reclassified_run_count
+                );
+                println!(
+                    "qualification: {}",
+                    if report.report.rejected_run_count == 0 {
+                        "transported_photon_kerma_candidate_unreviewed"
+                    } else {
+                        "transported_photon_kerma_rejected"
+                    }
+                );
+            }
+            NjoyCommand::AssessEvidenceAware {
+                domain_aware_report,
+                law7_residual_report,
+                law7_comparison_report,
+                capture_balance_report,
+                capture_comparison_report,
+                output,
+            } => {
+                let domain =
+                    NjoyDomainAwareSuitabilityReportDocument::from_path(&domain_aware_report)?;
+                let law7_residual =
+                    EndfMf6Law7ImplicitResidualReportDocument::from_path(&law7_residual_report)?;
+                let law7_comparison =
+                    NjoyLaw7ImplicitResidualComparisonDocument::from_path(&law7_comparison_report)?;
+                let capture_balance =
+                    EndfMf6CapturePhotonBalanceReportDocument::from_path(&capture_balance_report)?;
+                let capture_comparison = NjoyCapturePhotonMomentComparisonDocument::from_path(
+                    &capture_comparison_report,
+                )?;
+                let report = NjoyEvidenceAwareSuitabilityReport::assess(
+                    &domain,
+                    &law7_residual,
+                    &law7_comparison,
+                    &capture_balance,
+                    &capture_comparison,
+                )?;
+                let result = report.write_new(&output)?;
+                println!("assessed reaction-evidence-aware v0.4 suitability");
+                println!("report: {}", result.report_path.display());
+                println!("report SHA-256: {}", result.report_sha256);
+                println!(
+                    "kinematic violations: {} in-domain / {} approximation-attributed / {} remaining",
+                    result.report.domain_in_scope_kinematic_violation_count,
+                    result
+                        .report
+                        .approximation_attributed_in_domain_violation_count,
+                    result.report.remaining_in_domain_kinematic_violation_count
+                );
+                println!(
+                    "domain-status transitions: {} cleared / {} independently rejected",
+                    result.report.reclassified_from_domain_run_count,
+                    result.report.independently_rejected_from_domain_run_count
+                );
+                println!(
+                    "rejected nuclide runs: {}",
+                    result.report.rejected_run_count
+                );
+                if result.report.rejected_run_count == 0 {
+                    println!("qualification: transported_photon_kerma_candidate_unreviewed");
+                } else {
+                    println!("qualification: transported_photon_kerma_rejected");
+                    return Err(io::Error::other(format!(
+                        "{} nuclide run(s) remain unsuitable after reaction-level evidence; report was preserved",
+                        result.report.rejected_run_count
+                    ))
+                    .into());
+                }
+            }
+            NjoyCommand::VerifyEvidenceAware {
+                domain_aware_report,
+                law7_residual_report,
+                law7_comparison_report,
+                capture_balance_report,
+                capture_comparison_report,
+                evidence_aware_report,
+            } => {
+                let domain =
+                    NjoyDomainAwareSuitabilityReportDocument::from_path(&domain_aware_report)?;
+                let law7_residual =
+                    EndfMf6Law7ImplicitResidualReportDocument::from_path(&law7_residual_report)?;
+                let law7_comparison =
+                    NjoyLaw7ImplicitResidualComparisonDocument::from_path(&law7_comparison_report)?;
+                let capture_balance =
+                    EndfMf6CapturePhotonBalanceReportDocument::from_path(&capture_balance_report)?;
+                let capture_comparison = NjoyCapturePhotonMomentComparisonDocument::from_path(
+                    &capture_comparison_report,
+                )?;
+                let report =
+                    NjoyEvidenceAwareSuitabilityReportDocument::from_path(&evidence_aware_report)?;
+                report.verify_against_evidence(
+                    &domain,
+                    &law7_residual,
+                    &law7_comparison,
+                    &capture_balance,
+                    &capture_comparison,
+                )?;
+                println!(
+                    "verified reaction-evidence-aware v0.4 suitability {}",
+                    evidence_aware_report.display()
+                );
+                println!("report SHA-256: {}", report.sha256);
+                println!(
+                    "kinematic violations: {} in-domain / {} approximation-attributed / {} remaining",
+                    report.report.domain_in_scope_kinematic_violation_count,
+                    report
+                        .report
+                        .approximation_attributed_in_domain_violation_count,
+                    report.report.remaining_in_domain_kinematic_violation_count
+                );
+                println!(
+                    "rejected nuclide runs: {}",
+                    report.report.rejected_run_count
                 );
                 println!(
                     "qualification: {}",

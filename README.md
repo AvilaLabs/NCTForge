@@ -272,18 +272,21 @@ Source-aware v0.2 evidence subsequently recognizes valid File 13 alternatives,
 and domain-aware v0.3 evidence scopes kinematic findings to a material- and
 manifest-bound OpenMC interval without deleting full-range diagnostics. For
 the JEFF-4.0 investigation this clears O-16's sole 30 MeV finding from the
-bounded 20 MeV decision, while 114 in-domain findings and the independent N-15
-capture-balance failure keep the candidate rejected. An independent H-2 LAW=7
-calculation now confirms normalized source distributions and positive mean
-energy for the implicit proton. A receipt-bound comparison also attributes all
-15 H-2 findings to NJOY's excluded File 6 energy-balance remainder; a new
-suitability schema must consume that evidence before reclassification. See [ADR
+bounded 20 MeV decision. An independent H-2 LAW=7 calculation confirms
+normalized source distributions and positive mean energy for the implicit
+proton, and a receipt-bound comparison attributes all 15 H-2 findings to
+NJOY's excluded File 6 energy-balance remainder. Evidence-aware v0.4 consumes
+that exact evidence and reclassifies only H-2 while independently restoring
+N-15's capture-balance rejection. C-13, O-17, and O-18 retain 102 in-domain
+findings, so the candidate remains rejected. See [ADR
 0017](docs/adr/0017-source-aware-photon-production-suitability.md), [ADR
 0019](docs/adr/0019-independent-mf6-capture-photon-balance.md), and [ADR
 0020](docs/adr/0020-content-bound-transport-domain-suitability.md), followed by
 [ADR 0021](docs/adr/0021-independent-law7-implicit-residual-balance.md).
 The processor attribution is frozen in [ADR
-0022](docs/adr/0022-law7-processor-attribution.md).
+0022](docs/adr/0022-law7-processor-attribution.md), and the integrated decision
+is specified by [ADR
+0023](docs/adr/0023-reaction-evidence-aware-suitability.md).
 
 ## License and use boundary
 

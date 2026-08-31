@@ -88,8 +88,8 @@ The frozen report SHA-256 is
   reproduces NJOY's printed neutron moment, synthesized recoil, energy-balance
   remainder, final MT 301 value, and kinematic excess at every warning energy.
 - Only a fully matched processor attribution may support a narrowly scoped
-  H-2 reclassification in a new suitability schema. It cannot waive C-13,
-  N-15, O-17, or O-18.
+  H-2 reclassification. ADR 0023 now applies that exact disposition in a new
+  suitability schema; it does not waive C-13, N-15, O-17, or O-18.
 
 ## Related decisions and primary sources
 
@@ -97,6 +97,7 @@ The frozen report SHA-256 is
 - [ADR 0019: Independent MF=6 capture-photon balance](0019-independent-mf6-capture-photon-balance.md)
 - [ADR 0020: Content-bound transport-domain suitability](0020-content-bound-transport-domain-suitability.md)
 - [ADR 0022: LAW=7 processor-approximation attribution](0022-law7-processor-attribution.md)
+- [ADR 0023: Reaction-evidence-aware transported-photon suitability](0023-reaction-evidence-aware-suitability.md)
 - [ENDF-6 Formats Manual, 2023](https://www.nndc.bnl.gov/endfdocs/ENDF-102-2023.pdf)
 - [NJOY2016.78 HEATR implementation](https://github.com/njoy/NJOY2016/blob/71a76bc6345fa15f36bacc816ae7900714345d97/src/heatr.f90)
 - [NJOY2016 HEATR manual](https://github.com/njoy/NJOY2016-manual/blob/master/heatx.tex)

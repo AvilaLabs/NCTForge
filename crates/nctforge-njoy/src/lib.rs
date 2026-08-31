@@ -30,6 +30,7 @@ mod capture_balance;
 mod capture_balance_comparison;
 mod comparison;
 mod domain_aware;
+mod evidence_aware;
 mod execution;
 mod law7_breakup;
 mod law7_breakup_comparison;
@@ -64,6 +65,12 @@ pub use domain_aware::{
     NJOY_DOMAIN_AWARE_SUITABILITY_SCHEMA, NjoyDomainAwareSuitabilityError,
     NjoyDomainAwareSuitabilityReport, NjoyDomainAwareSuitabilityReportDocument,
     NjoyDomainAwareSuitabilityResult, NjoyDomainAwareSuitabilityRun,
+};
+pub use evidence_aware::{
+    NJOY_EVIDENCE_AWARE_SUITABILITY_SCHEMA, NjoyEvidenceAwareIndependentGate,
+    NjoyEvidenceAwareKinematicDisposition, NjoyEvidenceAwareSuitabilityError,
+    NjoyEvidenceAwareSuitabilityReport, NjoyEvidenceAwareSuitabilityReportDocument,
+    NjoyEvidenceAwareSuitabilityResult, NjoyEvidenceAwareSuitabilityRun,
 };
 
 pub use execution::{

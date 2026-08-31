@@ -1,6 +1,6 @@
 # ADR 0022: LAW=7 Processor-Approximation Attribution
 
-**Status:** Accepted and implemented; all H-2 findings attributed, suitability transition pending
+**Status:** Accepted and implemented; all H-2 findings attributed, transition completed by ADR 0023
 
 **Date:** 2026-08-31
 
@@ -96,9 +96,9 @@ The frozen comparison SHA-256 is
 - No warning is deleted, and NJOY's negative synthesized recoil is not treated
   as physical proton-spectrum evidence. Both remain visible in the immutable
   comparison.
-- The v0.3 suitability report remains immutable and rejected. A separately
-  versioned, approximation-aware report may reclassify only H-2 after binding
-  this comparison and the content-derived transport domain.
+- The v0.3 suitability report remains immutable and rejected. ADR 0023's
+  separately versioned, approximation-aware v0.4 report binds this comparison
+  and the content-derived transport domain and reclassifies only H-2.
 - The evidence provides no waiver for C-13, N-15, O-17, or O-18.
 
 ## Related decisions and primary sources
@@ -106,5 +106,6 @@ The frozen comparison SHA-256 is
 - [ADR 0012: Controlled NJOY execution evidence](0012-controlled-njoy-execution-evidence.md)
 - [ADR 0020: Content-bound transport-domain suitability](0020-content-bound-transport-domain-suitability.md)
 - [ADR 0021: Independent LAW=7 implicit-residual balance](0021-independent-law7-implicit-residual-balance.md)
+- [ADR 0023: Reaction-evidence-aware transported-photon suitability](0023-reaction-evidence-aware-suitability.md)
 - [NJOY2016.78 HEATR implementation](https://github.com/njoy/NJOY2016/blob/71a76bc6345fa15f36bacc816ae7900714345d97/src/heatr.f90)
 - [NJOY2016 HEATR manual](https://github.com/njoy/NJOY2016-manual/blob/master/heatx.tex)

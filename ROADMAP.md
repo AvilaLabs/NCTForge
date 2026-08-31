@@ -2,7 +2,7 @@
 
 **Adopted:** 2026-08-31
 
-**Status:** R1 complete; R2 research contracts in progress
+**Status:** R1 complete; R2 response qualification in progress
 
 **Style:** Evidence-gated, not feature-count or calendar driven
 
@@ -144,10 +144,14 @@ Implementation status:
   symmetrically through domain-aware suitability schema `0.3.0`; all 72
   baseline violations remain in domain, while six of 120 JEFF findings are
   above 20 MeV and O-16 alone clears with zero in-domain violations;
-- in progress: extend independent reaction/source diagnostics to the 114
-  in-domain JEFF-4.0 findings across C-13, H-2, O-17, and O-18 before defining
-  a reviewed response treatment; N-15 remains independently rejected by its
-  capture-balance gate;
+- complete: add evidence-aware suitability schema `0.4.0`, bind the exact H-2
+  source and processor-attribution reports to the immutable domain assessment,
+  clear all 15 attributed H-2 findings without deleting them, and integrate
+  N-15's independent capture-balance rejection;
+- in progress: extend independent reaction/source diagnostics to the 102
+  remaining in-domain JEFF-4.0 findings across C-13, O-17, and O-18 before
+  defining a reviewed response treatment; N-15 remains independently rejected
+  by its capture-balance gate;
 - pending: generate the first reviewable response tables only after the
   diagnostic blocker is resolved through a versioned, reviewed data profile;
 - pending: smoke execution, statepoint import, and independent estimator

@@ -1,0 +1,211 @@
+{
+  "schema_version": "nctforge.njoy-transported-photon-suitability/0.4.0",
+  "id": "nctforge.nf-bnct-001.jeff40-neutron-source-selection.v1.njoy2016-78-inputs.execution.1788195965.8a37cf70cf80.transported-photon-kerma-suitability.source-aware-v2.domain-aware-v3.evidence-aware-v4",
+  "case_id": "nf-bnct-001",
+  "requirement": "transported_photon_kerma_with_coupled_photon_transport",
+  "qualification": "transported_photon_kerma_rejected",
+  "domain_aware_suitability_report": {
+    "id": "nctforge.nf-bnct-001.jeff40-neutron-source-selection.v1.njoy2016-78-inputs.execution.1788195965.8a37cf70cf80.transported-photon-kerma-suitability.source-aware-v2.domain-aware-v3",
+    "sha256": "6e46b627d9b766e596ad2219eaafca970bd9f3c5df1d5e400ad644397c44ce55"
+  },
+  "law7_implicit_residual_report": {
+    "id": "nctforge.nf-bnct-001.jeff40-neutron-source-selection.v1.endf-mf6-law7-implicit-residual.h2.mt16",
+    "sha256": "0cfaaf52c67f359b3fd2c70b147e92dd9e004e3495bb860f9ad5ab7707acd1d5"
+  },
+  "law7_processor_attribution": {
+    "id": "nctforge.nf-bnct-001.jeff40-neutron-source-selection.v1.endf-mf6-law7-implicit-residual.h2.mt16.njoy2016-78-law7-implicit-residual-comparison",
+    "sha256": "64b3985ed5fc3d57c7a41c55b58e13f8bba069403c72bafe50235a13e0ae5687"
+  },
+  "capture_balance_report": {
+    "id": "nctforge.nf-bnct-001.jeff40-neutron-source-selection.v1.endf-mf6-capture-photon-balance.n15.mt102",
+    "sha256": "306a0d893f7ea8e3b5490a7cc6f5556a6de523e0171bb98dc23571bec1febbce"
+  },
+  "capture_processor_comparison": {
+    "id": "nctforge.nf-bnct-001.jeff40-neutron-source-selection.v1.endf-mf6-capture-photon-balance.n15.mt102.njoy2016-78-capture-print-comparison",
+    "sha256": "e3b995922e91214d07f708c307c38f19166fe4b51c38e0611c6fcc01d5bdd831"
+  },
+  "execution_receipt": {
+    "id": "nctforge.nf-bnct-001.jeff40-neutron-source-selection.v1.njoy2016-78-inputs.execution.1788195965.8a37cf70cf80",
+    "sha256": "b53dd718d944af20d80d8c43d0832e4b5edc7edbf695d04642ab1efafe0803d9"
+  },
+  "evaluated_source_selection": {
+    "id": "nctforge.nf-bnct-001.jeff40-neutron-source-selection.v1",
+    "sha256": "010bceddfd83d1bafbe5b46238195bdb64cd75ab0f368b6c6662de98c5c34dcf"
+  },
+  "photon_production_inventory": {
+    "id": "nctforge.nf-bnct-001.jeff40-neutron-source-selection.v1.endf-photon-production-inventory",
+    "sha256": "8e03f3f9ca894a3e6aafae59f3568a8c5b1f09d9c890279e15e4407c760bdd92"
+  },
+  "neutron_transport_domain": {
+    "id": "nctforge.nf-bnct-001.openmc-endfb81-official-library.b7ad59cb4a3d.v1.nctforge.nf-bnct-001.material.v1.neutron-transport-domain",
+    "sha256": "1554dfb3167c0aa804cd6c893ce22a363cefbc0cba1b8f7781eeae1c2dccf89e"
+  },
+  "assessment_energy_range_ev": [
+    9.999999999999999e-6,
+    20000000.0
+  ],
+  "diagnostic_boundary_policy": "closed_conservative",
+  "runs": [
+    {
+      "nuclide": "B10",
+      "full_evaluation_diagnostic_violation_count": 0,
+      "in_domain_diagnostic_violation_count": 0,
+      "out_of_domain_diagnostic_violation_count": 0,
+      "approximation_attributed_full_evaluation_violation_count": 0,
+      "approximation_attributed_in_domain_violation_count": 0,
+      "approximation_attributed_out_of_domain_violation_count": 0,
+      "remaining_in_domain_diagnostic_violation_count": 0,
+      "rejecting_nonkinematic_finding_count": 0,
+      "kinematic_disposition": "none",
+      "independent_gate": "none",
+      "domain_aware_suitability": "candidate_unreviewed",
+      "suitability": "candidate_unreviewed"
+    },
+    {
+      "nuclide": "C12",
+      "full_evaluation_diagnostic_violation_count": 0,
+      "in_domain_diagnostic_violation_count": 0,
+      "out_of_domain_diagnostic_violation_count": 0,
+      "approximation_attributed_full_evaluation_violation_count": 0,
+      "approximation_attributed_in_domain_violation_count": 0,
+      "approximation_attributed_out_of_domain_violation_count": 0,
+      "remaining_in_domain_diagnostic_violation_count": 0,
+      "rejecting_nonkinematic_finding_count": 0,
+      "kinematic_disposition": "none",
+      "independent_gate": "none",
+      "domain_aware_suitability": "candidate_unreviewed",
+      "suitability": "candidate_unreviewed"
+    },
+    {
+      "nuclide": "C13",
+      "full_evaluation_diagnostic_violation_count": 32,
+      "in_domain_diagnostic_violation_count": 32,
+      "out_of_domain_diagnostic_violation_count": 0,
+      "approximation_attributed_full_evaluation_violation_count": 0,
+      "approximation_attributed_in_domain_violation_count": 0,
+      "approximation_attributed_out_of_domain_violation_count": 0,
+      "remaining_in_domain_diagnostic_violation_count": 32,
+      "rejecting_nonkinematic_finding_count": 1,
+      "kinematic_disposition": "none",
+      "independent_gate": "none",
+      "domain_aware_suitability": "rejected",
+      "suitability": "rejected"
+    },
+    {
+      "nuclide": "H1",
+      "full_evaluation_diagnostic_violation_count": 0,
+      "in_domain_diagnostic_violation_count": 0,
+      "out_of_domain_diagnostic_violation_count": 0,
+      "approximation_attributed_full_evaluation_violation_count": 0,
+      "approximation_attributed_in_domain_violation_count": 0,
+      "approximation_attributed_out_of_domain_violation_count": 0,
+      "remaining_in_domain_diagnostic_violation_count": 0,
+      "rejecting_nonkinematic_finding_count": 0,
+      "kinematic_disposition": "none",
+      "independent_gate": "none",
+      "domain_aware_suitability": "candidate_unreviewed",
+      "suitability": "candidate_unreviewed"
+    },
+    {
+      "nuclide": "H2",
+      "full_evaluation_diagnostic_violation_count": 15,
+      "in_domain_diagnostic_violation_count": 12,
+      "out_of_domain_diagnostic_violation_count": 3,
+      "approximation_attributed_full_evaluation_violation_count": 15,
+      "approximation_attributed_in_domain_violation_count": 12,
+      "approximation_attributed_out_of_domain_violation_count": 3,
+      "remaining_in_domain_diagnostic_violation_count": 0,
+      "rejecting_nonkinematic_finding_count": 0,
+      "kinematic_disposition": "law7_implicit_residual_processor_approximation",
+      "independent_gate": "none",
+      "domain_aware_suitability": "rejected",
+      "suitability": "candidate_unreviewed"
+    },
+    {
+      "nuclide": "N14",
+      "full_evaluation_diagnostic_violation_count": 0,
+      "in_domain_diagnostic_violation_count": 0,
+      "out_of_domain_diagnostic_violation_count": 0,
+      "approximation_attributed_full_evaluation_violation_count": 0,
+      "approximation_attributed_in_domain_violation_count": 0,
+      "approximation_attributed_out_of_domain_violation_count": 0,
+      "remaining_in_domain_diagnostic_violation_count": 0,
+      "rejecting_nonkinematic_finding_count": 0,
+      "kinematic_disposition": "none",
+      "independent_gate": "none",
+      "domain_aware_suitability": "candidate_unreviewed",
+      "suitability": "candidate_unreviewed"
+    },
+    {
+      "nuclide": "N15",
+      "full_evaluation_diagnostic_violation_count": 0,
+      "in_domain_diagnostic_violation_count": 0,
+      "out_of_domain_diagnostic_violation_count": 0,
+      "approximation_attributed_full_evaluation_violation_count": 0,
+      "approximation_attributed_in_domain_violation_count": 0,
+      "approximation_attributed_out_of_domain_violation_count": 0,
+      "remaining_in_domain_diagnostic_violation_count": 0,
+      "rejecting_nonkinematic_finding_count": 0,
+      "kinematic_disposition": "none",
+      "independent_gate": "mf6_capture_photon_energy_balance_rejected",
+      "domain_aware_suitability": "candidate_unreviewed",
+      "suitability": "rejected"
+    },
+    {
+      "nuclide": "O16",
+      "full_evaluation_diagnostic_violation_count": 1,
+      "in_domain_diagnostic_violation_count": 0,
+      "out_of_domain_diagnostic_violation_count": 1,
+      "approximation_attributed_full_evaluation_violation_count": 0,
+      "approximation_attributed_in_domain_violation_count": 0,
+      "approximation_attributed_out_of_domain_violation_count": 0,
+      "remaining_in_domain_diagnostic_violation_count": 0,
+      "rejecting_nonkinematic_finding_count": 0,
+      "kinematic_disposition": "none",
+      "independent_gate": "none",
+      "domain_aware_suitability": "candidate_unreviewed",
+      "suitability": "candidate_unreviewed"
+    },
+    {
+      "nuclide": "O17",
+      "full_evaluation_diagnostic_violation_count": 45,
+      "in_domain_diagnostic_violation_count": 43,
+      "out_of_domain_diagnostic_violation_count": 2,
+      "approximation_attributed_full_evaluation_violation_count": 0,
+      "approximation_attributed_in_domain_violation_count": 0,
+      "approximation_attributed_out_of_domain_violation_count": 0,
+      "remaining_in_domain_diagnostic_violation_count": 43,
+      "rejecting_nonkinematic_finding_count": 0,
+      "kinematic_disposition": "none",
+      "independent_gate": "none",
+      "domain_aware_suitability": "rejected",
+      "suitability": "rejected"
+    },
+    {
+      "nuclide": "O18",
+      "full_evaluation_diagnostic_violation_count": 27,
+      "in_domain_diagnostic_violation_count": 27,
+      "out_of_domain_diagnostic_violation_count": 0,
+      "approximation_attributed_full_evaluation_violation_count": 0,
+      "approximation_attributed_in_domain_violation_count": 0,
+      "approximation_attributed_out_of_domain_violation_count": 0,
+      "remaining_in_domain_diagnostic_violation_count": 27,
+      "rejecting_nonkinematic_finding_count": 1,
+      "kinematic_disposition": "none",
+      "independent_gate": "none",
+      "domain_aware_suitability": "rejected",
+      "suitability": "rejected"
+    }
+  ],
+  "rejected_run_count": 4,
+  "reclassified_from_domain_run_count": 1,
+  "independently_rejected_from_domain_run_count": 1,
+  "full_evaluation_kinematic_violation_count": 120,
+  "domain_in_scope_kinematic_violation_count": 114,
+  "approximation_attributed_full_evaluation_violation_count": 15,
+  "approximation_attributed_in_domain_violation_count": 12,
+  "approximation_attributed_out_of_domain_violation_count": 3,
+  "remaining_in_domain_kinematic_violation_count": 102,
+  "out_of_domain_kinematic_violation_count": 6,
+  "independent_capture_balance_failed_sample_count": 33
+}

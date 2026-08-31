@@ -2,8 +2,8 @@
 
 **Recorded:** 2026-08-31
 
-**Evidence state:** Controlled candidate rejected after independent capture-
-balance and transport-domain refinements; not a qualified response table
+**Evidence state:** Controlled candidate rejected after reaction-evidence-aware
+v0.4 refinement; not a qualified response table
 
 ## Question
 
@@ -41,7 +41,7 @@ source files are the intended independent variable.
 | C-12 | candidate | candidate | no recognized blocker |
 | C-13 | candidate | rejected | 32 kinematic violations; no-photon local fallback |
 | H-1 | candidate | candidate | no recognized blocker |
-| H-2 | candidate | rejected only by immutable v0.3 pending new schema | all 15 findings attributed to NJOY's excluded energy-balance remainder |
+| H-2 | candidate | candidate under evidence-aware v0.4 | all 15 findings attributed to NJOY's excluded energy-balance remainder |
 | N-14 | candidate | candidate | no recognized blocker |
 | N-15 | rejected | rejected by deeper gate | valid File 13/14/15 path plus MF=6/MT=102 clears the narrow processor check, but 33 of 37 capture-balance nodes fail independently |
 | O-16 | rejected | candidate under bound domain | sole finding is at 30 MeV, above the common 20 MeV OpenMC domain |
@@ -68,8 +68,14 @@ ADR 0020 then derives the common OpenMC transport interval from the exact
 processed-data manifest and material instead of supplying a loose cutoff. Its
 closed diagnostic interval ends at 20 MeV. The domain-aware v0.3 report retains
 all 120 JEFF findings, classifies 114 in domain and six above it, and clears
-only O-16. C-13, H-2, O-17, and O-18 remain rejected. Together with the
-independent N-15 rejection, the candidate still has five unresolved nuclides.
+only O-16. C-13, H-2, O-17, and O-18 remain rejected in that immutable report.
+
+ADR 0023's evidence-aware v0.4 report then binds the independent H-2 source
+calculation and receipt-bound processor attribution, clearing H-2 alone. It
+also incorporates the independent N-15 capture-balance gate instead of
+mistaking the narrower processor pass for suitability. The integrated rejected
+set is C-13, N-15, O-17, and O-18. The 102 still-unexplained in-domain
+kinematic findings belong to C-13 (32), O-17 (43), and O-18 (27).
 
 Both exact ten-nuclide inventories have zero format-pairing findings and eight
 evaluations with a HEATR photon source. This establishes record availability,
@@ -105,6 +111,8 @@ not energy-balance validity.
   `0cfaaf52c67f359b3fd2c70b147e92dd9e004e3495bb860f9ad5ab7707acd1d5`.
 - JEFF-4.0 H-2 NJOY attribution SHA-256:
   `64b3985ed5fc3d57c7a41c55b58e13f8bba069403c72bafe50235a13e0ae5687`.
+- JEFF-4.0 evidence-aware v0.4 suitability SHA-256:
+  `68b22afd510d477eb997fd514a37bcca9c45730e7fab22fd7ad9186d37f2baa0`.
 
 The baseline-comparison artifact is intentionally the immutable v0.1
 log-only comparison. ADR 0017 and the v0.2 report supersede only its treatment
@@ -145,10 +153,10 @@ positive mean energy for the implicit proton. The minimum residual is 443.1
 keV. The receipt-bound comparison then matches all 15 structured violations to
 the final table and proves that each MT 301 excess is the printed `ebal` term
 excluded from the kinematic maximum. All 15 pass, with a worst remainder/
-excess difference of `1.055e-4`. H-2 remains rejected only because the
-immutable v0.3 schema has no approximation-aware disposition; a new schema
-must bind this evidence before changing the decision. C-13, O-17, and O-18
-remain untouched.
+excess difference of `1.055e-4`. Evidence-aware v0.4 binds both exact H-2
+reports, the immutable v0.3 domain assessment, and the N-15 independent gate.
+It clears only H-2 and leaves C-13, O-17, and O-18 untouched. H-2 is still
+`candidate_unreviewed`, not a qualified response treatment.
 
 ## Primary sources
 
@@ -161,3 +169,4 @@ remain untouched.
 - [Content-bound transport-domain decision](../adr/0020-content-bound-transport-domain-suitability.md)
 - [Independent LAW=7 implicit-residual decision](../adr/0021-independent-law7-implicit-residual-balance.md)
 - [LAW=7 processor-attribution decision](../adr/0022-law7-processor-attribution.md)
+- [Reaction-evidence-aware suitability decision](../adr/0023-reaction-evidence-aware-suitability.md)

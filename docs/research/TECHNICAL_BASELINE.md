@@ -317,9 +317,12 @@ result exists. Cross-code agreement alone remains `cross_code_research_only`.
   integrate all 54 JEFF H-2 MF=6/MT=16 LAW=7 source nodes; all 53 active nodes
   normalize and leave positive energy for the implicit proton. Complete: bind
   that result to the exact receipt and attribute all 15 H-2 findings to NJOY's
-  excluded File 6 energy-balance remainder. Pending: encode the narrow H-2
-  disposition in a new suitability schema, diagnose C-13, O-17, and O-18,
-  then define, justify, and review a passing versioned response treatment.
+  excluded File 6 energy-balance remainder. Complete: add reaction-evidence-
+  aware suitability schema `0.4.0`, clear only H-2 under that exact
+  attribution, and incorporate N-15's independent capture-balance rejection;
+  102 in-domain findings remain across C-13, O-17, and O-18. Pending: diagnose
+  those three nuclides, then define, justify, and review a passing versioned
+  response treatment.
 - Do not use reaction-filtered neutron heating as a component partition; retain
   it only as a diagnostic under ADR 0005.
 - Do not publish “golden” OpenMC dose arrays before an independent calculation is
