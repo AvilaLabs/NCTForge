@@ -2,8 +2,8 @@
 
 **Recorded:** 2026-08-31
 
-**Evidence state:** Controlled candidate rejected; not a qualified response
-table
+**Evidence state:** Controlled candidate rejected after source-aware
+refinement; not a qualified response table
 
 ## Question
 
@@ -43,7 +43,7 @@ source files are the intended independent variable.
 | H-1 | candidate | candidate | no recognized blocker |
 | H-2 | candidate | rejected | 15 kinematic violations |
 | N-14 | candidate | candidate | no recognized blocker |
-| N-15 | rejected | rejected | File 12 absent; kinematic count improves from 10 to 0 |
+| N-15 | rejected | candidate | valid File 13/14/15 path plus MF=6/MT=102; kinematic count improves from 10 to 0 |
 | O-16 | rejected | rejected | one kinematic violation; recognized warning is absent |
 | O-17 | rejected | rejected | 45 kinematic violations; recognized warning is absent |
 | O-18 | rejected | rejected | 27 kinematic violations; no-photon local fallback |
@@ -52,10 +52,17 @@ source files are the intended independent variable.
 structured by ADR 0013 appeared. It is not evidence that the evaluation's
 photon representation is complete or physically suitable.
 
-The aggregate candidate result is six rejected nuclides, 120 kinematic
-violations, and three unique processor findings. Compared with the baseline,
-zero of four rejected nuclides clears the complete gate and two new rejections
-are introduced. The comparison is therefore `candidate_rejected`.
+The original log-only report has six rejected nuclides, 120 kinematic
+violations, and three unique processor findings. The source-aware v0.2 report
+correctly treats N-15's File 12 message as informational because the exact
+evaluation supplies eight paired File 13/14/15 continuum reactions and an
+MF=6/MT=102 photon product. Its corrected aggregate is five rejected nuclides:
+C-13, H-2, O-16, O-17, and O-18. One baseline rejection clears, but two new
+rejections are introduced, so the candidate remains rejected.
+
+Both exact ten-nuclide inventories have zero format-pairing findings and eight
+evaluations with a HEATR photon source. This establishes record availability,
+not energy-balance validity.
 
 ## Evidence anchors
 
@@ -65,6 +72,14 @@ are introduced. The comparison is therefore `candidate_rejected`.
   `0b33a754c6f1223fcb680d7fe7916d311d93acf7848e733c87ce607e5793cdbb`;
 - baseline comparison SHA-256:
   `bd6c63ac973f83e4872c9c17175dc8c2b10a815f095e3c6febb4023426698b03`.
+- JEFF-4.0 photon inventory SHA-256:
+  `8e03f3f9ca894a3e6aafae59f3568a8c5b1f09d9c890279e15e4407c760bdd92`;
+- JEFF-4.0 source-aware suitability SHA-256:
+  `3bc909a8285f8654fd62d776c427d7b7ef0825f5608b19744740bcbbc8babe92`.
+
+The baseline-comparison artifact is intentionally the immutable v0.1
+log-only comparison. ADR 0017 and the v0.2 report supersede only its treatment
+of the File 12 message.
 
 The checked receipts bind the external processor logs and tapes; the large
 external artifacts are not redistributed in the repository.
@@ -77,9 +92,9 @@ incomplete-discrete-photon warning and drops from 15 violations to one, while
 O-17 loses the local-fallback warning but increases to 45 violations. That
 separates “photon records exist” from “the energy-balance response passes.”
 
-The next high-value work is an exact MF=6/12/13/14/15 inventory for the four
-baseline failures and the corresponding JEFF evaluations, followed by an
-independent energy-release balance calculation that does not reuse HEATR's
+The exact MF=6/12/13/14/15 inventory and source-aware interpretation are now
+complete. The next high-value work is the independent photon-energy moment and
+reaction energy-release balance calculation that does not reuse HEATR's
 implementation. Further whole-library candidates remain useful controls, but
 they should not displace that causal investigation.
 
@@ -88,3 +103,4 @@ they should not displace that causal investigation.
 - [JEFF-4.0 evaluated nuclear data library](https://data.oecd-nea.org/records/e9ajn-a3p20)
 - [NJOY2016.78 HEATR source](https://github.com/njoy/NJOY2016/blob/71a76bc6345fa15f36bacc816ae7900714345d97/src/heatr.f90)
 - [NJOY2016 HEATR manual](https://github.com/njoy/NJOY2016-manual/blob/master/heatx.tex)
+- [Source-aware photon-production decision](../adr/0017-source-aware-photon-production-suitability.md)

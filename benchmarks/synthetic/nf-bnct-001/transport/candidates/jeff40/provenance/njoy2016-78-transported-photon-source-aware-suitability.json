@@ -1,0 +1,217 @@
+{
+  "schema_version": "nctforge.njoy-transported-photon-suitability/0.2.0",
+  "id": "nctforge.nf-bnct-001.jeff40-neutron-source-selection.v1.njoy2016-78-inputs.execution.1788195965.8a37cf70cf80.transported-photon-kerma-suitability.source-aware-v2",
+  "case_id": "nf-bnct-001",
+  "requirement": "transported_photon_kerma_with_coupled_photon_transport",
+  "qualification": "transported_photon_kerma_rejected",
+  "legacy_suitability_report": {
+    "id": "nctforge.nf-bnct-001.jeff40-neutron-source-selection.v1.njoy2016-78-inputs.execution.1788195965.8a37cf70cf80.transported-photon-kerma-suitability",
+    "sha256": "0b33a754c6f1223fcb680d7fe7916d311d93acf7848e733c87ce607e5793cdbb"
+  },
+  "photon_production_inventory": {
+    "id": "nctforge.nf-bnct-001.jeff40-neutron-source-selection.v1.endf-photon-production-inventory",
+    "sha256": "8e03f3f9ca894a3e6aafae59f3568a8c5b1f09d9c890279e15e4407c760bdd92"
+  },
+  "input_manifest": {
+    "id": "nctforge.nf-bnct-001.jeff40-neutron-source-selection.v1.njoy2016-78-inputs",
+    "sha256": "46dd5087dbd49f67399203dc149de586be698afa17796d17014c44ee330c191b"
+  },
+  "runs": [
+    {
+      "nuclide": "B10",
+      "processor_report": {
+        "path": "B10/output",
+        "media_type": "text/plain",
+        "size_bytes": 199078,
+        "sha256": "61d65c4ea89fe1652d1ca5e162a4003b834b58b5b56d05e643df7f03c312c3f0"
+      },
+      "diagnostic_status": "within_kinematic_limits",
+      "diagnostic_violation_count": 0,
+      "heatr_photon_source": "mixed_file6_and_file12_or13",
+      "file13_without_file12_reaction_count": 2,
+      "source_format_findings": [],
+      "processor_findings": [],
+      "suitability": "candidate_unreviewed"
+    },
+    {
+      "nuclide": "C12",
+      "processor_report": {
+        "path": "C12/output",
+        "media_type": "text/plain",
+        "size_bytes": 94458,
+        "sha256": "5ab05e65272d192f5b8b68daf5d4d89489e6fb4f423637c080aaf261d4c80bbf"
+      },
+      "diagnostic_status": "within_kinematic_limits",
+      "diagnostic_violation_count": 0,
+      "heatr_photon_source": "mixed_file6_and_file12_or13",
+      "file13_without_file12_reaction_count": 0,
+      "source_format_findings": [],
+      "processor_findings": [],
+      "suitability": "candidate_unreviewed"
+    },
+    {
+      "nuclide": "C13",
+      "processor_report": {
+        "path": "C13/output",
+        "media_type": "text/plain",
+        "size_bytes": 27634,
+        "sha256": "cb4203463d8e5e5db736585add2ef1d09300ebb3015ae62a8845db9d5c8e277e"
+      },
+      "diagnostic_status": "kinematic_limits_exceeded",
+      "diagnostic_violation_count": 32,
+      "heatr_photon_source": "local_deposition_fallback",
+      "file13_without_file12_reaction_count": 0,
+      "source_format_findings": [],
+      "processor_findings": [
+        {
+          "finding": {
+            "kind": "no_photon_production_local_fallback",
+            "file_number": null,
+            "reaction_mt": null,
+            "occurrence_count": 2
+          },
+          "disposition": "rejecting"
+        }
+      ],
+      "suitability": "rejected"
+    },
+    {
+      "nuclide": "H1",
+      "processor_report": {
+        "path": "H1/output",
+        "media_type": "text/plain",
+        "size_bytes": 34699,
+        "sha256": "a7215ddb99657375048c718b93259dccb6721bb99dd351adb4e1b609445e2445"
+      },
+      "diagnostic_status": "within_kinematic_limits",
+      "diagnostic_violation_count": 0,
+      "heatr_photon_source": "file6_only",
+      "file13_without_file12_reaction_count": 0,
+      "source_format_findings": [],
+      "processor_findings": [],
+      "suitability": "candidate_unreviewed"
+    },
+    {
+      "nuclide": "H2",
+      "processor_report": {
+        "path": "H2/output",
+        "media_type": "text/plain",
+        "size_bytes": 32617,
+        "sha256": "8b84fbec227b92ec07036eeff3425dd19c3b80aeb21cc179843b07216ca5b4b0"
+      },
+      "diagnostic_status": "kinematic_limits_exceeded",
+      "diagnostic_violation_count": 15,
+      "heatr_photon_source": "file12_or13_only",
+      "file13_without_file12_reaction_count": 0,
+      "source_format_findings": [],
+      "processor_findings": [],
+      "suitability": "rejected"
+    },
+    {
+      "nuclide": "N14",
+      "processor_report": {
+        "path": "N14/output",
+        "media_type": "text/plain",
+        "size_bytes": 331763,
+        "sha256": "7d6ccfe09a113766d289be5a790213602593e538126061018d60a88797905304"
+      },
+      "diagnostic_status": "within_kinematic_limits",
+      "diagnostic_violation_count": 0,
+      "heatr_photon_source": "mixed_file6_and_file12_or13",
+      "file13_without_file12_reaction_count": 7,
+      "source_format_findings": [],
+      "processor_findings": [],
+      "suitability": "candidate_unreviewed"
+    },
+    {
+      "nuclide": "N15",
+      "processor_report": {
+        "path": "N15/output",
+        "media_type": "text/plain",
+        "size_bytes": 47465,
+        "sha256": "4b45db6c65cfa2fc39fd8fc3df27d3b5a840e6e0a4e04373026ec5cd670e37e5"
+      },
+      "diagnostic_status": "within_kinematic_limits",
+      "diagnostic_violation_count": 0,
+      "heatr_photon_source": "mixed_file6_and_file12_or13",
+      "file13_without_file12_reaction_count": 8,
+      "source_format_findings": [],
+      "processor_findings": [
+        {
+          "finding": {
+            "kind": "missing_photon_multiplicity_file",
+            "file_number": 12,
+            "reaction_mt": null,
+            "occurrence_count": 2
+          },
+          "disposition": "informational_file13_alternative"
+        }
+      ],
+      "suitability": "candidate_unreviewed"
+    },
+    {
+      "nuclide": "O16",
+      "processor_report": {
+        "path": "O16/output",
+        "media_type": "text/plain",
+        "size_bytes": 213960,
+        "sha256": "6f7d9ddce9e4d35b5ae5d0c6c0f9781390ade451125fb53e36c905752d3e408b"
+      },
+      "diagnostic_status": "kinematic_limits_exceeded",
+      "diagnostic_violation_count": 1,
+      "heatr_photon_source": "mixed_file6_and_file12_or13",
+      "file13_without_file12_reaction_count": 7,
+      "source_format_findings": [],
+      "processor_findings": [],
+      "suitability": "rejected"
+    },
+    {
+      "nuclide": "O17",
+      "processor_report": {
+        "path": "O17/output",
+        "media_type": "text/plain",
+        "size_bytes": 701234,
+        "sha256": "e7ec927a4d7faeb49a2f6c7cc89c0a22c322818252763899b950e41d39f38e61"
+      },
+      "diagnostic_status": "kinematic_limits_exceeded",
+      "diagnostic_violation_count": 45,
+      "heatr_photon_source": "mixed_file6_and_file12_or13",
+      "file13_without_file12_reaction_count": 0,
+      "source_format_findings": [],
+      "processor_findings": [],
+      "suitability": "rejected"
+    },
+    {
+      "nuclide": "O18",
+      "processor_report": {
+        "path": "O18/output",
+        "media_type": "text/plain",
+        "size_bytes": 29294,
+        "sha256": "5d87f78d93ab531b711ca601c7c8749f13f30c54a41fc3c0a533b1dc19628158"
+      },
+      "diagnostic_status": "kinematic_limits_exceeded",
+      "diagnostic_violation_count": 27,
+      "heatr_photon_source": "local_deposition_fallback",
+      "file13_without_file12_reaction_count": 0,
+      "source_format_findings": [],
+      "processor_findings": [
+        {
+          "finding": {
+            "kind": "no_photon_production_local_fallback",
+            "file_number": null,
+            "reaction_mt": null,
+            "occurrence_count": 2
+          },
+          "disposition": "rejecting"
+        }
+      ],
+      "suitability": "rejected"
+    }
+  ],
+  "rejected_run_count": 5,
+  "kinematic_violation_count": 120,
+  "processor_finding_count": 3,
+  "rejecting_processor_finding_count": 2,
+  "informational_processor_finding_count": 1,
+  "source_format_finding_count": 0
+}

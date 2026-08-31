@@ -128,9 +128,13 @@ Implementation status:
   gate with publisher-matched JEFF-4.0; it is rejected with six affected
   nuclides, 120 kinematic violations, no baseline rejection resolved, and two
   new rejections;
-- in progress: inventory the exact photon-production representation behind the
-  N-15/O-16/O-17/O-18 failures and independently calculate the corresponding
-  energy-release balance before defining a reviewed response treatment;
+- complete: inventory exact MF=6/12/13/14/15 source records for both
+  ten-nuclide selections and add source-aware suitability schema `0.2.0`; this
+  corrects NJOY's File 12 message to informational when File 13 is valid,
+  clearing JEFF N-15 while leaving five genuine candidate rejections;
+- in progress: independently calculate photon-energy moments and the
+  corresponding reaction energy-release balance before defining a reviewed
+  response treatment;
 - pending: generate the first reviewable response tables only after the
   diagnostic blocker is resolved through a versioned, reviewed data profile;
 - pending: smoke execution, statepoint import, and independent estimator

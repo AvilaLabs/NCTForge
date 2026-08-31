@@ -28,6 +28,8 @@ use thiserror::Error;
 
 mod comparison;
 mod execution;
+mod photon_inventory;
+mod source_aware;
 mod suitability;
 
 pub use comparison::{
@@ -44,6 +46,21 @@ pub use execution::{
     NjoyExecutionResult, NjoyExecutionRun, NjoyExecutionTape, NjoyKinematicDirection,
     NjoyKinematicViolation, NjoyProcessorArtifact, NjoyProcessorExecutionIdentity,
     NjoyRunDiagnosticStatus, NjoyTapePurpose,
+};
+pub use photon_inventory::{
+    ENDF_PHOTON_PRODUCTION_INVENTORY_SCHEMA, EndfFile6PhotonProduct, EndfFile12Representation,
+    EndfFile13Representation, EndfFile14Representation, EndfFile15Representation,
+    EndfPhotonFormatFinding, EndfPhotonFormatFindingKind, EndfPhotonInventoryError,
+    EndfPhotonInventoryEvaluation, EndfPhotonInventoryQualification, EndfPhotonInventorySource,
+    EndfPhotonProductionInventory, EndfPhotonProductionInventoryDocument,
+    EndfPhotonProductionInventoryResult, EndfPhotonReaction, EndfPhotonSection,
+    EndfPhotonSectionHeader, HeatrPhotonSource,
+};
+pub use source_aware::{
+    NJOY_SOURCE_AWARE_SUITABILITY_SCHEMA, NjoyProcessorFindingDisposition,
+    NjoySourceAwareProcessorFinding, NjoySourceAwareSuitabilityError,
+    NjoySourceAwareSuitabilityReport, NjoySourceAwareSuitabilityReportDocument,
+    NjoySourceAwareSuitabilityResult, NjoySourceAwareSuitabilityRun,
 };
 pub use suitability::{
     NJOY_SUITABILITY_REPORT_SCHEMA, NjoyProcessorDataFinding, NjoySuitabilityError,

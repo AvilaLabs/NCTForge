@@ -1,0 +1,3908 @@
+{
+  "schema_version": "nctforge.endf-photon-production-inventory/0.1.0",
+  "id": "nctforge.nf-bnct-001.jeff40-neutron-source-selection.v1.endf-photon-production-inventory",
+  "case_id": "nf-bnct-001",
+  "qualification": "source_inventory_unreviewed",
+  "evaluated_source_selection": {
+    "id": "nctforge.nf-bnct-001.jeff40-neutron-source-selection.v1",
+    "sha256": "010bceddfd83d1bafbe5b46238195bdb64cd75ab0f368b6c6662de98c5c34dcf"
+  },
+  "evaluations": [
+    {
+      "nuclide": "B10",
+      "endf_mat": 525,
+      "source_evaluation": {
+        "filename": "n_5-B-010g.jeff",
+        "size_bytes": 1208842,
+        "sha256": "a02f834e12d98455be9699e5edef14628a1a607c56e50c1ce014c50528ea2b86"
+      },
+      "sections": [
+        {
+          "file_number": 6,
+          "reaction_mt": 5,
+          "record_count": 4964,
+          "sha256": "a506c364bba19c88fc71e69e3c65ba532bae03091dffacfd8c83ec482fc03188",
+          "header": {
+            "l1": 0,
+            "l2": 3,
+            "n1": 17,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 106,
+          "record_count": 699,
+          "sha256": "48c2ba1ded31bab433d6fc08f2722214cf602b1c1eff456b785b3c0a9ccf3c1b",
+          "header": {
+            "l1": 0,
+            "l2": 3,
+            "n1": 3,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 700,
+          "record_count": 193,
+          "sha256": "42bf2dfbb0b9f1a6fc5d73f69fe53bbca3cd3d25f7f5d30b0f2dd08893bf71ba",
+          "header": {
+            "l1": 0,
+            "l2": 2,
+            "n1": 2,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 800,
+          "record_count": 157,
+          "sha256": "ba6cad204e91d4196d90ef6d9a72dac4bef89973a2ccd60cce2ec0e44d6ae7c9",
+          "header": {
+            "l1": 0,
+            "l2": 2,
+            "n1": 2,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 801,
+          "record_count": 168,
+          "sha256": "0d9951968353af3d50f3ba69eee273d7c640e77a6ce1f45b9a258c4b16520636",
+          "header": {
+            "l1": 0,
+            "l2": 2,
+            "n1": 3,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 12,
+          "reaction_mt": 102,
+          "record_count": 53,
+          "sha256": "97e481b5976d5e69cf96a909b92b00b31d9b67f8a9e79d4f41aea60e7550fac5",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 12,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 13,
+          "reaction_mt": 4,
+          "record_count": 879,
+          "sha256": "5d7ea58114910fd62743a9ade7daeea3aae197d88ca52a645273dc2191ed2510",
+          "header": {
+            "l1": 0,
+            "l2": 0,
+            "n1": 16,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 13,
+          "reaction_mt": 103,
+          "record_count": 198,
+          "sha256": "94ce1e54780e3c57e0554525cffdbc007c2d42775a25b2a97cf92bc1901ea6a5",
+          "header": {
+            "l1": 0,
+            "l2": 0,
+            "n1": 9,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 4,
+          "record_count": 1,
+          "sha256": "bc78147f966836dba235daaf3db523ab4121e78ce4fa92e04cfec4db42c29d5a",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 16,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 102,
+          "record_count": 1,
+          "sha256": "9617964bfed7edac91d7115fdc75db69a2c720a99be542be7188f27db5ee21ef",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 12,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 103,
+          "record_count": 1,
+          "sha256": "b019050e4b244858a09ea2564a59ecdfeb17dc5e302749a0634b9d807bc72240",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 9,
+            "n2": 0
+          }
+        }
+      ],
+      "reactions": [
+        {
+          "reaction_mt": 4,
+          "file6_photon_products": [],
+          "file12": null,
+          "file13": {
+            "subsection_count": 16,
+            "continuum_subsection_count": 0
+          },
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 16,
+            "isotropic_subsection_count": 0
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 5,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 28
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 102,
+          "file6_photon_products": [],
+          "file12": {
+            "representation_option": 1,
+            "multiplicity_subsection_count": 12,
+            "transition_probability_mode": null,
+            "transition_lower_level_count": null,
+            "continuum_subsection_count": 0
+          },
+          "file13": null,
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 12,
+            "isotropic_subsection_count": 0
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 103,
+          "file6_photon_products": [],
+          "file12": null,
+          "file13": {
+            "subsection_count": 9,
+            "continuum_subsection_count": 0
+          },
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 9,
+            "isotropic_subsection_count": 0
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 106,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 13
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 700,
+          "file6_photon_products": [],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 800,
+          "file6_photon_products": [],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 801,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 2
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        }
+      ],
+      "heatr_photon_source": "mixed_file6_and_file12_or13",
+      "file13_without_file12_reaction_count": 2,
+      "format_findings": []
+    },
+    {
+      "nuclide": "C12",
+      "endf_mat": 625,
+      "source_evaluation": {
+        "filename": "n_6-C-012g.jeff",
+        "size_bytes": 3857390,
+        "sha256": "09af11fe72d5d6cdb9f6dff7c6a8a03dfa9f11a8fb6887336fa9bbb326dbad8b"
+      },
+      "sections": [
+        {
+          "file_number": 6,
+          "reaction_mt": 5,
+          "record_count": 4658,
+          "sha256": "3a62f83b697a3b52a10aaf608c0b57faf7d875639a9b5a5509a32100f6b08462",
+          "header": {
+            "l1": 0,
+            "l2": 3,
+            "n1": 21,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 12,
+          "reaction_mt": 51,
+          "record_count": 5,
+          "sha256": "0e1a236c5301580df3b7251a8b7ad58238b4a22c44f10f7f023d3d351fcb1e3f",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 12,
+          "reaction_mt": 102,
+          "record_count": 13,
+          "sha256": "0045c05be7b49c6cd57e78a2b211c56faf5ebcbb1e20c1288458999272a5d040",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 3,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 51,
+          "record_count": 147,
+          "sha256": "cd9179973acd7609bba33c998230cc7f7defb52e6237cc4cbb892c2561831753",
+          "header": {
+            "l1": 0,
+            "l2": 1,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 102,
+          "record_count": 1,
+          "sha256": "48738afd2a84e0e21f0c93254da1d15208094365c93f4e257b80b4134bc20209",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 3,
+            "n2": 0
+          }
+        }
+      ],
+      "reactions": [
+        {
+          "reaction_mt": 5,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 19
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 51,
+          "file6_photon_products": [],
+          "file12": {
+            "representation_option": 1,
+            "multiplicity_subsection_count": 1,
+            "transition_probability_mode": null,
+            "transition_lower_level_count": null,
+            "continuum_subsection_count": 0
+          },
+          "file13": null,
+          "file14": {
+            "isotropic": false,
+            "angular_representation": 1,
+            "subsection_count": 1,
+            "isotropic_subsection_count": 0
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 102,
+          "file6_photon_products": [],
+          "file12": {
+            "representation_option": 1,
+            "multiplicity_subsection_count": 3,
+            "transition_probability_mode": null,
+            "transition_lower_level_count": null,
+            "continuum_subsection_count": 0
+          },
+          "file13": null,
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 3,
+            "isotropic_subsection_count": 0
+          },
+          "file15": null,
+          "format_findings": []
+        }
+      ],
+      "heatr_photon_source": "mixed_file6_and_file12_or13",
+      "file13_without_file12_reaction_count": 0,
+      "format_findings": []
+    },
+    {
+      "nuclide": "C13",
+      "endf_mat": 628,
+      "source_evaluation": {
+        "filename": "n_6-C-013g.jeff",
+        "size_bytes": 3510122,
+        "sha256": "f27cecb9236022436f0f596bc3bcc313938cbea03cb00f134b6f1d27f7522284"
+      },
+      "sections": [],
+      "reactions": [],
+      "heatr_photon_source": "local_deposition_fallback",
+      "file13_without_file12_reaction_count": 0,
+      "format_findings": []
+    },
+    {
+      "nuclide": "H1",
+      "endf_mat": 125,
+      "source_evaluation": {
+        "filename": "n_1-H-001g.jeff",
+        "size_bytes": 744724,
+        "sha256": "4b34684fc6dfe1d2d82f6bcd99b2c7ac4db30b10a1369deb7f0043623222425a"
+      },
+      "sections": [
+        {
+          "file_number": 6,
+          "reaction_mt": 102,
+          "record_count": 319,
+          "sha256": "4875d4b59c62c6b492205a0cbf09473925a5c8c858acdfb68bbfbfad8197a89e",
+          "header": {
+            "l1": 0,
+            "l2": 2,
+            "n1": 2,
+            "n2": 0
+          }
+        }
+      ],
+      "reactions": [
+        {
+          "reaction_mt": 102,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 2,
+              "yield_point_count": 3
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        }
+      ],
+      "heatr_photon_source": "file6_only",
+      "file13_without_file12_reaction_count": 0,
+      "format_findings": []
+    },
+    {
+      "nuclide": "H2",
+      "endf_mat": 128,
+      "source_evaluation": {
+        "filename": "n_1-H-002g.jeff",
+        "size_bytes": 2340444,
+        "sha256": "d0791bdbebe04d33b17a44debd2d3fc68651bbcf956fdc220a21f3fa17314d8d"
+      },
+      "sections": [
+        {
+          "file_number": 6,
+          "reaction_mt": 16,
+          "record_count": 27187,
+          "sha256": "6ce01f2a070dce770d731961badf5980ca6c8790b4a9c1b966dc10cf78723752",
+          "header": {
+            "l1": 0,
+            "l2": 1,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 12,
+          "reaction_mt": 102,
+          "record_count": 4,
+          "sha256": "8ce8d6773f3ee3a87698c28151c6bb7aae5b53be050bc1b2274ab1e64ee587a5",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 102,
+          "record_count": 1,
+          "sha256": "0066960d7229c1b3b31f4fc5beb631bdf6732a2db14dd9a769ddc220a852aa3f",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 1,
+            "n2": 0
+          }
+        }
+      ],
+      "reactions": [
+        {
+          "reaction_mt": 16,
+          "file6_photon_products": [],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 102,
+          "file6_photon_products": [],
+          "file12": {
+            "representation_option": 1,
+            "multiplicity_subsection_count": 1,
+            "transition_probability_mode": null,
+            "transition_lower_level_count": null,
+            "continuum_subsection_count": 0
+          },
+          "file13": null,
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 1,
+            "isotropic_subsection_count": 0
+          },
+          "file15": null,
+          "format_findings": []
+        }
+      ],
+      "heatr_photon_source": "file12_or13_only",
+      "file13_without_file12_reaction_count": 0,
+      "format_findings": []
+    },
+    {
+      "nuclide": "N14",
+      "endf_mat": 725,
+      "source_evaluation": {
+        "filename": "n_7-N-014g.jeff",
+        "size_bytes": 1352918,
+        "sha256": "758dad9cead8bbf43fb5f7d7b628f82ec7b8a947f4e39d4e5d566c8cc0a948e7"
+      },
+      "sections": [
+        {
+          "file_number": 6,
+          "reaction_mt": 5,
+          "record_count": 4575,
+          "sha256": "97c822ebec2a6509977b884bb5bb4f253f9fc1223da7fdc02c3b357ae0df9630",
+          "header": {
+            "l1": 0,
+            "l2": 3,
+            "n1": 22,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 16,
+          "record_count": 131,
+          "sha256": "cdfe348d5ef2b3e8ef72d01aa44219d99d813aa4a48a368e4c49957fb0e56e1e",
+          "header": {
+            "l1": 0,
+            "l2": 2,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 12,
+          "reaction_mt": 102,
+          "record_count": 217,
+          "sha256": "a8d2b8ee563b435abbc9d8f815e3d3ce81eafe4ea1e69604b8f9fb895c8c7098",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 59,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 13,
+          "reaction_mt": 4,
+          "record_count": 2127,
+          "sha256": "01d4764eb4e4a3b41d96b9cd261d791a4eccd2ec70b30d92e4b15d4c64fb3440",
+          "header": {
+            "l1": 0,
+            "l2": 0,
+            "n1": 43,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 13,
+          "reaction_mt": 28,
+          "record_count": 70,
+          "sha256": "db198b7267ca43a067cfeb9264552dc808318a4ec888875d683dad6720ae24b4",
+          "header": {
+            "l1": 0,
+            "l2": 0,
+            "n1": 6,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 13,
+          "reaction_mt": 32,
+          "record_count": 6,
+          "sha256": "eb51f033fe9debb7a7055dd1da99f6b37876615cd8a8a2e21a240d99ce5221ac",
+          "header": {
+            "l1": 0,
+            "l2": 0,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 13,
+          "reaction_mt": 103,
+          "record_count": 293,
+          "sha256": "86bdb7da96d456fdc519c5f7ecee80f8d53d2d51016dff72f176c87ddab9dbbf",
+          "header": {
+            "l1": 0,
+            "l2": 0,
+            "n1": 11,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 13,
+          "reaction_mt": 104,
+          "record_count": 128,
+          "sha256": "2f4d41ceb35a0f766a2e7ed35716e715b4b0edd04cc773b25709b676e9636c2d",
+          "header": {
+            "l1": 0,
+            "l2": 0,
+            "n1": 6,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 13,
+          "reaction_mt": 105,
+          "record_count": 19,
+          "sha256": "b2c44f53b31fc79728eb5a515f531fc7d4ebaf82ac221d654a7b09ba2daa103f",
+          "header": {
+            "l1": 0,
+            "l2": 0,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 13,
+          "reaction_mt": 107,
+          "record_count": 1010,
+          "sha256": "a8c280da128c4b3a8ba746968ac5b533094c6f97b60c93c4899a05005400f0de",
+          "header": {
+            "l1": 0,
+            "l2": 0,
+            "n1": 23,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 4,
+          "record_count": 66,
+          "sha256": "8200fd661600375f78bda499a5946d5fe0c5b2be2a9e879632552dd358d748a7",
+          "header": {
+            "l1": 0,
+            "l2": 1,
+            "n1": 43,
+            "n2": 41
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 28,
+          "record_count": 18,
+          "sha256": "d058e0dc24ef334c6ebbbf9795f5b19be4a9eb32003c43b434c4393f6fbfc929",
+          "header": {
+            "l1": 0,
+            "l2": 1,
+            "n1": 6,
+            "n2": 5
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 32,
+          "record_count": 1,
+          "sha256": "58b6ae92e383c7b398b4cc64ad44d403965d477db050e66b53567d2eda736d03",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 102,
+          "record_count": 139,
+          "sha256": "794a6f0b1e9720edebbf1c32b8566c8b408ffda7d814ad1a37a71922190251bd",
+          "header": {
+            "l1": 0,
+            "l2": 1,
+            "n1": 59,
+            "n2": 58
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 103,
+          "record_count": 1,
+          "sha256": "5b9a314dee8e24fbdb3167dd9268d1aa6521f3e7df09706d59e1417d2fcfb4fc",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 11,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 104,
+          "record_count": 18,
+          "sha256": "5b3352d2b4589d4a6ebb18626a79a2179210cb28f36a697ca20a284a012ae214",
+          "header": {
+            "l1": 0,
+            "l2": 1,
+            "n1": 6,
+            "n2": 5
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 105,
+          "record_count": 1,
+          "sha256": "78da4093cce12d9481d64c62472840bcefb92ef33c1cf2c10c34bd2ed00f1617",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 107,
+          "record_count": 1,
+          "sha256": "923ee07b3c85a6fd9d26dfefb605a012fa81e0cebe935c08636e2eecb8995ee3",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 23,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 15,
+          "reaction_mt": 102,
+          "record_count": 210,
+          "sha256": "d208deafb756b4c221aafb460ac415245dcf34e50fafca74fb6e56141529eb31",
+          "header": {
+            "l1": 0,
+            "l2": 0,
+            "n1": 1,
+            "n2": 0
+          }
+        }
+      ],
+      "reactions": [
+        {
+          "reaction_mt": 4,
+          "file6_photon_products": [],
+          "file12": null,
+          "file13": {
+            "subsection_count": 43,
+            "continuum_subsection_count": 0
+          },
+          "file14": {
+            "isotropic": false,
+            "angular_representation": 1,
+            "subsection_count": 43,
+            "isotropic_subsection_count": 41
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 5,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 19
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 16,
+          "file6_photon_products": [],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 28,
+          "file6_photon_products": [],
+          "file12": null,
+          "file13": {
+            "subsection_count": 6,
+            "continuum_subsection_count": 0
+          },
+          "file14": {
+            "isotropic": false,
+            "angular_representation": 1,
+            "subsection_count": 6,
+            "isotropic_subsection_count": 5
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 32,
+          "file6_photon_products": [],
+          "file12": null,
+          "file13": {
+            "subsection_count": 1,
+            "continuum_subsection_count": 0
+          },
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 1,
+            "isotropic_subsection_count": 0
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 102,
+          "file6_photon_products": [],
+          "file12": {
+            "representation_option": 1,
+            "multiplicity_subsection_count": 59,
+            "transition_probability_mode": null,
+            "transition_lower_level_count": null,
+            "continuum_subsection_count": 1
+          },
+          "file13": null,
+          "file14": {
+            "isotropic": false,
+            "angular_representation": 1,
+            "subsection_count": 59,
+            "isotropic_subsection_count": 58
+          },
+          "file15": {
+            "component_count": 1
+          },
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 103,
+          "file6_photon_products": [],
+          "file12": null,
+          "file13": {
+            "subsection_count": 11,
+            "continuum_subsection_count": 0
+          },
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 11,
+            "isotropic_subsection_count": 0
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 104,
+          "file6_photon_products": [],
+          "file12": null,
+          "file13": {
+            "subsection_count": 6,
+            "continuum_subsection_count": 0
+          },
+          "file14": {
+            "isotropic": false,
+            "angular_representation": 1,
+            "subsection_count": 6,
+            "isotropic_subsection_count": 5
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 105,
+          "file6_photon_products": [],
+          "file12": null,
+          "file13": {
+            "subsection_count": 1,
+            "continuum_subsection_count": 0
+          },
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 1,
+            "isotropic_subsection_count": 0
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 107,
+          "file6_photon_products": [],
+          "file12": null,
+          "file13": {
+            "subsection_count": 23,
+            "continuum_subsection_count": 0
+          },
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 23,
+            "isotropic_subsection_count": 0
+          },
+          "file15": null,
+          "format_findings": []
+        }
+      ],
+      "heatr_photon_source": "mixed_file6_and_file12_or13",
+      "file13_without_file12_reaction_count": 7,
+      "format_findings": []
+    },
+    {
+      "nuclide": "N15",
+      "endf_mat": 728,
+      "source_evaluation": {
+        "filename": "n_7-N-015g.jeff",
+        "size_bytes": 329148,
+        "sha256": "8624d4425edae8fa82d168ba91c133c9e4babdc83d0dbb39dc35b9b74495a6d6"
+      },
+      "sections": [
+        {
+          "file_number": 6,
+          "reaction_mt": 102,
+          "record_count": 803,
+          "sha256": "599cc5e104d0155f19631c6002cad22ec97521c281e71bdf0d29820c21cbe26e",
+          "header": {
+            "l1": 0,
+            "l2": 3,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 13,
+          "reaction_mt": 4,
+          "record_count": 20,
+          "sha256": "7a8e6d44c18853d8e6a210a3f659c5fb5cd73d4b68dbd6d75786141bf0be67f1",
+          "header": {
+            "l1": 0,
+            "l2": 0,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 13,
+          "reaction_mt": 16,
+          "record_count": 9,
+          "sha256": "c2e1a75858915eb52173b770417e903974ab511fcc9e326e28362a8855eea349",
+          "header": {
+            "l1": 0,
+            "l2": 0,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 13,
+          "reaction_mt": 22,
+          "record_count": 9,
+          "sha256": "4d1e73bc88b33f1e50d7493fba8614e87643198e5a47c8dc7183bbab92abed85",
+          "header": {
+            "l1": 0,
+            "l2": 0,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 13,
+          "reaction_mt": 28,
+          "record_count": 6,
+          "sha256": "0bcef59218267a6959628830bcf44cbe9bc2bda44f8d78080082eb971d40d09f",
+          "header": {
+            "l1": 0,
+            "l2": 0,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 13,
+          "reaction_mt": 103,
+          "record_count": 14,
+          "sha256": "6384b8d482a8f368d84336cdd197c5c226313dcbe0fc4a0891699142f0131b61",
+          "header": {
+            "l1": 0,
+            "l2": 0,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 13,
+          "reaction_mt": 104,
+          "record_count": 8,
+          "sha256": "1ecd4da452437d69c984cfe0ed3df65a46de62a828cc9ae6fc63da36a2f56d61",
+          "header": {
+            "l1": 0,
+            "l2": 0,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 13,
+          "reaction_mt": 105,
+          "record_count": 9,
+          "sha256": "f811a49741cab01ff0de3a8c563cb62b42eff9cbe6f9732a42fb57f2f5074463",
+          "header": {
+            "l1": 0,
+            "l2": 0,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 13,
+          "reaction_mt": 107,
+          "record_count": 16,
+          "sha256": "c4e5fd95e28fe29b962f9813f3e522279c1215f763d92481450928bf1deea974",
+          "header": {
+            "l1": 0,
+            "l2": 0,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 4,
+          "record_count": 1,
+          "sha256": "045b7b5e7c27deea3d81851a11e6a1dc0d2207edd507373f5de3e21b7bab2b00",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 16,
+          "record_count": 1,
+          "sha256": "826a01b30a72cdf3f7948412d37bbfb1aee0f778ad6b05347a213d03d8d1670c",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 22,
+          "record_count": 1,
+          "sha256": "11c63c938cd63ccb398d90b4b485df54a76c118c3e8de84d4bed7a8e5d25558d",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 28,
+          "record_count": 1,
+          "sha256": "3223667972efd0da00991cc7e4955ee41beb1dfc22376fbddc230caad17f1351",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 103,
+          "record_count": 1,
+          "sha256": "e3b72ae1cb0cafbfb416074729197db7d61dad29f90f3d57ba42eaf333116cce",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 104,
+          "record_count": 1,
+          "sha256": "e02b21441eee5036fcf6ffed0550c6e2c6616e93a98eb5ebcb2f946180f78942",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 105,
+          "record_count": 1,
+          "sha256": "56d603e6756085b18221109e966703cb32415316d227c0712f057ff1b180c6df",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 107,
+          "record_count": 1,
+          "sha256": "2d7d6e0dfb8a710dea7c869ed02a2dbf8233249f9dceec2032a7a5c23f70e7dc",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 15,
+          "reaction_mt": 4,
+          "record_count": 460,
+          "sha256": "0c753a5b16944f91e2482a7802c49c418ad322be87d2aa41b6e8fcfa811a3057",
+          "header": {
+            "l1": 0,
+            "l2": 0,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 15,
+          "reaction_mt": 16,
+          "record_count": 80,
+          "sha256": "a5e95c283d80e7712b948633d97b17f631e7c34df174a69458343304ca67774e",
+          "header": {
+            "l1": 0,
+            "l2": 0,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 15,
+          "reaction_mt": 22,
+          "record_count": 70,
+          "sha256": "fa3b2c15a453d6c0a38dce29e3e9e7f2f88517befa878b17ea79328a7960f40c",
+          "header": {
+            "l1": 0,
+            "l2": 0,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 15,
+          "reaction_mt": 28,
+          "record_count": 52,
+          "sha256": "5b67eb17c4fbb48be98b48245f52c0abd944321a812bb3a9feeaa38b6b79bcce",
+          "header": {
+            "l1": 0,
+            "l2": 0,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 15,
+          "reaction_mt": 103,
+          "record_count": 100,
+          "sha256": "d90ee7793219fbccdc4578ebae01a6b9d0431e845e3c3d5772c7b065358c7731",
+          "header": {
+            "l1": 0,
+            "l2": 0,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 15,
+          "reaction_mt": 104,
+          "record_count": 54,
+          "sha256": "55d4eff7c0fd3a89161807d511a5c3b77b6c059a4d6d5ea85e870032a972794b",
+          "header": {
+            "l1": 0,
+            "l2": 0,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 15,
+          "reaction_mt": 105,
+          "record_count": 46,
+          "sha256": "566f61c8acee6171742a0cecf22f96abecdb034bbb991b8818690b863cf2d19f",
+          "header": {
+            "l1": 0,
+            "l2": 0,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 15,
+          "reaction_mt": 107,
+          "record_count": 159,
+          "sha256": "44360c164128ac7d3a50a3a312920ef7102d73decad5e8d42c166f511e6ddc33",
+          "header": {
+            "l1": 0,
+            "l2": 0,
+            "n1": 1,
+            "n2": 0
+          }
+        }
+      ],
+      "reactions": [
+        {
+          "reaction_mt": 4,
+          "file6_photon_products": [],
+          "file12": null,
+          "file13": {
+            "subsection_count": 1,
+            "continuum_subsection_count": 1
+          },
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 1,
+            "isotropic_subsection_count": 0
+          },
+          "file15": {
+            "component_count": 1
+          },
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 16,
+          "file6_photon_products": [],
+          "file12": null,
+          "file13": {
+            "subsection_count": 1,
+            "continuum_subsection_count": 1
+          },
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 1,
+            "isotropic_subsection_count": 0
+          },
+          "file15": {
+            "component_count": 1
+          },
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 22,
+          "file6_photon_products": [],
+          "file12": null,
+          "file13": {
+            "subsection_count": 1,
+            "continuum_subsection_count": 1
+          },
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 1,
+            "isotropic_subsection_count": 0
+          },
+          "file15": {
+            "component_count": 1
+          },
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 28,
+          "file6_photon_products": [],
+          "file12": null,
+          "file13": {
+            "subsection_count": 1,
+            "continuum_subsection_count": 1
+          },
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 1,
+            "isotropic_subsection_count": 0
+          },
+          "file15": {
+            "component_count": 1
+          },
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 102,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 41
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 103,
+          "file6_photon_products": [],
+          "file12": null,
+          "file13": {
+            "subsection_count": 1,
+            "continuum_subsection_count": 1
+          },
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 1,
+            "isotropic_subsection_count": 0
+          },
+          "file15": {
+            "component_count": 1
+          },
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 104,
+          "file6_photon_products": [],
+          "file12": null,
+          "file13": {
+            "subsection_count": 1,
+            "continuum_subsection_count": 1
+          },
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 1,
+            "isotropic_subsection_count": 0
+          },
+          "file15": {
+            "component_count": 1
+          },
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 105,
+          "file6_photon_products": [],
+          "file12": null,
+          "file13": {
+            "subsection_count": 1,
+            "continuum_subsection_count": 1
+          },
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 1,
+            "isotropic_subsection_count": 0
+          },
+          "file15": {
+            "component_count": 1
+          },
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 107,
+          "file6_photon_products": [],
+          "file12": null,
+          "file13": {
+            "subsection_count": 1,
+            "continuum_subsection_count": 1
+          },
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 1,
+            "isotropic_subsection_count": 0
+          },
+          "file15": {
+            "component_count": 1
+          },
+          "format_findings": []
+        }
+      ],
+      "heatr_photon_source": "mixed_file6_and_file12_or13",
+      "file13_without_file12_reaction_count": 8,
+      "format_findings": []
+    },
+    {
+      "nuclide": "O16",
+      "endf_mat": 825,
+      "source_evaluation": {
+        "filename": "n_8-O-016g.jeff",
+        "size_bytes": 3037690,
+        "sha256": "c5cb12e4db9480cd13f5dce2e15c543b6a837a7b2007c88a69e803f21addbbc1"
+      },
+      "sections": [
+        {
+          "file_number": 6,
+          "reaction_mt": 5,
+          "record_count": 4784,
+          "sha256": "257b5f724bee6adf0a76d9e45b771645c90dfd9e177099b356d1272ea474ebd0",
+          "header": {
+            "l1": 0,
+            "l2": 3,
+            "n1": 26,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 16,
+          "record_count": 522,
+          "sha256": "4860b646f1ac3bb346844d57546e1c9c5f6a5d9ccb4e6964564b1e4e2d6d435a",
+          "header": {
+            "l1": 0,
+            "l2": 2,
+            "n1": 2,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 22,
+          "record_count": 2279,
+          "sha256": "ec8f822234a6fcef449a0144f6f18bcce2d130e84251341c54f28d823a96a689",
+          "header": {
+            "l1": 0,
+            "l2": 2,
+            "n1": 3,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 23,
+          "record_count": 915,
+          "sha256": "514689b4ed945feabd005a0f3615c962557dc11cf58d285d0c8d7e9e7b1cf805",
+          "header": {
+            "l1": 0,
+            "l2": 2,
+            "n1": 3,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 28,
+          "record_count": 1451,
+          "sha256": "fe588bb9c0d95829a8bfc47423986eebefce91c97d303793b0b97a3caaadcc0a",
+          "header": {
+            "l1": 0,
+            "l2": 2,
+            "n1": 4,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 32,
+          "record_count": 476,
+          "sha256": "d8fe91a819d91d41f238b78c2e133029570ff0e9b02dc74de84c440a3ff6f27b",
+          "header": {
+            "l1": 0,
+            "l2": 2,
+            "n1": 4,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 41,
+          "record_count": 258,
+          "sha256": "6014d4893e2bf88b512ee5f560e75a3afe878f770f50e6b05604bf928b4e3b07",
+          "header": {
+            "l1": 0,
+            "l2": 2,
+            "n1": 4,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 44,
+          "record_count": 246,
+          "sha256": "73e79cff31687a7eb8c530c98072de057a47c8cba8b8b53b288bb4c6e9da1ee2",
+          "header": {
+            "l1": 0,
+            "l2": 2,
+            "n1": 4,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 45,
+          "record_count": 275,
+          "sha256": "a96d90043844d0b8c45f06b565a4718ea6f79caf3d5714e3e3d670ba831eb597",
+          "header": {
+            "l1": 0,
+            "l2": 2,
+            "n1": 5,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 91,
+          "record_count": 2341,
+          "sha256": "4e09ebba1cf51948721f6e6c4883335127c2b7c33dbdb76b761d40aa0b98e4bb",
+          "header": {
+            "l1": 0,
+            "l2": 2,
+            "n1": 3,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 108,
+          "record_count": 798,
+          "sha256": "b0d11679ba27c6f315425ed2a15758d3132f547c7f4229d300a8f443fdf6011d",
+          "header": {
+            "l1": 0,
+            "l2": 2,
+            "n1": 3,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 112,
+          "record_count": 454,
+          "sha256": "9f6f06f8fecd3152aa91c94a0123601a1d2db71eed9cd21716e1aef94798d7bc",
+          "header": {
+            "l1": 0,
+            "l2": 2,
+            "n1": 4,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 749,
+          "record_count": 320,
+          "sha256": "7732ec488f2987a0f778e92176ee493ce0bcdbef38a1ae7a6bc46e3f4a379f4c",
+          "header": {
+            "l1": 0,
+            "l2": 2,
+            "n1": 3,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 12,
+          "reaction_mt": 102,
+          "record_count": 16,
+          "sha256": "e93c6390b0f15b4b9cf8afe9f7db1b230af4a260a3197f823d9d1e119edde91e",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 4,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 13,
+          "reaction_mt": 4,
+          "record_count": 1251,
+          "sha256": "3fd6dc79306d8e4d225ec26e34696bab67c5c55d4fee4a86b9c0ef2f01515dea",
+          "header": {
+            "l1": 0,
+            "l2": 0,
+            "n1": 15,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 13,
+          "reaction_mt": 16,
+          "record_count": 134,
+          "sha256": "817178554566f11cf01478d4b78662f0f053d7e1379214d728fe10f334d85c57",
+          "header": {
+            "l1": 0,
+            "l2": 0,
+            "n1": 7,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 13,
+          "reaction_mt": 22,
+          "record_count": 51,
+          "sha256": "3bbb001b9f9fba6fe2a510e0bf4f3dd7ace8c0303ed7c841095f77a62faa0fba",
+          "header": {
+            "l1": 0,
+            "l2": 0,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 13,
+          "reaction_mt": 103,
+          "record_count": 286,
+          "sha256": "a5006695f448594319f264beb2e2bc1832605a1545c22ed1f4241101ad0a1760",
+          "header": {
+            "l1": 0,
+            "l2": 0,
+            "n1": 4,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 13,
+          "reaction_mt": 104,
+          "record_count": 1540,
+          "sha256": "92401690f8d883e4cb033c99f61f7e7b7e4cf927908b49349192815caa576f62",
+          "header": {
+            "l1": 0,
+            "l2": 0,
+            "n1": 62,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 13,
+          "reaction_mt": 105,
+          "record_count": 472,
+          "sha256": "64756ed877f8351d5a3a9f0d1c2289294b9d2d8b260911ff82602c820c1526f8",
+          "header": {
+            "l1": 0,
+            "l2": 0,
+            "n1": 21,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 13,
+          "reaction_mt": 107,
+          "record_count": 1161,
+          "sha256": "9113c2e69854439cc7ece4b0431118987310a0deb4cfe082dc206316d1b502ee",
+          "header": {
+            "l1": 0,
+            "l2": 0,
+            "n1": 6,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 4,
+          "record_count": 933,
+          "sha256": "29a1229a456b104d50044f4fc9094ea7e6067f1ac8cb7cf5b767709820d783f0",
+          "header": {
+            "l1": 0,
+            "l2": 1,
+            "n1": 15,
+            "n2": 10
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 16,
+          "record_count": 17,
+          "sha256": "3bb204effea09a9feb088edb612c0fc395c07b554fdc73dd8bb58414866553a6",
+          "header": {
+            "l1": 0,
+            "l2": 1,
+            "n1": 7,
+            "n2": 6
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 22,
+          "record_count": 187,
+          "sha256": "a2134898ddd0dd5ac6f244d59a92148046fbc5ebbb416e02fad6f2f50d5a1334",
+          "header": {
+            "l1": 0,
+            "l2": 1,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 102,
+          "record_count": 1,
+          "sha256": "01a88a31801cb237e4ba818a02c561a8fcc3862c6eb27b541949f652885f5185",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 4,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 103,
+          "record_count": 554,
+          "sha256": "a8491c253e2779d52834fbc1ec53269553ddc5a372cb18ac98335327cf0bf069",
+          "header": {
+            "l1": 0,
+            "l2": 1,
+            "n1": 4,
+            "n2": 1
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 104,
+          "record_count": 242,
+          "sha256": "c8dd85a18cc8cd8ea78b003e6ffaae4e52c01df1b19d38d40f056501df76039d",
+          "header": {
+            "l1": 0,
+            "l2": 1,
+            "n1": 62,
+            "n2": 61
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 105,
+          "record_count": 1,
+          "sha256": "4a8c7d13d738f774badd0d4a295d582b8eefc3b408e58d915212059e1733c7a8",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 21,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 107,
+          "record_count": 400,
+          "sha256": "a40485257bc63695def8790dfa7969f6ebd07a12bc6464f00b67ce06a4b26549",
+          "header": {
+            "l1": 0,
+            "l2": 1,
+            "n1": 6,
+            "n2": 3
+          }
+        }
+      ],
+      "reactions": [
+        {
+          "reaction_mt": 4,
+          "file6_photon_products": [],
+          "file12": null,
+          "file13": {
+            "subsection_count": 15,
+            "continuum_subsection_count": 0
+          },
+          "file14": {
+            "isotropic": false,
+            "angular_representation": 1,
+            "subsection_count": 15,
+            "isotropic_subsection_count": 10
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 5,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 16
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 16,
+          "file6_photon_products": [],
+          "file12": null,
+          "file13": {
+            "subsection_count": 7,
+            "continuum_subsection_count": 0
+          },
+          "file14": {
+            "isotropic": false,
+            "angular_representation": 1,
+            "subsection_count": 7,
+            "isotropic_subsection_count": 6
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 22,
+          "file6_photon_products": [],
+          "file12": null,
+          "file13": {
+            "subsection_count": 1,
+            "continuum_subsection_count": 0
+          },
+          "file14": {
+            "isotropic": false,
+            "angular_representation": 1,
+            "subsection_count": 1,
+            "isotropic_subsection_count": 0
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 23,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 16
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 28,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 25
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 32,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 10
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 41,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 7
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 44,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 7
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 45,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 7
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 91,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 31
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 102,
+          "file6_photon_products": [],
+          "file12": {
+            "representation_option": 1,
+            "multiplicity_subsection_count": 4,
+            "transition_probability_mode": null,
+            "transition_lower_level_count": null,
+            "continuum_subsection_count": 0
+          },
+          "file13": null,
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 4,
+            "isotropic_subsection_count": 0
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 103,
+          "file6_photon_products": [],
+          "file12": null,
+          "file13": {
+            "subsection_count": 4,
+            "continuum_subsection_count": 0
+          },
+          "file14": {
+            "isotropic": false,
+            "angular_representation": 1,
+            "subsection_count": 4,
+            "isotropic_subsection_count": 1
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 104,
+          "file6_photon_products": [],
+          "file12": null,
+          "file13": {
+            "subsection_count": 62,
+            "continuum_subsection_count": 0
+          },
+          "file14": {
+            "isotropic": false,
+            "angular_representation": 1,
+            "subsection_count": 62,
+            "isotropic_subsection_count": 61
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 105,
+          "file6_photon_products": [],
+          "file12": null,
+          "file13": {
+            "subsection_count": 21,
+            "continuum_subsection_count": 0
+          },
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 21,
+            "isotropic_subsection_count": 0
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 107,
+          "file6_photon_products": [],
+          "file12": null,
+          "file13": {
+            "subsection_count": 6,
+            "continuum_subsection_count": 0
+          },
+          "file14": {
+            "isotropic": false,
+            "angular_representation": 1,
+            "subsection_count": 6,
+            "isotropic_subsection_count": 3
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 108,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 21
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 112,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 11
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 749,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 8
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        }
+      ],
+      "heatr_photon_source": "mixed_file6_and_file12_or13",
+      "file13_without_file12_reaction_count": 7,
+      "format_findings": []
+    },
+    {
+      "nuclide": "O17",
+      "endf_mat": 828,
+      "source_evaluation": {
+        "filename": "n_8-O-017g.jeff",
+        "size_bytes": 3167824,
+        "sha256": "7cfd2d7c9a93b4a46672eceec6cdd0f5ee658fc731f5501f19589b9b5008c7ed"
+      },
+      "sections": [
+        {
+          "file_number": 6,
+          "reaction_mt": 5,
+          "record_count": 9987,
+          "sha256": "2d1a0f97bbbe2a2b9fd570d4080b4ebea53c35b3085fb7141f7483a33768b8c3",
+          "header": {
+            "l1": 0,
+            "l2": 3,
+            "n1": 52,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 11,
+          "record_count": 311,
+          "sha256": "3a01935eb1a5e4dbe09c9bb31ddb45889951adb15602648e04a95f87c72d69c2",
+          "header": {
+            "l1": 0,
+            "l2": 3,
+            "n1": 4,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 16,
+          "record_count": 1344,
+          "sha256": "58c53e06b4bc49cbd1b324447f254a48d8d25ad827d56484d6eda589c6079ee6",
+          "header": {
+            "l1": 0,
+            "l2": 3,
+            "n1": 3,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 17,
+          "record_count": 482,
+          "sha256": "d7677050840d8db1ac09974178c2237cf1e4ed55a78abf1d99d3fc03bf3d7fd8",
+          "header": {
+            "l1": 0,
+            "l2": 3,
+            "n1": 3,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 22,
+          "record_count": 1612,
+          "sha256": "ab0348f614f2d4cd081dde4d2849327fc7ad166fa51eaa49d79068f029924c78",
+          "header": {
+            "l1": 0,
+            "l2": 3,
+            "n1": 4,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 24,
+          "record_count": 1017,
+          "sha256": "8315de1f507bfd813f9ffff36c4b60d3555c80a61774458b2d8e3e048f295b69",
+          "header": {
+            "l1": 0,
+            "l2": 3,
+            "n1": 4,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 28,
+          "record_count": 975,
+          "sha256": "87bae6b867dc6b7d5948e2d720d4338e0b6076eb2a6da771d195acd54a6d5a9d",
+          "header": {
+            "l1": 0,
+            "l2": 3,
+            "n1": 4,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 29,
+          "record_count": 685,
+          "sha256": "e5d161cba35bc2ea8a54a3ba1be0032d4937d908d125310fb7f13cfdb4afd560",
+          "header": {
+            "l1": 0,
+            "l2": 3,
+            "n1": 4,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 30,
+          "record_count": 539,
+          "sha256": "948f960d3feb1e92cbb9aad769e62c6bb8a2876d6720d146438277f03606e18f",
+          "header": {
+            "l1": 0,
+            "l2": 3,
+            "n1": 4,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 32,
+          "record_count": 936,
+          "sha256": "ce0078090873ed940b6ccce4c78d789741bf9a72f3e9f7fc544b58b3f3446a96",
+          "header": {
+            "l1": 0,
+            "l2": 3,
+            "n1": 4,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 33,
+          "record_count": 648,
+          "sha256": "48ab72da743574ce1a0bffd2469cf3e4e9200133a9e5ca57e00cf9acd5e32cfc",
+          "header": {
+            "l1": 0,
+            "l2": 3,
+            "n1": 4,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 34,
+          "record_count": 637,
+          "sha256": "8d364d1a391f4df0d9c1402f8fbd774564b6a1d4d13d6f4473fdb64b3849d8c5",
+          "header": {
+            "l1": 0,
+            "l2": 3,
+            "n1": 4,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 41,
+          "record_count": 777,
+          "sha256": "3ef8046b39db8689e056d74314b50544f383067346efb932bf9a5c5d76c37e92",
+          "header": {
+            "l1": 0,
+            "l2": 3,
+            "n1": 4,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 44,
+          "record_count": 278,
+          "sha256": "fdaf3080411cdd0c90aef2ff779c23e7a7c12ac1145212d9da6d4d466a14da00",
+          "header": {
+            "l1": 0,
+            "l2": 3,
+            "n1": 4,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 45,
+          "record_count": 443,
+          "sha256": "a1c25399491a6267224b85f87a2cb0993219a7b098acdec9c13b58644dd7f2a2",
+          "header": {
+            "l1": 0,
+            "l2": 3,
+            "n1": 5,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 91,
+          "record_count": 94,
+          "sha256": "92bcf993364ba35abcf2c2daaf3812ea6a056bdd4591944f31bb2c9ece57067e",
+          "header": {
+            "l1": 0,
+            "l2": 3,
+            "n1": 3,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 102,
+          "record_count": 2349,
+          "sha256": "3c4591bce8cb134e3075161a676890e4f12dd718e012cca89a52d5f30c266f49",
+          "header": {
+            "l1": 0,
+            "l2": 3,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 103,
+          "record_count": 1028,
+          "sha256": "3816bb90f0ea523295354b0ab3e9f1a03afdcb6bfddd9a8bba368a71601324db",
+          "header": {
+            "l1": 0,
+            "l2": 3,
+            "n1": 3,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 104,
+          "record_count": 923,
+          "sha256": "2ff38e48df389932c4f7d59ff291c4708e77b3b5eb8601f253ea2dd4760afd66",
+          "header": {
+            "l1": 0,
+            "l2": 3,
+            "n1": 3,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 105,
+          "record_count": 926,
+          "sha256": "1e96be36748d6a6a82b7b730d17b0f494d43535dd459d21c47fc42d02ea39c60",
+          "header": {
+            "l1": 0,
+            "l2": 3,
+            "n1": 3,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 106,
+          "record_count": 511,
+          "sha256": "b1aa5dc6ee4541efcd42e2f9fe7ea192b4f7d61085fe5ff8b6c6251759848ba4",
+          "header": {
+            "l1": 0,
+            "l2": 3,
+            "n1": 3,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 107,
+          "record_count": 895,
+          "sha256": "23d747d42abec1e920d26b2d9fc7f372f568d5e8ad2d0b3079cbf98396a3bb82",
+          "header": {
+            "l1": 0,
+            "l2": 3,
+            "n1": 3,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 108,
+          "record_count": 819,
+          "sha256": "0b9c99d757ce8ac23f1cd3d1e9640a6fa3211ba570c146c45f0b77a6227972d7",
+          "header": {
+            "l1": 0,
+            "l2": 3,
+            "n1": 3,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 111,
+          "record_count": 207,
+          "sha256": "0b0ec2dbe917af0dcdeb261acf1e8ddb186b492a9695ef6fe24bb655c3572828",
+          "header": {
+            "l1": 0,
+            "l2": 3,
+            "n1": 3,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 112,
+          "record_count": 619,
+          "sha256": "aa91226a11a5591081fb9968a8737a43095e965deaf210d200807b6af1235b5a",
+          "header": {
+            "l1": 0,
+            "l2": 3,
+            "n1": 4,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 115,
+          "record_count": 402,
+          "sha256": "6e9456bb6387775b2242bde0dc67cfddaa48a35457edb134abd9128f223a171f",
+          "header": {
+            "l1": 0,
+            "l2": 3,
+            "n1": 4,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 116,
+          "record_count": 667,
+          "sha256": "fa4026abd009daf43ec514908f64a1be8e4e3a7fc1fe8c037a182b115d73a02c",
+          "header": {
+            "l1": 0,
+            "l2": 3,
+            "n1": 4,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 6,
+          "reaction_mt": 117,
+          "record_count": 472,
+          "sha256": "a90500823dab93cd70c4a93429977b31ed37ac6db26282916340e8502529a9ec",
+          "header": {
+            "l1": 0,
+            "l2": 3,
+            "n1": 4,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 12,
+          "reaction_mt": 51,
+          "record_count": 3,
+          "sha256": "a6ff48d914d87e56517784ef8296af086506a19f5e5ccc30e818e329d927edd0",
+          "header": {
+            "l1": 2,
+            "l2": 1,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 12,
+          "reaction_mt": 52,
+          "record_count": 3,
+          "sha256": "b04784e3b9e765043b406210956ee108a3083e5254a290560ea5d23b01ac3ce6",
+          "header": {
+            "l1": 2,
+            "l2": 1,
+            "n1": 2,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 12,
+          "reaction_mt": 53,
+          "record_count": 3,
+          "sha256": "a03db132d126b7980739ead88c9c023602847d478be30bdb3a719c5a216fea4f",
+          "header": {
+            "l1": 2,
+            "l2": 1,
+            "n1": 3,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 12,
+          "reaction_mt": 54,
+          "record_count": 3,
+          "sha256": "ab662d17168003562a596c5b0b37bc1dbf9161750cc53e69d75a8c7be1e853d1",
+          "header": {
+            "l1": 2,
+            "l2": 1,
+            "n1": 4,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 12,
+          "reaction_mt": 55,
+          "record_count": 3,
+          "sha256": "4c67e452fb2facc32c5957d9f0c55dea49ff96703b93d297ac6434782a02cda8",
+          "header": {
+            "l1": 2,
+            "l2": 1,
+            "n1": 5,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 12,
+          "reaction_mt": 56,
+          "record_count": 3,
+          "sha256": "3af3b7a8022fdb19a12cc0ccc0d6024bbfeae507e273babaac51a32a613cf965",
+          "header": {
+            "l1": 2,
+            "l2": 1,
+            "n1": 6,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 12,
+          "reaction_mt": 57,
+          "record_count": 3,
+          "sha256": "5e925e89812ffe235bc50cc01c098263acbb1350541365be84694aaaec7a6100",
+          "header": {
+            "l1": 2,
+            "l2": 1,
+            "n1": 7,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 12,
+          "reaction_mt": 58,
+          "record_count": 3,
+          "sha256": "f3267f3f921286319f1ed5ce6c355b0ff578c882da74b7688c8b4c27b9e46471",
+          "header": {
+            "l1": 2,
+            "l2": 1,
+            "n1": 8,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 12,
+          "reaction_mt": 59,
+          "record_count": 3,
+          "sha256": "67079203c931431c36020212ccf2dcbf44375aa5a076593765c1a7bc4418a3f8",
+          "header": {
+            "l1": 2,
+            "l2": 1,
+            "n1": 9,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 12,
+          "reaction_mt": 60,
+          "record_count": 3,
+          "sha256": "fa60392167a6a0cf2ceb7a3a60861194953edff45a114d0f223ac67d994eac49",
+          "header": {
+            "l1": 2,
+            "l2": 1,
+            "n1": 10,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 12,
+          "reaction_mt": 61,
+          "record_count": 3,
+          "sha256": "88447d9ba0730289f9f0bd99dfa32dd0b4ad6862f1a3bbe0b1498482851ed8db",
+          "header": {
+            "l1": 2,
+            "l2": 1,
+            "n1": 11,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 12,
+          "reaction_mt": 62,
+          "record_count": 4,
+          "sha256": "5af207597bbabfd01d078796dbdacd346a8a87881d59eece042113c5f6899430",
+          "header": {
+            "l1": 2,
+            "l2": 1,
+            "n1": 12,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 12,
+          "reaction_mt": 63,
+          "record_count": 3,
+          "sha256": "bda9cf5bb34b735e771a909da030cfbd090547d9451a1e646072fdf709f71be1",
+          "header": {
+            "l1": 2,
+            "l2": 1,
+            "n1": 13,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 12,
+          "reaction_mt": 64,
+          "record_count": 4,
+          "sha256": "63129b8c8e2c7db4f7839d22be4916e6f2f44b5e06271ee7f63217ca4b4756b3",
+          "header": {
+            "l1": 2,
+            "l2": 1,
+            "n1": 14,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 12,
+          "reaction_mt": 65,
+          "record_count": 4,
+          "sha256": "710b2eef586a92a508b3fbcb89cde01d8f8c5989905b136c068182f72c03c791",
+          "header": {
+            "l1": 2,
+            "l2": 1,
+            "n1": 15,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 12,
+          "reaction_mt": 66,
+          "record_count": 4,
+          "sha256": "dea4d8ef63ac01679407913069f731a102610dcc01891cbd8412ebe1d136046d",
+          "header": {
+            "l1": 2,
+            "l2": 1,
+            "n1": 16,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 12,
+          "reaction_mt": 67,
+          "record_count": 4,
+          "sha256": "bd7d902456108b05d9e349bd4a1f2198d487e8e8bc88dcf6c9f87d9aee94feac",
+          "header": {
+            "l1": 2,
+            "l2": 1,
+            "n1": 17,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 12,
+          "reaction_mt": 68,
+          "record_count": 4,
+          "sha256": "a3a6b58a67ac695da6188b69d11ff56978488cd96803a16644278441c4a28db0",
+          "header": {
+            "l1": 2,
+            "l2": 1,
+            "n1": 18,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 12,
+          "reaction_mt": 69,
+          "record_count": 4,
+          "sha256": "5e628fa758e83d114335ae911615c0b0540525ff7ed1961ada24486b540c1d5e",
+          "header": {
+            "l1": 2,
+            "l2": 1,
+            "n1": 19,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 12,
+          "reaction_mt": 70,
+          "record_count": 4,
+          "sha256": "e47a67236a7da174dd410806dd5652846ec7a5c99b76a78632cb1c03bbd11abb",
+          "header": {
+            "l1": 2,
+            "l2": 1,
+            "n1": 20,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 12,
+          "reaction_mt": 71,
+          "record_count": 4,
+          "sha256": "cdd101cbacf340d31adf378e6f0f0a3517a91840ee2415c44dc9e5325b2b568d",
+          "header": {
+            "l1": 2,
+            "l2": 1,
+            "n1": 21,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 12,
+          "reaction_mt": 72,
+          "record_count": 4,
+          "sha256": "12b1301e7c38f3c387ea3b59830d2270d80520531dcccfddd889bef954a35e6a",
+          "header": {
+            "l1": 2,
+            "l2": 1,
+            "n1": 22,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 12,
+          "reaction_mt": 73,
+          "record_count": 4,
+          "sha256": "e682f4cb6c397aeb4fc3b30f25170edff72c81be09ff5ce6f35f431bc087e41a",
+          "header": {
+            "l1": 2,
+            "l2": 1,
+            "n1": 23,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 51,
+          "record_count": 1,
+          "sha256": "7aedcfed2f4ce6ad57691a5b8db62e4550258f8914da27c243541c87b86a9c41",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 52,
+          "record_count": 1,
+          "sha256": "eb7743ab3f667a5a03d627b620f6f72f4b5e9f436526276a192cda1976621834",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 53,
+          "record_count": 1,
+          "sha256": "12fff48a459b1f115ed87bdc979cefdb037dc7ae18153c25de3eed89c82d7a0a",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 1,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 54,
+          "record_count": 1,
+          "sha256": "673c4b8fee1f3fef0ec33d9740b2d4abf1f5bb46396171b69a3ab9f56ede39e0",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 3,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 55,
+          "record_count": 1,
+          "sha256": "5ce795d8b15c6426ba2b8dc78e3a6f99a07f1cd4f99c3fb3794c02fcdf25db25",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 2,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 56,
+          "record_count": 1,
+          "sha256": "5439474e2e4b1a4f60cba12e7bbbcff67b9c5b981a5290c5618af83d16c7cf0d",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 2,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 57,
+          "record_count": 1,
+          "sha256": "02a7dab528d82532299afa9341d8ccff68016d0332e7ef294d357d41e1ab4286",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 3,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 58,
+          "record_count": 1,
+          "sha256": "4b253d6ea2439454cb6d443bb850417173192bb674398cbd9f93422cda810c44",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 3,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 59,
+          "record_count": 1,
+          "sha256": "dd35dd5eadb0f1b52401fc7c2a73895e155595c010c86e09179f68650d7877dd",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 3,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 60,
+          "record_count": 1,
+          "sha256": "3ffed97ffb041823bf638ae5b1a47445702b9efff9016affe18855dbae04cfbb",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 3,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 61,
+          "record_count": 1,
+          "sha256": "c11c4eb583f20a7b32e2075b57027972854510f21ff939c4da06f6ea5590d863",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 3,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 62,
+          "record_count": 1,
+          "sha256": "6a5b0cab02f32c559ada1e2b7aedfd157b4bb9b5a850cedf0f5faa8e7c1cf6b1",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 4,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 63,
+          "record_count": 1,
+          "sha256": "60de2e8563168e5d2cd86909dbf2e33f7350a11e9a55c8e552544fadc045152a",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 3,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 64,
+          "record_count": 1,
+          "sha256": "23965ed240d66c365c2e7651bb9f1cdd0d58d0307f0f4906e5fe54b59f66de51",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 4,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 65,
+          "record_count": 1,
+          "sha256": "b01595fb03c6e9584b48373278efc001663da1c0caec3c5da6fc9fccd6014f91",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 4,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 66,
+          "record_count": 1,
+          "sha256": "ed86e99a23476e584e5f2187234649eb129c0590e64831bb0f7fb9dfd633bdc8",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 4,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 67,
+          "record_count": 1,
+          "sha256": "ee5f42432428fa81808bb3e0d05b8dc987b87c28b34679b620c9c354aed70b8f",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 4,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 68,
+          "record_count": 1,
+          "sha256": "ad93c4e2fcb340d499fce5290eab8ee6cc980d31bcadb269fd0a79e978796458",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 4,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 69,
+          "record_count": 1,
+          "sha256": "df07e19004bd43515d764d1ed2f1d4f418b6416f79c038f35df84892ccc0ac87",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 4,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 70,
+          "record_count": 1,
+          "sha256": "3e3fa073cc903673cfd86f81bade88c8c1909b6e581e4787fcc1ffd9ff5f6c69",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 4,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 71,
+          "record_count": 1,
+          "sha256": "6a8784eb92d682344aa1dc5f2a566a5ad6a085eea4b63d9327d059a95ae89785",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 4,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 72,
+          "record_count": 1,
+          "sha256": "e742539199b21b8554bb16eaae4dd5cba6afa65edbd97675820897036e8734de",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 4,
+            "n2": 0
+          }
+        },
+        {
+          "file_number": 14,
+          "reaction_mt": 73,
+          "record_count": 1,
+          "sha256": "6a0364814969ee37bf8fa6117f271ca32da56ddd0b945f6e5230a24dbe9857bf",
+          "header": {
+            "l1": 1,
+            "l2": 0,
+            "n1": 4,
+            "n2": 0
+          }
+        }
+      ],
+      "reactions": [
+        {
+          "reaction_mt": 5,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 32
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 11,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 4
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 16,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 22
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 17,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 7
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 22,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 16
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 24,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 10
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 28,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 10
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 29,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 7
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 30,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 6
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 32,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 9
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 33,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 7
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 34,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 7
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 41,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 8
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 44,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 4
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 45,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 5
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 51,
+          "file6_photon_products": [],
+          "file12": {
+            "representation_option": 2,
+            "multiplicity_subsection_count": null,
+            "transition_probability_mode": 1,
+            "transition_lower_level_count": 1,
+            "continuum_subsection_count": 0
+          },
+          "file13": null,
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 1,
+            "isotropic_subsection_count": 0
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 52,
+          "file6_photon_products": [],
+          "file12": {
+            "representation_option": 2,
+            "multiplicity_subsection_count": null,
+            "transition_probability_mode": 1,
+            "transition_lower_level_count": 2,
+            "continuum_subsection_count": 0
+          },
+          "file13": null,
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 1,
+            "isotropic_subsection_count": 0
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 53,
+          "file6_photon_products": [],
+          "file12": {
+            "representation_option": 2,
+            "multiplicity_subsection_count": null,
+            "transition_probability_mode": 1,
+            "transition_lower_level_count": 3,
+            "continuum_subsection_count": 0
+          },
+          "file13": null,
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 1,
+            "isotropic_subsection_count": 0
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 54,
+          "file6_photon_products": [],
+          "file12": {
+            "representation_option": 2,
+            "multiplicity_subsection_count": null,
+            "transition_probability_mode": 1,
+            "transition_lower_level_count": 4,
+            "continuum_subsection_count": 0
+          },
+          "file13": null,
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 3,
+            "isotropic_subsection_count": 0
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 55,
+          "file6_photon_products": [],
+          "file12": {
+            "representation_option": 2,
+            "multiplicity_subsection_count": null,
+            "transition_probability_mode": 1,
+            "transition_lower_level_count": 5,
+            "continuum_subsection_count": 0
+          },
+          "file13": null,
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 2,
+            "isotropic_subsection_count": 0
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 56,
+          "file6_photon_products": [],
+          "file12": {
+            "representation_option": 2,
+            "multiplicity_subsection_count": null,
+            "transition_probability_mode": 1,
+            "transition_lower_level_count": 6,
+            "continuum_subsection_count": 0
+          },
+          "file13": null,
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 2,
+            "isotropic_subsection_count": 0
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 57,
+          "file6_photon_products": [],
+          "file12": {
+            "representation_option": 2,
+            "multiplicity_subsection_count": null,
+            "transition_probability_mode": 1,
+            "transition_lower_level_count": 7,
+            "continuum_subsection_count": 0
+          },
+          "file13": null,
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 3,
+            "isotropic_subsection_count": 0
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 58,
+          "file6_photon_products": [],
+          "file12": {
+            "representation_option": 2,
+            "multiplicity_subsection_count": null,
+            "transition_probability_mode": 1,
+            "transition_lower_level_count": 8,
+            "continuum_subsection_count": 0
+          },
+          "file13": null,
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 3,
+            "isotropic_subsection_count": 0
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 59,
+          "file6_photon_products": [],
+          "file12": {
+            "representation_option": 2,
+            "multiplicity_subsection_count": null,
+            "transition_probability_mode": 1,
+            "transition_lower_level_count": 9,
+            "continuum_subsection_count": 0
+          },
+          "file13": null,
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 3,
+            "isotropic_subsection_count": 0
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 60,
+          "file6_photon_products": [],
+          "file12": {
+            "representation_option": 2,
+            "multiplicity_subsection_count": null,
+            "transition_probability_mode": 1,
+            "transition_lower_level_count": 10,
+            "continuum_subsection_count": 0
+          },
+          "file13": null,
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 3,
+            "isotropic_subsection_count": 0
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 61,
+          "file6_photon_products": [],
+          "file12": {
+            "representation_option": 2,
+            "multiplicity_subsection_count": null,
+            "transition_probability_mode": 1,
+            "transition_lower_level_count": 11,
+            "continuum_subsection_count": 0
+          },
+          "file13": null,
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 3,
+            "isotropic_subsection_count": 0
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 62,
+          "file6_photon_products": [],
+          "file12": {
+            "representation_option": 2,
+            "multiplicity_subsection_count": null,
+            "transition_probability_mode": 1,
+            "transition_lower_level_count": 12,
+            "continuum_subsection_count": 0
+          },
+          "file13": null,
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 4,
+            "isotropic_subsection_count": 0
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 63,
+          "file6_photon_products": [],
+          "file12": {
+            "representation_option": 2,
+            "multiplicity_subsection_count": null,
+            "transition_probability_mode": 1,
+            "transition_lower_level_count": 13,
+            "continuum_subsection_count": 0
+          },
+          "file13": null,
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 3,
+            "isotropic_subsection_count": 0
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 64,
+          "file6_photon_products": [],
+          "file12": {
+            "representation_option": 2,
+            "multiplicity_subsection_count": null,
+            "transition_probability_mode": 1,
+            "transition_lower_level_count": 14,
+            "continuum_subsection_count": 0
+          },
+          "file13": null,
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 4,
+            "isotropic_subsection_count": 0
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 65,
+          "file6_photon_products": [],
+          "file12": {
+            "representation_option": 2,
+            "multiplicity_subsection_count": null,
+            "transition_probability_mode": 1,
+            "transition_lower_level_count": 15,
+            "continuum_subsection_count": 0
+          },
+          "file13": null,
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 4,
+            "isotropic_subsection_count": 0
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 66,
+          "file6_photon_products": [],
+          "file12": {
+            "representation_option": 2,
+            "multiplicity_subsection_count": null,
+            "transition_probability_mode": 1,
+            "transition_lower_level_count": 16,
+            "continuum_subsection_count": 0
+          },
+          "file13": null,
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 4,
+            "isotropic_subsection_count": 0
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 67,
+          "file6_photon_products": [],
+          "file12": {
+            "representation_option": 2,
+            "multiplicity_subsection_count": null,
+            "transition_probability_mode": 1,
+            "transition_lower_level_count": 17,
+            "continuum_subsection_count": 0
+          },
+          "file13": null,
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 4,
+            "isotropic_subsection_count": 0
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 68,
+          "file6_photon_products": [],
+          "file12": {
+            "representation_option": 2,
+            "multiplicity_subsection_count": null,
+            "transition_probability_mode": 1,
+            "transition_lower_level_count": 18,
+            "continuum_subsection_count": 0
+          },
+          "file13": null,
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 4,
+            "isotropic_subsection_count": 0
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 69,
+          "file6_photon_products": [],
+          "file12": {
+            "representation_option": 2,
+            "multiplicity_subsection_count": null,
+            "transition_probability_mode": 1,
+            "transition_lower_level_count": 19,
+            "continuum_subsection_count": 0
+          },
+          "file13": null,
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 4,
+            "isotropic_subsection_count": 0
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 70,
+          "file6_photon_products": [],
+          "file12": {
+            "representation_option": 2,
+            "multiplicity_subsection_count": null,
+            "transition_probability_mode": 1,
+            "transition_lower_level_count": 20,
+            "continuum_subsection_count": 0
+          },
+          "file13": null,
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 4,
+            "isotropic_subsection_count": 0
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 71,
+          "file6_photon_products": [],
+          "file12": {
+            "representation_option": 2,
+            "multiplicity_subsection_count": null,
+            "transition_probability_mode": 1,
+            "transition_lower_level_count": 21,
+            "continuum_subsection_count": 0
+          },
+          "file13": null,
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 4,
+            "isotropic_subsection_count": 0
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 72,
+          "file6_photon_products": [],
+          "file12": {
+            "representation_option": 2,
+            "multiplicity_subsection_count": null,
+            "transition_probability_mode": 1,
+            "transition_lower_level_count": 22,
+            "continuum_subsection_count": 0
+          },
+          "file13": null,
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 4,
+            "isotropic_subsection_count": 0
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 73,
+          "file6_photon_products": [],
+          "file12": {
+            "representation_option": 2,
+            "multiplicity_subsection_count": null,
+            "transition_probability_mode": 1,
+            "transition_lower_level_count": 23,
+            "continuum_subsection_count": 0
+          },
+          "file13": null,
+          "file14": {
+            "isotropic": true,
+            "angular_representation": 0,
+            "subsection_count": 4,
+            "isotropic_subsection_count": 0
+          },
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 91,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 2
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 102,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 47
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 103,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 12
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 104,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 11
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 105,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 10
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 106,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 8
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 107,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 7
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 108,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 12
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 111,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 6
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 112,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 7
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 115,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 5
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 116,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 7
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        },
+        {
+          "reaction_mt": 117,
+          "file6_photon_products": [
+            {
+              "product_modifier": 0,
+              "law": 1,
+              "yield_point_count": 6
+            }
+          ],
+          "file12": null,
+          "file13": null,
+          "file14": null,
+          "file15": null,
+          "format_findings": []
+        }
+      ],
+      "heatr_photon_source": "mixed_file6_and_file12_or13",
+      "file13_without_file12_reaction_count": 0,
+      "format_findings": []
+    },
+    {
+      "nuclide": "O18",
+      "endf_mat": 831,
+      "source_evaluation": {
+        "filename": "n_8-O-018g.jeff",
+        "size_bytes": 137022,
+        "sha256": "374ec0a9e49f3024aa466029fa2c23151b0c03000049af7c146b55218675c76d"
+      },
+      "sections": [],
+      "reactions": [],
+      "heatr_photon_source": "local_deposition_fallback",
+      "file13_without_file12_reaction_count": 0,
+      "format_findings": []
+    }
+  ],
+  "section_count": 167,
+  "reaction_count": 103,
+  "evaluations_with_heatr_photon_source_count": 8,
+  "format_finding_count": 0
+}

@@ -302,8 +302,11 @@ result exists. Cross-code agreement alone remains `cross_code_research_only`.
   the matching photon-data fallback/incompleteness messages and reject the
   source selection for transported-photon KERMA. Complete: confirm against the
   official OpenMC tables that O-17 and O-18 retain effective local-photon
-  fallback. Pending: define, justify, and independently review a passing
-  versioned response treatment, then pass every declared review gate.
+  fallback. Complete: bind an exact MF=6/12/13/14/15 source inventory and
+  correct the log-only File 12 false-positive through a source-aware v0.2
+  report; JEFF N-15 clears, but both selections remain rejected. Pending:
+  independently reproduce the photon-energy and reaction-balance terms, then
+  define, justify, and review a passing versioned response treatment.
 - Do not use reaction-filtered neutron heating as a component partition; retain
   it only as a diagnostic under ADR 0005.
 - Do not publish “golden” OpenMC dose arrays before an independent calculation is

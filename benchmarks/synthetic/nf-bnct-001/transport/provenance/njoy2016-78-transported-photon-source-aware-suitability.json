@@ -1,0 +1,227 @@
+{
+  "schema_version": "nctforge.njoy-transported-photon-suitability/0.2.0",
+  "id": "nctforge.nf-bnct-001.endfb81-neutron-source-selection.v1.njoy2016-78-inputs.execution.1788177479.8a37cf70cf80.transported-photon-kerma-suitability.source-aware-v2",
+  "case_id": "nf-bnct-001",
+  "requirement": "transported_photon_kerma_with_coupled_photon_transport",
+  "qualification": "transported_photon_kerma_rejected",
+  "legacy_suitability_report": {
+    "id": "nctforge.nf-bnct-001.endfb81-neutron-source-selection.v1.njoy2016-78-inputs.execution.1788177479.8a37cf70cf80.transported-photon-kerma-suitability",
+    "sha256": "39f32c071e715d4b712a92a25faf1424ba99f548aeabe88c934e84b5d2e48e22"
+  },
+  "photon_production_inventory": {
+    "id": "nctforge.nf-bnct-001.endfb81-neutron-source-selection.v1.endf-photon-production-inventory",
+    "sha256": "8ccf4da3f29d879e473b49f72fc14f979d002a05cb09947be21ba7624ec697cc"
+  },
+  "input_manifest": {
+    "id": "nctforge.nf-bnct-001.endfb81-neutron-source-selection.v1.njoy2016-78-inputs",
+    "sha256": "d855cce368da9b5683c1895fc8bfc618f4922e76a75efae14ab8b840bf7882ab"
+  },
+  "runs": [
+    {
+      "nuclide": "B10",
+      "processor_report": {
+        "path": "B10/output",
+        "media_type": "text/plain",
+        "size_bytes": 182147,
+        "sha256": "3a1156f3c13ce744332845f2e80da320a344da9112f4fc984183de230efca298"
+      },
+      "diagnostic_status": "within_kinematic_limits",
+      "diagnostic_violation_count": 0,
+      "heatr_photon_source": "mixed_file6_and_file12_or13",
+      "file13_without_file12_reaction_count": 2,
+      "source_format_findings": [],
+      "processor_findings": [],
+      "suitability": "candidate_unreviewed"
+    },
+    {
+      "nuclide": "C12",
+      "processor_report": {
+        "path": "C12/output",
+        "media_type": "text/plain",
+        "size_bytes": 94718,
+        "sha256": "84d4bd93ede5be4aa3ce8492a7a728eb2cba5976554ea74ab2fdd4a8fe789ee7"
+      },
+      "diagnostic_status": "within_kinematic_limits",
+      "diagnostic_violation_count": 0,
+      "heatr_photon_source": "mixed_file6_and_file12_or13",
+      "file13_without_file12_reaction_count": 0,
+      "source_format_findings": [],
+      "processor_findings": [],
+      "suitability": "candidate_unreviewed"
+    },
+    {
+      "nuclide": "C13",
+      "processor_report": {
+        "path": "C13/output",
+        "media_type": "text/plain",
+        "size_bytes": 73749,
+        "sha256": "30f8540d31272b657130a0d376316d5e7a42f0e6849eb993837b27f090577c42"
+      },
+      "diagnostic_status": "within_kinematic_limits",
+      "diagnostic_violation_count": 0,
+      "heatr_photon_source": "file12_or13_only",
+      "file13_without_file12_reaction_count": 0,
+      "source_format_findings": [],
+      "processor_findings": [],
+      "suitability": "candidate_unreviewed"
+    },
+    {
+      "nuclide": "H1",
+      "processor_report": {
+        "path": "H1/output",
+        "media_type": "text/plain",
+        "size_bytes": 24319,
+        "sha256": "90545ad373b1620163405ca4433e99d38c9d20cb59ee858bfbc6c6f43d381918"
+      },
+      "diagnostic_status": "within_kinematic_limits",
+      "diagnostic_violation_count": 0,
+      "heatr_photon_source": "file6_only",
+      "file13_without_file12_reaction_count": 0,
+      "source_format_findings": [],
+      "processor_findings": [],
+      "suitability": "candidate_unreviewed"
+    },
+    {
+      "nuclide": "H2",
+      "processor_report": {
+        "path": "H2/output",
+        "media_type": "text/plain",
+        "size_bytes": 46434,
+        "sha256": "b2bc14df705fab2d08dad7b481dc8a8cf20b511b76bb6ba08a83352b8223a841"
+      },
+      "diagnostic_status": "within_kinematic_limits",
+      "diagnostic_violation_count": 0,
+      "heatr_photon_source": "file12_or13_only",
+      "file13_without_file12_reaction_count": 0,
+      "source_format_findings": [],
+      "processor_findings": [],
+      "suitability": "candidate_unreviewed"
+    },
+    {
+      "nuclide": "N14",
+      "processor_report": {
+        "path": "N14/output",
+        "media_type": "text/plain",
+        "size_bytes": 331763,
+        "sha256": "ba1350886bf300b33e9cba55c39a9c822c953b53073e1e247bc5e9df4e6b5398"
+      },
+      "diagnostic_status": "within_kinematic_limits",
+      "diagnostic_violation_count": 0,
+      "heatr_photon_source": "mixed_file6_and_file12_or13",
+      "file13_without_file12_reaction_count": 7,
+      "source_format_findings": [],
+      "processor_findings": [],
+      "suitability": "candidate_unreviewed"
+    },
+    {
+      "nuclide": "N15",
+      "processor_report": {
+        "path": "N15/output",
+        "media_type": "text/plain",
+        "size_bytes": 43506,
+        "sha256": "ce0d583b8b3843f5ffe9eddd33d628fe0279b6a6d0cd808a5a6a4fb8bb8337e1"
+      },
+      "diagnostic_status": "kinematic_limits_exceeded",
+      "diagnostic_violation_count": 10,
+      "heatr_photon_source": "file12_or13_only",
+      "file13_without_file12_reaction_count": 8,
+      "source_format_findings": [],
+      "processor_findings": [
+        {
+          "finding": {
+            "kind": "missing_photon_multiplicity_file",
+            "file_number": 12,
+            "reaction_mt": null,
+            "occurrence_count": 2
+          },
+          "disposition": "informational_file13_alternative"
+        }
+      ],
+      "suitability": "rejected"
+    },
+    {
+      "nuclide": "O16",
+      "processor_report": {
+        "path": "O16/output",
+        "media_type": "text/plain",
+        "size_bytes": 248349,
+        "sha256": "03cc4861e962f3a0f3b08d8d22aa5794d36f7dbe98e8ca07918f4b342b7a24e1"
+      },
+      "diagnostic_status": "kinematic_limits_exceeded",
+      "diagnostic_violation_count": 15,
+      "heatr_photon_source": "mixed_file6_and_file12_or13",
+      "file13_without_file12_reaction_count": 7,
+      "source_format_findings": [],
+      "processor_findings": [
+        {
+          "finding": {
+            "kind": "incomplete_discrete_photon_data",
+            "file_number": 12,
+            "reaction_mt": 51,
+            "occurrence_count": 2
+          },
+          "disposition": "rejecting"
+        }
+      ],
+      "suitability": "rejected"
+    },
+    {
+      "nuclide": "O17",
+      "processor_report": {
+        "path": "O17/output",
+        "media_type": "text/plain",
+        "size_bytes": 47122,
+        "sha256": "922393d4bc22bae27875145811bcfee97aff1a860c9ef519622ec2632dba3c68"
+      },
+      "diagnostic_status": "kinematic_limits_exceeded",
+      "diagnostic_violation_count": 20,
+      "heatr_photon_source": "local_deposition_fallback",
+      "file13_without_file12_reaction_count": 0,
+      "source_format_findings": [],
+      "processor_findings": [
+        {
+          "finding": {
+            "kind": "no_photon_production_local_fallback",
+            "file_number": null,
+            "reaction_mt": null,
+            "occurrence_count": 2
+          },
+          "disposition": "rejecting"
+        }
+      ],
+      "suitability": "rejected"
+    },
+    {
+      "nuclide": "O18",
+      "processor_report": {
+        "path": "O18/output",
+        "media_type": "text/plain",
+        "size_bytes": 29294,
+        "sha256": "28dddc2c526ed7356af9e30d6c95be280afc7b4372246204cf44b101228b81bf"
+      },
+      "diagnostic_status": "kinematic_limits_exceeded",
+      "diagnostic_violation_count": 27,
+      "heatr_photon_source": "local_deposition_fallback",
+      "file13_without_file12_reaction_count": 0,
+      "source_format_findings": [],
+      "processor_findings": [
+        {
+          "finding": {
+            "kind": "no_photon_production_local_fallback",
+            "file_number": null,
+            "reaction_mt": null,
+            "occurrence_count": 2
+          },
+          "disposition": "rejecting"
+        }
+      ],
+      "suitability": "rejected"
+    }
+  ],
+  "rejected_run_count": 4,
+  "kinematic_violation_count": 72,
+  "processor_finding_count": 4,
+  "rejecting_processor_finding_count": 3,
+  "informational_processor_finding_count": 1,
+  "source_format_finding_count": 0
+}

@@ -4,6 +4,11 @@
 
 **Date:** 2026-08-31
 
+**Subsequent refinement:** [ADR 0017](0017-source-aware-photon-production-suitability.md)
+retains this log-only report as historical evidence but corrects the File 12
+message using content-bound MF=6/12/13/14/15 source records. A valid File 13
+alternative is informational in the source-aware v0.2 assessment.
+
 ## Context
 
 The first component profile excludes photon energy from neutron KERMA and

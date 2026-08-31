@@ -12,10 +12,12 @@ use clap::{Args, Parser, Subcommand};
 use nctforge_dicom::synthetic::generate_nf_bnct_001;
 use nctforge_dicom::verify_nf_bnct_001;
 use nctforge_njoy::{
-    DEFAULT_NJOY_TIMEOUT_SECONDS, NjoyExecutionOptions, NjoyExecutionReceipt,
-    NjoyExecutionReceiptDocument, NjoyInputArtifacts, NjoyInputBundle, NjoySuitabilityComparison,
-    NjoySuitabilityComparisonDocument, NjoySuitabilityComparisonQualification,
-    NjoySuitabilityReport, NjoySuitabilityReportDocument,
+    DEFAULT_NJOY_TIMEOUT_SECONDS, EndfPhotonProductionInventory,
+    EndfPhotonProductionInventoryDocument, NjoyExecutionOptions, NjoyExecutionReceipt,
+    NjoyExecutionReceiptDocument, NjoyInputArtifacts, NjoyInputBundle,
+    NjoySourceAwareSuitabilityReport, NjoySourceAwareSuitabilityReportDocument,
+    NjoySuitabilityComparison, NjoySuitabilityComparisonDocument,
+    NjoySuitabilityComparisonQualification, NjoySuitabilityReport, NjoySuitabilityReportDocument,
 };
 use nctforge_openmc::{
     DataAcquisitionClient, DataAcquisitionProfileDocument, DataAcquisitionReceiptDocument,
@@ -117,6 +119,30 @@ enum NjoyCommand {
         #[arg(long)]
         output: PathBuf,
     },
+    /// Inventory MF=6/12/13/14/15 photon-production records in exact ENDF sources.
+    InventoryPhotonData {
+        /// Case-scoped evaluated-neutron source-selection manifest.
+        #[arg(long)]
+        selection: PathBuf,
+        /// Directory containing exactly the selected extracted ENDF files.
+        #[arg(long)]
+        evaluations_directory: PathBuf,
+        /// New source-bound JSON inventory path; it must not already exist.
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Regenerate and verify a source-bound ENDF photon-production inventory.
+    VerifyPhotonInventory {
+        /// Case-scoped evaluated-neutron source-selection manifest.
+        #[arg(long)]
+        selection: PathBuf,
+        /// Directory containing exactly the selected extracted ENDF files.
+        #[arg(long)]
+        evaluations_directory: PathBuf,
+        /// Inventory to validate and regenerate.
+        #[arg(long)]
+        inventory: PathBuf,
+    },
     /// Execute a verified input bundle and emit an unreviewed evidence receipt.
     Execute {
         /// Case-scoped evaluated-neutron source-selection manifest.
@@ -185,6 +211,48 @@ enum NjoyCommand {
         /// Suitability report to validate and regenerate.
         #[arg(long)]
         suitability_report: PathBuf,
+    },
+    /// Reinterpret verified diagnostics using source-bound ENDF photon records.
+    AssessSourceAware {
+        /// Verified legacy v0.1 transported-photon suitability report.
+        #[arg(long)]
+        legacy_report: PathBuf,
+        /// External execution receipt used as the trust anchor.
+        #[arg(long)]
+        receipt: PathBuf,
+        /// Complete execution directory bound by the receipt.
+        #[arg(long)]
+        execution_directory: PathBuf,
+        /// Exact NJOY input manifest bound by the execution receipt.
+        #[arg(long)]
+        input_manifest: PathBuf,
+        /// Source-bound ENDF photon-production inventory.
+        #[arg(long)]
+        photon_inventory: PathBuf,
+        /// New v0.2 JSON report path; it must not already exist.
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Regenerate and verify a source-aware v0.2 suitability report.
+    VerifySourceAware {
+        /// Verified legacy v0.1 transported-photon suitability report.
+        #[arg(long)]
+        legacy_report: PathBuf,
+        /// External execution receipt used as the trust anchor.
+        #[arg(long)]
+        receipt: PathBuf,
+        /// Complete execution directory bound by the receipt.
+        #[arg(long)]
+        execution_directory: PathBuf,
+        /// Exact NJOY input manifest bound by the execution receipt.
+        #[arg(long)]
+        input_manifest: PathBuf,
+        /// Source-bound ENDF photon-production inventory.
+        #[arg(long)]
+        photon_inventory: PathBuf,
+        /// Source-aware v0.2 report to validate and regenerate.
+        #[arg(long)]
+        source_aware_report: PathBuf,
     },
     /// Compare a candidate suitability report against a rejected baseline.
     CompareSuitability {
@@ -474,6 +542,50 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                 );
                 println!("qualification: input_preparation_only");
             }
+            NjoyCommand::InventoryPhotonData {
+                selection,
+                evaluations_directory,
+                output,
+            } => {
+                let selection = EvaluatedNeutronSourceSelectionDocument::from_path(&selection)?;
+                let inventory =
+                    EndfPhotonProductionInventory::inspect(&selection, &evaluations_directory)?;
+                let result = inventory.write_new(&output)?;
+                println!("inventoried exact ENDF photon-production records");
+                println!("inventory: {}", result.inventory_path.display());
+                println!("inventory SHA-256: {}", result.inventory_sha256);
+                println!("evaluations: {}", result.inventory.evaluations.len());
+                println!(
+                    "MF=6/12/13/14/15 sections: {}",
+                    result.inventory.section_count
+                );
+                println!(
+                    "evaluations with a HEATR photon source: {}",
+                    result.inventory.evaluations_with_heatr_photon_source_count
+                );
+                println!("format findings: {}", result.inventory.format_finding_count);
+                println!("qualification: source_inventory_unreviewed");
+            }
+            NjoyCommand::VerifyPhotonInventory {
+                selection,
+                evaluations_directory,
+                inventory,
+            } => {
+                let selection = EvaluatedNeutronSourceSelectionDocument::from_path(&selection)?;
+                let document = EndfPhotonProductionInventoryDocument::from_path(&inventory)?;
+                document.verify_against_selection(&selection, &evaluations_directory)?;
+                println!(
+                    "verified ENDF photon-production inventory {}",
+                    inventory.display()
+                );
+                println!("inventory SHA-256: {}", document.sha256);
+                println!("evaluations: {}", document.inventory.evaluations.len());
+                println!(
+                    "format findings: {}",
+                    document.inventory.format_finding_count
+                );
+                println!("qualification: source_inventory_unreviewed");
+            }
             NjoyCommand::Execute {
                 selection,
                 material,
@@ -614,6 +726,98 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                 println!(
                     "rejected nuclide runs: {}",
                     report.report.rejected_run_count
+                );
+                println!(
+                    "qualification: {}",
+                    if report.report.rejected_run_count == 0 {
+                        "transported_photon_kerma_candidate_unreviewed"
+                    } else {
+                        "transported_photon_kerma_rejected"
+                    }
+                );
+            }
+            NjoyCommand::AssessSourceAware {
+                legacy_report,
+                receipt,
+                execution_directory,
+                input_manifest,
+                photon_inventory,
+                output,
+            } => {
+                let legacy = NjoySuitabilityReportDocument::from_path(&legacy_report)?;
+                let execution = NjoyExecutionReceiptDocument::from_path(&receipt)?;
+                let input_manifest = fs::read(input_manifest)?;
+                let inventory =
+                    EndfPhotonProductionInventoryDocument::from_path(&photon_inventory)?;
+                let report = NjoySourceAwareSuitabilityReport::assess(
+                    &legacy,
+                    &execution,
+                    &execution_directory,
+                    &input_manifest,
+                    &inventory,
+                )?;
+                let result = report.write_new(&output)?;
+                println!("assessed source-aware transported-photon KERMA suitability");
+                println!("report: {}", result.report_path.display());
+                println!("report SHA-256: {}", result.report_sha256);
+                println!(
+                    "rejected nuclide runs: {}",
+                    result.report.rejected_run_count
+                );
+                println!(
+                    "processor findings: {} rejecting / {} informational",
+                    result.report.rejecting_processor_finding_count,
+                    result.report.informational_processor_finding_count
+                );
+                println!(
+                    "source format findings: {}",
+                    result.report.source_format_finding_count
+                );
+                if result.report.rejected_run_count == 0 {
+                    println!("qualification: transported_photon_kerma_candidate_unreviewed");
+                } else {
+                    println!("qualification: transported_photon_kerma_rejected");
+                    return Err(io::Error::other(format!(
+                        "{} NJOY run(s) remain unsuitable after source-aware interpretation; report was preserved",
+                        result.report.rejected_run_count
+                    ))
+                    .into());
+                }
+            }
+            NjoyCommand::VerifySourceAware {
+                legacy_report,
+                receipt,
+                execution_directory,
+                input_manifest,
+                photon_inventory,
+                source_aware_report,
+            } => {
+                let legacy = NjoySuitabilityReportDocument::from_path(&legacy_report)?;
+                let execution = NjoyExecutionReceiptDocument::from_path(&receipt)?;
+                let input_manifest = fs::read(input_manifest)?;
+                let inventory =
+                    EndfPhotonProductionInventoryDocument::from_path(&photon_inventory)?;
+                let report =
+                    NjoySourceAwareSuitabilityReportDocument::from_path(&source_aware_report)?;
+                report.verify_against_evidence(
+                    &legacy,
+                    &execution,
+                    &execution_directory,
+                    &input_manifest,
+                    &inventory,
+                )?;
+                println!(
+                    "verified source-aware suitability report {}",
+                    source_aware_report.display()
+                );
+                println!("report SHA-256: {}", report.sha256);
+                println!(
+                    "rejected nuclide runs: {}",
+                    report.report.rejected_run_count
+                );
+                println!(
+                    "informational File 13 findings: {}",
+                    report.report.informational_processor_finding_count
                 );
                 println!(
                     "qualification: {}",
