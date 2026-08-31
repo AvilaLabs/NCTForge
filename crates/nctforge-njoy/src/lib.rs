@@ -32,6 +32,7 @@ mod comparison;
 mod domain_aware;
 mod execution;
 mod law7_breakup;
+mod law7_breakup_comparison;
 mod photon_inventory;
 mod photon_moment;
 mod photon_moment_comparison;
@@ -80,6 +81,13 @@ pub use law7_breakup::{
     EndfMf6Law7ImplicitResidualReportDocument, EndfMf6Law7ImplicitResidualResult,
     EndfMf6Law7ImplicitResidualSample, EndfMf6Law7ImplicitResidualSampleStatus,
     EndfMf6Law7ImplicitResidualScope, EndfMf6Law7ReferenceFrame,
+};
+pub use law7_breakup_comparison::{
+    DEFAULT_NJOY_LAW7_PRINT_RELATIVE_TOLERANCE, DEFAULT_NJOY_LAW7_SOURCE_RELATIVE_TOLERANCE,
+    NJOY_LAW7_IMPLICIT_RESIDUAL_COMPARISON_SCHEMA, NjoyLaw7ImplicitResidualComparison,
+    NjoyLaw7ImplicitResidualComparisonDocument, NjoyLaw7ImplicitResidualComparisonError,
+    NjoyLaw7ImplicitResidualComparisonQualification, NjoyLaw7ImplicitResidualComparisonResult,
+    NjoyLaw7ImplicitResidualComparisonSample, NjoyLaw7ImplicitResidualComparisonStatus,
 };
 pub use photon_inventory::{
     ENDF_PHOTON_PRODUCTION_INVENTORY_SCHEMA, EndfFile6PhotonProduct, EndfFile12Representation,

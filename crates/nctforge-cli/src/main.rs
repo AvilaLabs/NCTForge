@@ -14,7 +14,8 @@ use nctforge_dicom::verify_nf_bnct_001;
 use nctforge_njoy::{
     DEFAULT_CAPTURE_ENERGY_BALANCE_RELATIVE_TOLERANCE,
     DEFAULT_LAW7_BREAKUP_NORMALIZATION_TOLERANCE, DEFAULT_LAW7_BREAKUP_RELATIVE_ENERGY_TOLERANCE,
-    DEFAULT_NJOY_CAPTURE_PRINT_RELATIVE_TOLERANCE, DEFAULT_NJOY_PRINT_RELATIVE_TOLERANCE,
+    DEFAULT_NJOY_CAPTURE_PRINT_RELATIVE_TOLERANCE, DEFAULT_NJOY_LAW7_PRINT_RELATIVE_TOLERANCE,
+    DEFAULT_NJOY_LAW7_SOURCE_RELATIVE_TOLERANCE, DEFAULT_NJOY_PRINT_RELATIVE_TOLERANCE,
     DEFAULT_NJOY_TIMEOUT_SECONDS, DEFAULT_SPECTRUM_NORMALIZATION_TOLERANCE,
     EndfContinuumPhotonMomentReport, EndfContinuumPhotonMomentReportDocument,
     EndfMf6CapturePhotonBalanceQualification, EndfMf6CapturePhotonBalanceReport,
@@ -24,7 +25,9 @@ use nctforge_njoy::{
     NjoyCapturePhotonMomentComparison, NjoyCapturePhotonMomentComparisonDocument,
     NjoyDomainAwareSuitabilityReport, NjoyDomainAwareSuitabilityReportDocument,
     NjoyExecutionOptions, NjoyExecutionReceipt, NjoyExecutionReceiptDocument, NjoyInputArtifacts,
-    NjoyInputBundle, NjoyPhotonMomentComparison, NjoyPhotonMomentComparisonDocument,
+    NjoyInputBundle, NjoyLaw7ImplicitResidualComparison,
+    NjoyLaw7ImplicitResidualComparisonDocument, NjoyLaw7ImplicitResidualComparisonQualification,
+    NjoyPhotonMomentComparison, NjoyPhotonMomentComparisonDocument,
     NjoySourceAwareSuitabilityReport, NjoySourceAwareSuitabilityReportDocument,
     NjoySuitabilityComparison, NjoySuitabilityComparisonDocument,
     NjoySuitabilityComparisonQualification, NjoySuitabilityReport, NjoySuitabilityReportDocument,
@@ -296,6 +299,42 @@ enum NjoyCommand {
         /// LAW=7 implicit-residual report to validate and regenerate.
         #[arg(long)]
         residual_report: PathBuf,
+    },
+    /// Attribute H-2 LAW=7 warnings to NJOY's printed residual approximation.
+    CompareLaw7ImplicitResidual {
+        /// Independently calculated deuterium LAW=7 residual report.
+        #[arg(long)]
+        residual_report: PathBuf,
+        /// External execution receipt used as the trust anchor.
+        #[arg(long)]
+        receipt: PathBuf,
+        /// Complete execution directory bound by the receipt.
+        #[arg(long)]
+        execution_directory: PathBuf,
+        /// Maximum relative difference between source integration and NJOY quadrature.
+        #[arg(long, default_value_t = DEFAULT_NJOY_LAW7_SOURCE_RELATIVE_TOLERANCE)]
+        source_relative_tolerance: f64,
+        /// Maximum relative difference for five-significant-digit print identities.
+        #[arg(long, default_value_t = DEFAULT_NJOY_LAW7_PRINT_RELATIVE_TOLERANCE)]
+        print_relative_tolerance: f64,
+        /// New receipt-bound comparison JSON path; it must not already exist.
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Regenerate and verify the H-2 LAW=7 processor attribution.
+    VerifyLaw7ImplicitResidualComparison {
+        /// Independently calculated deuterium LAW=7 residual report.
+        #[arg(long)]
+        residual_report: PathBuf,
+        /// External execution receipt used as the trust anchor.
+        #[arg(long)]
+        receipt: PathBuf,
+        /// Complete execution directory bound by the receipt.
+        #[arg(long)]
+        execution_directory: PathBuf,
+        /// Comparison report to validate and regenerate.
+        #[arg(long)]
+        comparison_report: PathBuf,
     },
     /// Compare independent capture moments with NJOY's photon and recoil print tables.
     CompareCapturePhotonMoments {
@@ -1230,6 +1269,95 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                     law7_qualification_name(report.report.qualification)
                 );
             }
+            NjoyCommand::CompareLaw7ImplicitResidual {
+                residual_report,
+                receipt,
+                execution_directory,
+                source_relative_tolerance,
+                print_relative_tolerance,
+                output,
+            } => {
+                let residual =
+                    EndfMf6Law7ImplicitResidualReportDocument::from_path(&residual_report)?;
+                let execution = NjoyExecutionReceiptDocument::from_path(&receipt)?;
+                let comparison = NjoyLaw7ImplicitResidualComparison::compare(
+                    &residual,
+                    &execution,
+                    &execution_directory,
+                    source_relative_tolerance,
+                    print_relative_tolerance,
+                )?;
+                let result = comparison.write_new(&output)?;
+                println!("attributed deuterium LAW=7 processor diagnostics");
+                println!("comparison: {}", result.comparison_path.display());
+                println!("comparison SHA-256: {}", result.comparison_sha256);
+                println!(
+                    "shared source samples: {}",
+                    result.comparison.shared_sample_count
+                );
+                println!(
+                    "receipt violations attributed: {}/{}",
+                    result.comparison.attributed_violation_count,
+                    result.comparison.receipt_violation_count
+                );
+                println!("failed samples: {}", result.comparison.failed_sample_count);
+                println!(
+                    "maximum source/processor neutron-mean difference: {:.12e}",
+                    result
+                        .comparison
+                        .maximum_source_neutron_mean_relative_difference
+                );
+                println!(
+                    "maximum violation remainder/excess difference: {:.12e}",
+                    result
+                        .comparison
+                        .maximum_violation_excess_relative_difference
+                );
+                println!(
+                    "qualification: {}",
+                    law7_comparison_qualification_name(result.comparison.qualification)
+                );
+                if result.comparison.qualification
+                    != NjoyLaw7ImplicitResidualComparisonQualification::
+                        ProcessorApproximationFullyAttributedUnreviewed
+                {
+                    return Err(io::Error::other(
+                        "H-2 LAW=7 processor attribution did not pass; comparison was preserved",
+                    )
+                    .into());
+                }
+            }
+            NjoyCommand::VerifyLaw7ImplicitResidualComparison {
+                residual_report,
+                receipt,
+                execution_directory,
+                comparison_report,
+            } => {
+                let residual =
+                    EndfMf6Law7ImplicitResidualReportDocument::from_path(&residual_report)?;
+                let execution = NjoyExecutionReceiptDocument::from_path(&receipt)?;
+                let comparison =
+                    NjoyLaw7ImplicitResidualComparisonDocument::from_path(&comparison_report)?;
+                comparison.verify_against_evidence(&residual, &execution, &execution_directory)?;
+                println!(
+                    "verified H-2 LAW=7 processor attribution {}",
+                    comparison_report.display()
+                );
+                println!("comparison SHA-256: {}", comparison.sha256);
+                println!(
+                    "receipt violations attributed: {}/{}",
+                    comparison.comparison.attributed_violation_count,
+                    comparison.comparison.receipt_violation_count
+                );
+                println!(
+                    "failed samples: {}",
+                    comparison.comparison.failed_sample_count
+                );
+                println!(
+                    "qualification: {}",
+                    law7_comparison_qualification_name(comparison.comparison.qualification)
+                );
+            }
             NjoyCommand::CompareCapturePhotonMoments {
                 balance_report,
                 receipt,
@@ -1788,6 +1916,20 @@ fn law7_qualification_name(
         }
         EndfMf6Law7ImplicitResidualQualification::ImplicitResidualEnergyCheckedUnreviewed => {
             "implicit_residual_energy_checked_unreviewed"
+        }
+    }
+}
+
+fn law7_comparison_qualification_name(
+    qualification: NjoyLaw7ImplicitResidualComparisonQualification,
+) -> &'static str {
+    match qualification {
+        NjoyLaw7ImplicitResidualComparisonQualification::
+            ProcessorApproximationFullyAttributedUnreviewed => {
+                "processor_approximation_fully_attributed_unreviewed"
+            }
+        NjoyLaw7ImplicitResidualComparisonQualification::ProcessorAttributionRejected => {
+            "processor_attribution_rejected"
         }
     }
 }

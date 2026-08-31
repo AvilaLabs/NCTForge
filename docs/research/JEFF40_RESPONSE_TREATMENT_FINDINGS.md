@@ -41,7 +41,7 @@ source files are the intended independent variable.
 | C-12 | candidate | candidate | no recognized blocker |
 | C-13 | candidate | rejected | 32 kinematic violations; no-photon local fallback |
 | H-1 | candidate | candidate | no recognized blocker |
-| H-2 | candidate | rejected pending processor attribution | 15 kinematic violations; independent LAW=7 source balance passes all 53 active nodes |
+| H-2 | candidate | rejected only by immutable v0.3 pending new schema | all 15 findings attributed to NJOY's excluded energy-balance remainder |
 | N-14 | candidate | candidate | no recognized blocker |
 | N-15 | rejected | rejected by deeper gate | valid File 13/14/15 path plus MF=6/MT=102 clears the narrow processor check, but 33 of 37 capture-balance nodes fail independently |
 | O-16 | rejected | candidate under bound domain | sole finding is at 30 MeV, above the common 20 MeV OpenMC domain |
@@ -103,6 +103,8 @@ not energy-balance validity.
   `6e46b627d9b766e596ad2219eaafca970bd9f3c5df1d5e400ad644397c44ce55`.
 - JEFF-4.0 H-2 LAW=7 implicit-residual report SHA-256:
   `0cfaaf52c67f359b3fd2c70b147e92dd9e004e3495bb860f9ad5ab7707acd1d5`.
+- JEFF-4.0 H-2 NJOY attribution SHA-256:
+  `64b3985ed5fc3d57c7a41c55b58e13f8bba069403c72bafe50235a13e0ae5687`.
 
 The baseline-comparison artifact is intentionally the immutable v0.1
 log-only comparison. ADR 0017 and the v0.2 report supersede only its treatment
@@ -140,10 +142,13 @@ O-16's scope question is now resolved without deleting its full-range
 diagnostic. The first H-2 causal layer is also complete: all 53 active
 MF=6/MT=16 LAW=7 nodes normalize within `5.674e-8`, and every node leaves
 positive mean energy for the implicit proton. The minimum residual is 443.1
-keV. This rules out a source-level mean-energy overspend, but H-2 remains
-rejected until a receipt-bound comparison proves that each in-domain warning
-is caused by NJOY's missing-residual approximation and excluded
-energy-balance remainder. C-13, O-17, and O-18 remain untouched.
+keV. The receipt-bound comparison then matches all 15 structured violations to
+the final table and proves that each MT 301 excess is the printed `ebal` term
+excluded from the kinematic maximum. All 15 pass, with a worst remainder/
+excess difference of `1.055e-4`. H-2 remains rejected only because the
+immutable v0.3 schema has no approximation-aware disposition; a new schema
+must bind this evidence before changing the decision. C-13, O-17, and O-18
+remain untouched.
 
 ## Primary sources
 
@@ -155,3 +160,4 @@ energy-balance remainder. C-13, O-17, and O-18 remain untouched.
 - [Independent MF=6 capture-balance decision](../adr/0019-independent-mf6-capture-photon-balance.md)
 - [Content-bound transport-domain decision](../adr/0020-content-bound-transport-domain-suitability.md)
 - [Independent LAW=7 implicit-residual decision](../adr/0021-independent-law7-implicit-residual-balance.md)
+- [LAW=7 processor-attribution decision](../adr/0022-law7-processor-attribution.md)

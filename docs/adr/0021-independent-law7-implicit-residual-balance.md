@@ -1,6 +1,6 @@
 # ADR 0021: Independent LAW=7 Implicit-Residual Balance
 
-**Status:** Accepted and implemented; H-2 source balance passes, processor attribution pending
+**Status:** Accepted and implemented; H-2 source balance passes, processor attribution completed by ADR 0022
 
 **Date:** 2026-08-31
 
@@ -84,10 +84,9 @@ The frozen report SHA-256 is
 - The result strongly motivates testing NJOY's missing-residual approximation
   as the cause, but it does not clear H-2 by itself. The immutable v0.3
   suitability report remains rejected.
-- The next evidence layer must bind this calculation to the exact execution
-  receipt and reproduce NJOY's printed neutron moment, synthesized recoil,
-  energy-balance remainder, final MT 301 value, and kinematic excess at each
-  shared diagnostic energy.
+- ADR 0022 binds this calculation to the exact execution receipt and
+  reproduces NJOY's printed neutron moment, synthesized recoil, energy-balance
+  remainder, final MT 301 value, and kinematic excess at every warning energy.
 - Only a fully matched processor attribution may support a narrowly scoped
   H-2 reclassification in a new suitability schema. It cannot waive C-13,
   N-15, O-17, or O-18.
@@ -97,6 +96,7 @@ The frozen report SHA-256 is
 - [ADR 0012: Controlled NJOY execution evidence](0012-controlled-njoy-execution-evidence.md)
 - [ADR 0019: Independent MF=6 capture-photon balance](0019-independent-mf6-capture-photon-balance.md)
 - [ADR 0020: Content-bound transport-domain suitability](0020-content-bound-transport-domain-suitability.md)
+- [ADR 0022: LAW=7 processor-approximation attribution](0022-law7-processor-attribution.md)
 - [ENDF-6 Formats Manual, 2023](https://www.nndc.bnl.gov/endfdocs/ENDF-102-2023.pdf)
 - [NJOY2016.78 HEATR implementation](https://github.com/njoy/NJOY2016/blob/71a76bc6345fa15f36bacc816ae7900714345d97/src/heatr.f90)
 - [NJOY2016 HEATR manual](https://github.com/njoy/NJOY2016-manual/blob/master/heatx.tex)

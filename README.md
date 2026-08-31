@@ -275,12 +275,15 @@ the JEFF-4.0 investigation this clears O-16's sole 30 MeV finding from the
 bounded 20 MeV decision, while 114 in-domain findings and the independent N-15
 capture-balance failure keep the candidate rejected. An independent H-2 LAW=7
 calculation now confirms normalized source distributions and positive mean
-energy for the implicit proton; processor attribution remains required before
-H-2 can be reclassified. See [ADR
+energy for the implicit proton. A receipt-bound comparison also attributes all
+15 H-2 findings to NJOY's excluded File 6 energy-balance remainder; a new
+suitability schema must consume that evidence before reclassification. See [ADR
 0017](docs/adr/0017-source-aware-photon-production-suitability.md), [ADR
 0019](docs/adr/0019-independent-mf6-capture-photon-balance.md), and [ADR
 0020](docs/adr/0020-content-bound-transport-domain-suitability.md), followed by
 [ADR 0021](docs/adr/0021-independent-law7-implicit-residual-balance.md).
+The processor attribution is frozen in [ADR
+0022](docs/adr/0022-law7-processor-attribution.md).
 
 ## License and use boundary
 
