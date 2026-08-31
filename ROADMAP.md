@@ -50,6 +50,8 @@ Implementation status:
 - complete: one-command CLI generation and independent verification;
 - complete: backend-neutral `case.json` with traversal-safe SHA-256 artifact
   verification;
+- complete: UI-independent axial, coronal, and sagittal mappings with linked
+  crosshair and independent edge-orientation tests;
 - pending: linked axial, sagittal, and coronal egui views;
 - pending: external DICOM CT and RT Structure Set IOD validation in CI.
 

@@ -42,29 +42,9 @@ impl CtVolume {
     /// Return the world-coordinate center of one voxel in DICOM LPS mm.
     #[must_use]
     pub fn voxel_center_lps_mm(&self, column: u32, row: u32, slice: u32) -> [f64; 3] {
-        let g = &self.geometry;
-        let local = [
-            f64::from(column) * g.spacing_mm[0],
-            f64::from(row) * g.spacing_mm[1],
-            f64::from(slice) * g.spacing_mm[2],
-        ];
-        [
-            g.origin_mm[0]
-                + g.direction[0].mul_add(
-                    local[0],
-                    g.direction[1].mul_add(local[1], g.direction[2] * local[2]),
-                ),
-            g.origin_mm[1]
-                + g.direction[3].mul_add(
-                    local[0],
-                    g.direction[4].mul_add(local[1], g.direction[5] * local[2]),
-                ),
-            g.origin_mm[2]
-                + g.direction[6].mul_add(
-                    local[0],
-                    g.direction[7].mul_add(local[1], g.direction[8] * local[2]),
-                ),
-        ]
+        self.geometry
+            .voxel_center_lps_mm([column, row, slice])
+            .expect("CT voxel indices originate from validated volume bounds")
     }
 }
 

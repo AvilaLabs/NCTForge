@@ -78,6 +78,13 @@ The first GUI milestone contains linked axial, sagittal, and coronal views for
 a synthetic case, window/level controls, RT structure overlays, component-dose
 selection, and provenance inspection. Contour editing is explicitly deferred.
 
+Anatomical mapping lives in `nctforge-view`, not egui callbacks. R1 labels views
+as axial, coronal, or sagittal only when grid direction is aligned to canonical
+DICOM LPS axes. The viewer rejects oblique or permuted grids until their
+resampling and labeling conventions have dedicated tests. Screen-edge mappings
+and click-to-voxel round trips are tested independently for all three planes.
+See `docs/adr/0004-anatomical-view-conventions.md`.
+
 ## Data handling
 
 Patient data is denied by default during early development. The repository

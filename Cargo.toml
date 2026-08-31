@@ -2,6 +2,7 @@
 members = [
   "crates/nctforge-core",
   "crates/nctforge-dicom",
+  "crates/nctforge-view",
   "crates/nctforge-transport",
   "crates/nctforge-evidence",
   "crates/nctforge-openmc",

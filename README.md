@@ -21,6 +21,8 @@ contains:
 - a deterministic generator and independent verifier for `NF-BNCT-001`;
 - a backend-neutral `case.json` binding geometry, structure truth values, DICOM
   identifiers, and SHA-256 artifact integrity;
+- an egui-independent, orientation-tested tri-planar view model with linked
+  voxel crosshairs and explicit patient-side labels;
 - content-hash and run-manifest primitives;
 - CLI and egui desktop shells;
 - an evidence-gated development roadmap;
@@ -67,6 +69,7 @@ must remain separable and independently inspectable.
 ```text
 crates/nctforge-core/       geometry and component-dose contracts
 crates/nctforge-dicom/      strict DICOM import and synthetic geometry benchmark
+crates/nctforge-view/       patient-aligned tri-planar view geometry
 crates/nctforge-transport/  backend interface and normalized run lifecycle
 crates/nctforge-evidence/   hashes, manifests, and qualification boundary
 crates/nctforge-openmc/     OpenMC adapter (scaffold)

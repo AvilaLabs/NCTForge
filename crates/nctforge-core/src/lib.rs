@@ -70,6 +70,43 @@ impl GridGeometry {
                 .ok_or(ValidationError::GridTooLarge)
         })
     }
+
+    /// Return the patient-coordinate center of a voxel in millimetres.
+    pub fn voxel_center_lps_mm(&self, voxel: [u32; 3]) -> Result<[f64; 3], ValidationError> {
+        self.voxel_count()?;
+        if voxel
+            .into_iter()
+            .zip(self.shape)
+            .any(|(index, extent)| index >= extent)
+        {
+            return Err(ValidationError::VoxelOutOfBounds {
+                voxel,
+                shape: self.shape,
+            });
+        }
+        let local = [
+            f64::from(voxel[0]) * self.spacing_mm[0],
+            f64::from(voxel[1]) * self.spacing_mm[1],
+            f64::from(voxel[2]) * self.spacing_mm[2],
+        ];
+        Ok([
+            self.origin_mm[0]
+                + self.direction[0].mul_add(
+                    local[0],
+                    self.direction[1].mul_add(local[1], self.direction[2] * local[2]),
+                ),
+            self.origin_mm[1]
+                + self.direction[3].mul_add(
+                    local[0],
+                    self.direction[4].mul_add(local[1], self.direction[5] * local[2]),
+                ),
+            self.origin_mm[2]
+                + self.direction[6].mul_add(
+                    local[0],
+                    self.direction[7].mul_add(local[1], self.direction[8] * local[2]),
+                ),
+        ])
+    }
 }
 
 /// The four physical dose groups retained before biological weighting.
@@ -182,6 +219,8 @@ pub enum ValidationError {
     InvalidDirection,
     #[error("voxel count overflows the addressable platform size")]
     GridTooLarge,
+    #[error("voxel {voxel:?} is outside grid shape {shape:?}")]
+    VoxelOutOfBounds { voxel: [u32; 3], shape: [u32; 3] },
     #[error("physical dose component {0:?} is missing")]
     MissingComponent(DoseComponent),
     #[error("physical dose component {0:?} occurs more than once")]
