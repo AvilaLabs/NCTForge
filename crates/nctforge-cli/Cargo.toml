@@ -1,0 +1,20 @@
+[package]
+name = "nctforge-cli"
+description = "Command-line interface for NCTForge"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "nctforge"
+path = "src/main.rs"
+
+[dependencies]
+clap.workspace = true
+nctforge-dicom = { path = "../nctforge-dicom" }
+nctforge-openmc = { path = "../nctforge-openmc" }
+nctforge-transport = { path = "../nctforge-transport" }

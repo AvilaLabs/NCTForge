@@ -1,0 +1,116 @@
+# NCTForge Development Roadmap
+
+**Adopted:** 2026-08-31
+
+**Status:** R1 in progress; deterministic DICOM generator, strict importer, and
+independent geometry oracle implemented
+
+**Style:** Evidence-gated, not feature-count or calendar driven
+
+## Goal
+
+Establish an open, transport-neutral BNCT research and independent-verification
+platform that makes geometry, component dosimetry, biological interpretation,
+uncertainty, and provenance comparable between codes and institutions.
+
+## R0 — Architecture and risk register
+
+Exit evidence:
+
+- backend-neutral case and physical-dose contracts;
+- OpenMC isolated behind a transport interface;
+- Apache-2.0 and contribution policy;
+- research and Avify Dose IP boundaries;
+- synthetic-data-only repository policy;
+- documented feasibility risks and acceptance gates.
+
+## R1 — Geometry truth case
+
+Deliver one synthetic DICOM CT and RTSTRUCT case with linked egui views.
+
+Exit evidence:
+
+- DICOM frame of reference and voxel affine preserved;
+- axial, sagittal, and coronal orientation independently checked;
+- structures round-trip within predeclared geometric tolerances;
+- patient identifiers absent by construction;
+- malformed or ambiguous geometry is rejected.
+
+The frozen starting case is
+[`NF-BNCT-001`](benchmarks/synthetic/nf-bnct-001/SPECIFICATION.md). R1 implements
+its synthetic CT, RTSTRUCT, expected masks, and backend-neutral case manifest;
+it does not wait for a transport engine.
+
+Implementation status:
+
+- complete: deterministic CT/RTSTRUCT generation;
+- complete: patient-space CT ordering and affine validation;
+- complete: exact frozen ROI masks, volumes, and LPS centroids;
+- complete: malformed frame, plane, spacing, and orientation rejection tests;
+- complete: one-command CLI generation and independent verification;
+- pending: linked axial, sagittal, and coronal egui views;
+- pending: backend-neutral `case.json` manifest;
+- pending: external DICOM CT and RT Structure Set IOD validation in CI.
+
+## R2 — Physical component truth case
+
+Calculate the four physical BNCT dose components for a simple analytic phantom.
+
+Exit evidence:
+
+- OpenMC version, commit, nuclear data, settings, seed, and inputs recorded;
+- B-10, N-14, hydrogen/recoil, and photon definitions cited and tested;
+- estimator limitations documented;
+- analytic or independently calculated reference tolerances passed;
+- statistical uncertainty retained at voxel level.
+
+R2 also requires the response-generation and classification ledger specified by
+`NF-BNCT-001`, plus an independent estimator comparison. OpenMC output alone is
+not promoted to a reference result.
+
+## R3 — End-to-end research alpha
+
+Run a synthetic head case from DICOM through physical dose, a separately
+versioned biological model, visualization, DVH, and evidence export.
+
+Exit evidence:
+
+- one-command reproducible run;
+- GUI and CLI consume identical engine results;
+- physical and biological layers can be inspected separately;
+- deterministic manifest binds inputs and outputs;
+- independent verifier rejects modified artifacts.
+
+## R4 — Transport-neutral reference platform
+
+Add generic component-dose import and cross-code comparison cases.
+
+Exit evidence:
+
+- published interchange schema;
+- at least one result produced outside OpenMC imported without loss of meaning;
+- OpenMC and one independent transport path compared on frozen cases;
+- public conformance suite and versioned reference outputs;
+- Python API supports external biological-model experiments without duplicating
+  production evaluation logic.
+
+## R5 — External validation and adoption
+
+Exit evidence:
+
+- independent reproduction by a researcher outside Avila Labs;
+- review by a BNCT physicist;
+- comparison with measured phantom or commissioned beam data under a written
+  collaboration agreement;
+- at least two institutions execute the conformance suite;
+- methods manuscript and archival software/data release.
+
+## Deferred beyond the research platform
+
+- patient-specific clinical decisions;
+- treatment delivery instructions;
+- automated segmentation or contour editing;
+- facility commissioning claims;
+- regulatory submission;
+- optimization involving Avify Dose patent subject matter;
+- any claim of clinical equivalence to a certified TPS.

@@ -1,0 +1,18 @@
+/target/
+**/*.rs.bk
+.DS_Store
+.idea/
+.vscode/
+
+# Patient, transport, and generated calculation artifacts are never committed
+# by default. Public synthetic cases must be deliberately added under
+# benchmarks/synthetic/ with a provenance record.
+/cases/
+/runs/
+/outputs/
+*.dcm
+*.nii
+*.nii.gz
+*.h5
+statepoint.*.h5
+summary.h5

@@ -1,0 +1,15 @@
+[package]
+name = "nctforge-openmc"
+description = "OpenMC transport adapter for NCTForge"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+nctforge-core = { path = "../nctforge-core" }
+nctforge-transport = { path = "../nctforge-transport" }
+thiserror.workspace = true

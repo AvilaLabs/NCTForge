@@ -1,0 +1,19 @@
+[package]
+name = "nctforge-gui"
+description = "egui desktop shell for NCTForge"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "nctforge-gui"
+path = "src/main.rs"
+
+[dependencies]
+eframe.workspace = true
+nctforge-openmc = { path = "../nctforge-openmc" }
+nctforge-transport = { path = "../nctforge-transport" }

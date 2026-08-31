@@ -1,0 +1,266 @@
+# BNCT Technical Baseline
+
+**Status:** Adopted research baseline, 2026-08-31
+
+**Scope:** Macroscopic research dosimetry and independent verification. This is
+not a clinical-dose specification or a claim that any transport code is a
+reference standard.
+
+## Outcome
+
+NCTForge can begin with OpenMC, but its first scientific deliverable must be a
+code-neutral benchmark rather than a patient workflow. The initial benchmark is
+`NF-BNCT-001`, a synthetic DICOM and transport case with exact geometry,
+materials, source, component definitions, provenance requirements, and
+predeclared comparison criteria.
+
+The first implementation sequence is therefore:
+
+1. generate and verify the synthetic DICOM geometry;
+2. generate a backend-neutral case manifest from it;
+3. generate OpenMC input through a version-pinned adapter;
+4. retain four unweighted macroscopic absorbed-dose components;
+5. compare independent estimators and, subsequently, independent codes;
+6. publish no reference dose values until the qualification gates pass.
+
+## Scientific quantity being reported
+
+The first dose model applies only at a spatial scale much larger than the ranges
+of the charged reaction products, where charged-particle equilibrium or a
+locally deposited KERMA approximation is defensible. Every component is an
+absorbed dose in Gy per source neutron before biological weighting:
+
+| Symbol | Interchange name | Required meaning |
+| --- | --- | --- |
+| `D_B` | `boron` | Local energy imparted by the charged products of the `B-10(n,alpha)Li-7` reaction. Energy carried by emitted photons is excluded. |
+| `D_N` | `nitrogen` | Local energy imparted by charged products of neutron reactions assigned to the nitrogen group, principally `N-14(n,p)C-14`. Energy carried by photons is excluded. |
+| `D_H` | `hydrogen` | The conventional BNCT hydrogen/fast-neutron group: non-photon neutron KERMA not assigned to `D_B` or `D_N`, dominated by recoil protons from neutron moderation on hydrogen. Contributing nuclides and reactions must remain inspectable. |
+| `D_gamma` | `photon` | Energy imparted by photons from every origin, including incident contamination and secondary photons generated in the phantom. |
+
+`D = D_B + D_N + D_H + D_gamma` is a physical absorbed-dose sum. A successful
+sum does not imply biological equivalence. CBE, RBE, isoeffective models, and
+boron pharmacokinetics remain separate, versioned layers.
+
+The definition of `D_H` is deliberately broader than “H-1 elastic scattering.”
+The IAEA describes that component as being produced mainly by hydrogen, and
+current BNCT/OpenMC work has warned that other energetically allowed tissue
+reactions must be examined to avoid an unreported remainder. A component model
+that only retains H-1 elastic dose cannot demonstrate energy-accounting closure.
+
+## Estimator design
+
+The benchmark will retain independent estimators instead of silently selecting
+one calculation as truth.
+
+### Reported component estimator
+
+- Neutron track-length fluence is folded with frozen, versioned,
+  material-specific fluence-to-KERMA response functions for `D_B`, `D_N`, and
+  `D_H`.
+- Photon dose uses coupled neutron-photon transport and photon heating. In the
+  released OpenMC baseline this is a collision estimator.
+- Track-length fluence is divided by voxel volume before applying a response in
+  Gy cm2 per particle, or an algebraically equivalent response is used. The
+  exact unit path must be written to the run manifest.
+
+The `D_H` response is generated as the classified non-photon neutron KERMA of
+the complete benchmark material, excluding contributions assigned to `D_B` and
+`D_N`. It must not be approximated as H-1 elastic scattering without a separate
+error study.
+
+### Audit estimators
+
+- `B-10` MT=107 and `N-14` MT=103 reaction rates, multiplied by documented
+  charged-particle energy releases, audit `D_B` and `D_N`.
+- A neutron-only `heating` tally audits the sum of locally deposited neutron
+  energy. With coupled transport, OpenMC's MT=301 heating data exclude energy
+  carried away by secondary photons.
+- A dedicated photon `heating` tally audits `D_gamma`.
+- Energy-binned neutron and photon fluence is retained for diagnosing response
+  interpolation, thermalization, and library differences.
+
+Agreement between two estimators built from the same histories is an internal
+consistency check, not independent validation.
+
+Before execution, the adapter also verifies that the loaded evaluations contain
+the required MT=107, MT=103, and heating responses and the secondary-photon data
+needed to represent at least H-1 capture and the B-10 prompt-photon branch. A
+missing datum is a failed capability preflight, not permission to report zero.
+
+## OpenMC feasibility and limits
+
+The current OpenMC tally system provides the necessary starting primitives:
+
+- fixed-source coupled neutron-photon transport;
+- regular mesh, energy, particle, nuclide, and energy-function filters;
+- reaction-rate scores including `(n,p)` and `(n,a)`;
+- total nuclear `heating` in eV per source particle;
+- track-length neutron heating when the tally is explicitly neutron-only;
+- direct photon energy-deposition scoring; and
+- batch means and standard deviations in statepoint files.
+
+Important limits remain:
+
+- standard `heating` data are not reaction-specific;
+- photon heating uses collision scoring in the released baseline and may
+  converge more slowly than neutron track-length responses;
+- charged products such as alpha particles, Li-7 nuclei, and recoil protons are
+  treated through local-energy or KERMA assumptions at this stage;
+- OpenMC's charged-particle treatment does not establish microscopic,
+  cell-layer, skin-interface, or electron-build-up accuracy;
+- a successful OpenMC run is not evidence of correct DICOM geometry, response
+  construction, source normalization, or component classification.
+
+For these reasons NCTForge must advertise a macroscopic research capability
+only. Microdosimetry is a different solver and validation problem.
+
+## Nuclear-data baseline
+
+The first candidate run is pinned to:
+
+- OpenMC `0.15.3`;
+- the official OpenMC ENDF/B-VIII.1 HDF5 incident-neutron, photoatomic, atomic
+  relaxation, and thermal-scattering distribution;
+- material temperature `293.6 K`;
+- no thermal-scattering-law table in the baseline case, so that molecular model
+  differences do not obscure the first cross-code comparison.
+
+A later `NF-BNCT-001-SAB` variant will add hydrogen bound in water. A later
+nuclear-data sensitivity study will repeat the calculation with at least
+ENDF/B-VIII.0 and one non-ENDF evaluation. These variants must never overwrite
+the baseline result.
+
+Every run records:
+
+- OpenMC semantic version, source commit when available, build options, and
+  executable hash;
+- archive URL and SHA-256 of the nuclear-data distribution;
+- `cross_sections.xml` hash and hashes of every used HDF5 table;
+- evaluated-data release, processing code/version, temperature, and thermal
+  scattering tables;
+- source definition, seed, stride, batches, particles per batch, MPI ranks,
+  threads, and transport cutoffs; and
+- input, statepoint, log, response-table, normalized result, and comparison
+  artifact hashes.
+
+“ENDF/B-VIII.1” alone is not a reproducible nuclear-data identifier.
+
+## Statistical uncertainty
+
+OpenMC reports statistics from batch realizations. NCTForge will retain the
+component mean and one-sigma absolute standard uncertainty. Relative uncertainty
+is a derived, nullable value and is undefined for a zero mean.
+
+The following are distinct and must not be collapsed into one number:
+
+1. Monte Carlo sampling uncertainty;
+2. response interpolation and energy-group discretization error;
+3. nuclear-data uncertainty and library-to-library sensitivity;
+4. geometry, material, and source-model uncertainty; and
+5. experimental uncertainty when measurements are added.
+
+Component tallies from the same particle histories are correlated. NCTForge
+must not estimate total-dose uncertainty as the root-sum-square of component
+standard deviations unless covariance is available and used. The total needs a
+dedicated estimator, batch-level covariance, or an explicit
+`uncertainty_not_available` state.
+
+Voxel precision is evaluated only in a declared scoring region. Relative-error
+criteria are not applied to zero or negligible tallies. Aggregate ROI scores and
+three independent seeds are required for the qualified reference run.
+
+## Geometry baseline
+
+NCTForge's canonical geometry is the DICOM patient-based right-handed LPS frame
+in millimetres. For a biped, positive x is patient-left, positive y is posterior,
+and positive z is toward the head.
+
+`GridGeometry` is interpreted as follows:
+
+- `shape = [columns, rows, slices]`;
+- `spacing_mm = [column spacing, row spacing, slice spacing]`;
+- `origin_mm` is the centre of voxel `[0, 0, 0]`; and
+- the columns of `direction` map the column, row, and slice index axes into LPS.
+
+The DICOM slice direction is the cross product of the row and column direction
+cosines. Slice order and spacing are derived by projecting `Image Position
+(Patient)` onto that normal; `Instance Number`, `Slice Location`, and nominal
+`Slice Thickness` do not determine the stack geometry.
+
+Contours are interpreted in patient coordinates and accepted only when their
+referenced Frame of Reference is resolvable. Ambiguous, non-orthonormal,
+duplicate, irregular, or mismatched geometry is rejected rather than silently
+repaired in the first milestone.
+
+The OpenMC adapter preserves the axes and converts millimetres to centimetres;
+it does not introduce an LPS-to-RAS flip.
+
+The benchmark writer and production importer must not share the code that
+computes the expected affine or masks. Generated objects are also checked with
+an external DICOM IOD validator. This prevents a writer and reader with the same
+mistake from “verifying” each other.
+
+## Independent evidence ladder
+
+NCTForge will use the following qualification language:
+
+1. **Exact/analytic checks:** units, transforms, source sampling, reaction-rate
+   identities, and energy-accounting invariants.
+2. **Single-code verification:** independent OpenMC estimators and convergence
+   studies.
+3. **Cross-code corroboration:** a separately implemented Geant4 case first,
+   followed by MCNP or PHITS results from appropriately licensed collaborators.
+4. **Experimental validation:** measured thermal-neutron and photon profiles in
+   a sufficiently large water/tissue-equivalent phantom.
+5. **Clinical qualification:** outside the present project scope and impossible
+   to infer from the preceding steps alone.
+
+Geant4 is suitable for the first openly redistributable comparison harness.
+MCNP remains especially valuable to the field, but its distribution is export
+controlled. PHITS requires an individual use licence. Neither restricted code
+will be bundled with NCTForge.
+
+OpenMC results remain `synthetic_research_only` until a genuinely independent
+result exists. Cross-code agreement alone remains `cross_code_research_only`.
+
+## Sources and design consequences
+
+- [IAEA, *Advances in Boron Neutron Capture Therapy* (2023)](https://www.iaea.org/publications/15339/advances-in-boron-neutron-capture-therapy): four principal components, macroscopic KERMA guidance, nuclear-data risks, QA phantoms, and the need for cross-code and measurement comparisons.
+- [IAEA-TECDOC-1223](https://www-pub.iaea.org/MTCD/Publications/PDF/te_1223_prn.pdf): historical reporting requirement to retain the four physical components separately from biological weighting.
+- [OpenMC tally guide](https://docs.openmc.org/en/stable/usersguide/tallies.html): score units, filters, reaction-rate scores, heating, and tally normalization.
+- [OpenMC 0.15.3 release](https://github.com/openmc-dev/openmc/releases/tag/v0.15.3): released implementation pinned by the first candidate run.
+- [OpenMC energy-deposition methods](https://docs.openmc.org/en/stable/methods/energy_deposition.html): MT=301/901 KERMA behavior and charged-particle energy-deposition assumptions.
+- [OpenMC tally statistics](https://docs.openmc.org/en/stable/methods/tallies.html): batch means and standard-deviation estimation.
+- [OpenMC official data libraries](https://openmc.org/data/): processed nuclear-data releases and temperatures.
+- [OpenMC cross-section representation](https://docs.openmc.org/en/latest/methods/cross_sections.html): use of common ACE-derived data for direct code comparisons.
+- [ESTRO 2024 OpenMC BNCT study](https://user-swndwmf.cld.bz/ESTRO-2024-Abstract-Book/3464/): voxel-specific KERMA/TLE approach, OpenMC performance, and the warning to examine all tissue reactions.
+- [DICOM PS3.3 2026c, Image Plane Module](https://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.7.6.2.html): patient coordinates, image position/orientation, pixel spacing, and index-to-world mapping.
+- [DICOM PS3.3 2026c, Structure Set Module](https://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.8.8.5.html) and [ROI Contour Module](https://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.8.8.6.html): Frame of Reference and contour-coordinate semantics.
+- [DICOM PS3.5 2026c, UUID-derived UIDs](https://dicom.nema.org/medical/dicom/current/output/chtml/part05/sect_B.2.html): the `2.25.<UUID integer>` identifiers used by the synthetic generator.
+- [DICOM-rs](https://github.com/Enet4/dicom-rs): permissively licensed Rust parsing/writing foundation selected for the production importer.
+- [`dciodvfy`](https://manpages.debian.org/unstable/dicom3tools/dciodvfy.1.en.html): external IOD validation for generated benchmark objects.
+- [NIST ICRU four-component soft tissue](https://physics.nist.gov/cgi-bin/Star/compos.pl?matno=262): density and elemental mass fractions for the synthetic material.
+- [Geant4 licence](https://geant4.web.cern.ch/download/license), [MCNP distribution](https://mcnp.lanl.gov/how_to_get_the_mcnp_code.html), and [PHITS licence application](https://phits.jaea.go.jp/forms/license-en-new/index.html): constraints on comparison backends and redistribution.
+
+## Implementation gates raised by this research
+
+- Replace the literal `HydrogenRecoil` contract with the conventional but
+  explicitly defined `hydrogen` component before R2.
+- Add absolute uncertainty and an undefined-relative-uncertainty representation
+  before importing a statepoint.
+- Add a component-definition/profile identifier and contributor metadata to the
+  interchange schema.
+- Do not freeze KERMA response tables until their derivation, units, interpolation,
+  and hashes are independently reviewed.
+- Do not publish “golden” OpenMC dose arrays before an independent calculation is
+  available.
+- Do not implement boron-map recomposition or optimization in this benchmark;
+  those subjects remain behind the documented Avify Dose IP review boundary.
+
+## Ready implementation milestone
+
+R1 starts with a new `nctforge-dicom` crate and a benchmark generator/validator,
+not the GUI or OpenMC adapter. The milestone is complete when a CLI command can
+generate `NF-BNCT-001`, import it in arbitrary file order, reproduce every
+declared affine and ROI mask, pass the external IOD check, and reject the frozen
+malformed variants. Only then does transport input generation begin.

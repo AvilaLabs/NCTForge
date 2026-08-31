@@ -1,0 +1,21 @@
+[package]
+name = "nctforge-dicom"
+description = "Strict DICOM geometry and structure-set boundary for NCTForge"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+dicom-core.workspace = true
+dicom-dictionary-std.workspace = true
+dicom-object.workspace = true
+nctforge-core = { path = "../nctforge-core" }
+thiserror.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+tempfile = "3"
