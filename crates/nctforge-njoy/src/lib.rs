@@ -26,6 +26,8 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use thiserror::Error;
 
+mod capture_balance;
+mod capture_balance_comparison;
 mod comparison;
 mod execution;
 mod photon_inventory;
@@ -34,6 +36,21 @@ mod photon_moment_comparison;
 mod source_aware;
 mod suitability;
 
+pub use capture_balance::{
+    DEFAULT_CAPTURE_ENERGY_BALANCE_RELATIVE_TOLERANCE, ENDF_MF6_CAPTURE_PHOTON_BALANCE_SCHEMA,
+    EndfMf6CapturePhotonBalanceError, EndfMf6CapturePhotonBalanceQualification,
+    EndfMf6CapturePhotonBalanceReport, EndfMf6CapturePhotonBalanceReportDocument,
+    EndfMf6CapturePhotonBalanceResult, EndfMf6CapturePhotonBalanceSample,
+    EndfMf6CapturePhotonBalanceSampleStatus, EndfMf6CapturePhotonBalanceScope,
+    EndfMf6CapturePhotonSource, EndfMf6CaptureRecoilModel, EndfMf6CaptureReferenceFrame,
+};
+pub use capture_balance_comparison::{
+    DEFAULT_NJOY_CAPTURE_PRINT_RELATIVE_TOLERANCE, NJOY_CAPTURE_PHOTON_MOMENT_COMPARISON_SCHEMA,
+    NjoyCapturePhotonMomentComparison, NjoyCapturePhotonMomentComparisonDocument,
+    NjoyCapturePhotonMomentComparisonError, NjoyCapturePhotonMomentComparisonQualification,
+    NjoyCapturePhotonMomentComparisonResult, NjoyCapturePhotonMomentComparisonSample,
+    NjoyCapturePhotonMomentComparisonStatus,
+};
 pub use comparison::{
     NJOY_SUITABILITY_COMPARISON_SCHEMA, NjoySuitabilityComparison,
     NjoySuitabilityComparisonDocument, NjoySuitabilityComparisonError,

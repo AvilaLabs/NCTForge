@@ -306,9 +306,12 @@ result exists. Cross-code agreement alone remains `cross_code_research_only`.
   correct the log-only File 12 false-positive through a source-aware v0.2
   report; JEFF N-15 clears, but both selections remain rejected. Complete:
   independently reproduce all eight supported N-15 File 13/File 15 continuum
-  energy moments and match NJOY at 58 shared source nodes. Pending: close the
-  full MF=6, recoil, Q-value, and reaction-balance terms, then define, justify,
-  and review a passing versioned response treatment.
+  energy moments and match NJOY at 58 shared source nodes. Complete:
+  independently reconstruct JEFF N-15 MF=6/MT=102 photon and recoil moments
+  and reject 33 of 37 source nodes on a 1% Q-value balance screen, while also
+  matching NJOY's printed photon/recoil moments at 23 shared nodes. Pending:
+  diagnose the five remaining JEFF failures, then define, justify, and review
+  a passing versioned response treatment.
 - Do not use reaction-filtered neutron heating as a component partition; retain
   it only as a diagnostic under ADR 0005.
 - Do not publish “golden” OpenMC dose arrays before an independent calculation is

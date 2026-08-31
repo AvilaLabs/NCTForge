@@ -2,8 +2,8 @@
 
 **Recorded:** 2026-08-31
 
-**Evidence state:** Controlled candidate rejected after source-aware
-refinement; not a qualified response table
+**Evidence state:** Controlled candidate rejected after independent capture-
+balance refinement; not a qualified response table
 
 ## Question
 
@@ -43,7 +43,7 @@ source files are the intended independent variable.
 | H-1 | candidate | candidate | no recognized blocker |
 | H-2 | candidate | rejected | 15 kinematic violations |
 | N-14 | candidate | candidate | no recognized blocker |
-| N-15 | rejected | candidate | valid File 13/14/15 path plus MF=6/MT=102; kinematic count improves from 10 to 0 |
+| N-15 | rejected | rejected by deeper gate | valid File 13/14/15 path plus MF=6/MT=102 clears the narrow processor check, but 33 of 37 capture-balance nodes fail independently |
 | O-16 | rejected | rejected | one kinematic violation; recognized warning is absent |
 | O-17 | rejected | rejected | 45 kinematic violations; recognized warning is absent |
 | O-18 | rejected | rejected | 27 kinematic violations; no-photon local fallback |
@@ -59,6 +59,10 @@ evaluation supplies eight paired File 13/14/15 continuum reactions and an
 MF=6/MT=102 photon product. Its corrected aggregate is five rejected nuclides:
 C-13, H-2, O-16, O-17, and O-18. One baseline rejection clears, but two new
 rejections are introduced, so the candidate remains rejected.
+
+That v0.2 aggregate describes its intentionally narrow source-aware processor
+gate. ADR 0019 adds a deeper source-level conservation gate and rejects N-15
+again; it does not mutate the immutable v0.2 evidence.
 
 Both exact ten-nuclide inventories have zero format-pairing findings and eight
 evaluations with a HEATR photon source. This establishes record availability,
@@ -79,7 +83,11 @@ not energy-balance validity.
 - JEFF-4.0 independent continuum-moment SHA-256:
   `6dac7055c0b970addfa1aa9bd89e5fa0f95ce87ffc4901e8a0c817ea2b4c455f`;
 - JEFF-4.0 NJOY moment-comparison SHA-256:
-  `c69ae5e033571cc7526fb4c66456370ef596bebb88c451be7bd4a990cd40d555`.
+  `c69ae5e033571cc7526fb4c66456370ef596bebb88c451be7bd4a990cd40d555`;
+- JEFF-4.0 MF=6 capture-balance SHA-256:
+  `306a0d893f7ea8e3b5490a7cc6f5556a6de523e0171bb98dc23571bec1febbce`;
+- JEFF-4.0 capture-moment print-comparison SHA-256:
+  `e3b995922e91214d07f708c307c38f19166fe4b51c38e0611c6fcc01d5bdd831`.
 
 The baseline-comparison artifact is intentionally the immutable v0.1
 log-only comparison. ADR 0017 and the v0.2 report supersede only its treatment
@@ -103,10 +111,18 @@ source-node samples, and 58 shared nodes agree with NJOY's printed diagnostics
 within `4.827186715582159e-5`. This rules out that supported continuum term as
 the cause of N-15's different outcome; it does not by itself prove the cause.
 
-The next high-value work is the complete reaction energy-release balance,
-starting with the MF=6/MT=102 photon and recoil treatment present in the JEFF
-candidate. Further whole-library candidates remain useful controls, but they
-should not displace that causal investigation.
+The MF=6/MT=102 causal check is now complete. All 37 JEFF spectra normalize
+within `3.93e-7`, and independent first/second moments reproduce NJOY's photon
+and synthesized-recoil print tables at 23 shared nodes. Nevertheless, 33 source
+nodes fail a conservative 1% Q-value balance screen, reaching 5.7512% at 20
+MeV. Nine failures oversupply photons before any positive recoil is added,
+including a 42.3 keV thermal excess. NJOY reports zero violations because its
+File 6 kinematic limits are set to the calculated File 6 result itself; that is
+not an independent conservation test.
+
+The next high-value causal target is O-16's single remaining JEFF violation,
+then C-13, H-2, O-17, and O-18. Further whole-library candidates remain useful
+controls, but they should not displace those reaction-level investigations.
 
 ## Primary sources
 
@@ -115,3 +131,4 @@ should not displace that causal investigation.
 - [NJOY2016 HEATR manual](https://github.com/njoy/NJOY2016-manual/blob/master/heatx.tex)
 - [Source-aware photon-production decision](../adr/0017-source-aware-photon-production-suitability.md)
 - [Independent continuum photon-moment decision](../adr/0018-independent-continuum-photon-moments.md)
+- [Independent MF=6 capture-balance decision](../adr/0019-independent-mf6-capture-photon-balance.md)

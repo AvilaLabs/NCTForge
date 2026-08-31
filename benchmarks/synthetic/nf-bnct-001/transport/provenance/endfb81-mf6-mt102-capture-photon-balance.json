@@ -1,0 +1,35 @@
+{
+  "schema_version": "nctforge.endf-mf6-capture-photon-balance/0.1.0",
+  "id": "nctforge.nf-bnct-001.endfb81-neutron-source-selection.v1.endf-mf6-capture-photon-balance.n15.mt102",
+  "case_id": "nf-bnct-001",
+  "scope": "single_law1_lct3_photon_product_without_explicit_recoil",
+  "qualification": "missing_capture_photon_data_rejected",
+  "evaluated_source_selection": {
+    "id": "nctforge.nf-bnct-001.endfb81-neutron-source-selection.v1",
+    "sha256": "3ed52248a0a201b638b5c78663f781f9354f619d76bee290831ff6311233b65d"
+  },
+  "photon_production_inventory": {
+    "id": "nctforge.nf-bnct-001.endfb81-neutron-source-selection.v1.endf-photon-production-inventory",
+    "sha256": "8ccf4da3f29d879e473b49f72fc14f979d002a05cb09947be21ba7624ec697cc"
+  },
+  "nuclide": "N15",
+  "endf_mat": 728,
+  "reaction_mt": 102,
+  "source_evaluation_sha256": "e3cba9a1d7b462d73fd328b7a290bb8f4e166ab68c7d982a10f90259fdb7fe26",
+  "file3_section_sha256": "6215c15d1bbfcb28a54b5918494f11dfb97f25c962e7ba4f92fe62df86074d76",
+  "file6_section_sha256": null,
+  "photon_source": "missing",
+  "file6_reference_frame": null,
+  "recoil_model": "independent_photon_momentum_second_moment_approximation",
+  "target_atomic_weight_ratio": 14.871,
+  "reaction_q_value_ev": 2490000.0,
+  "neutron_rest_energy_ev": 939565420.52539,
+  "normalization_tolerance": 0.0001,
+  "relative_energy_balance_tolerance": 0.01,
+  "samples": [],
+  "sample_count": 0,
+  "failed_normalization_sample_count": 0,
+  "failed_energy_balance_sample_count": 0,
+  "maximum_absolute_normalization_error": 0.0,
+  "maximum_absolute_relative_energy_residual": 0.0
+}

@@ -4,8 +4,10 @@ This directory records the first controlled alternate-library assessment for
 `NF-BNCT-001`. JEFF-4.0 remains rejected for the frozen transported-photon
 KERMA requirement. The immutable log-only v0.1 report rejects six nuclides; the
 source-aware v0.2 report correctly clears N-15's valid File 13 alternative and
-rejects five. One baseline rejection is resolved, but two new rejections are
-introduced.
+rejects five. The independent MF=6 capture-balance gate rejects N-15 again
+because 33 of 37 source nodes miss the Q-value budget by more than 1%. One
+baseline rejection clears only under the narrow processor gate, while the
+candidate remains unsuitable for response-table generation.
 
 The repository retains only manifests, deterministic NJOY decks, and evidence
 receipts. It does not redistribute the 608 MB publisher archive, extracted
@@ -59,6 +61,18 @@ cargo run -p nctforge-cli -- njoy verify-photon-moment-comparison \
   --receipt benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/njoy2016-78-execution-receipt.json \
   --execution-directory PATH_TO_JEFF40_EXECUTION \
   --comparison-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-vs-njoy2016-78-continuum-photon-moments.json
+
+cargo run -p nctforge-cli -- njoy verify-capture-photon-balance \
+  --selection benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/evaluated-neutron-source-selection.json \
+  --evaluations-directory PATH_TO_EXACT_JEFF40_SELECTION \
+  --photon-inventory benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-endf-photon-production-inventory.json \
+  --balance-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-mf6-mt102-capture-photon-balance.json
+
+cargo run -p nctforge-cli -- njoy verify-capture-photon-moment-comparison \
+  --balance-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-mf6-mt102-capture-photon-balance.json \
+  --receipt benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/njoy2016-78-execution-receipt.json \
+  --execution-directory PATH_TO_JEFF40_EXECUTION \
+  --comparison-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-vs-njoy2016-78-mf6-capture-photon-moments.json
 ```
 
 The checked comparison is self-contained over the two content-addressed
@@ -74,4 +88,5 @@ cargo run -p nctforge-cli -- njoy verify-comparison \
 See [the detailed finding](../../../../../../docs/research/JEFF40_RESPONSE_TREATMENT_FINDINGS.md)
 and [ADR 0016](../../../../../../docs/adr/0016-versioned-response-treatment-candidates.md)
 plus [ADR 0017](../../../../../../docs/adr/0017-source-aware-photon-production-suitability.md)
-and [ADR 0018](../../../../../../docs/adr/0018-independent-continuum-photon-moments.md).
+and [ADR 0018](../../../../../../docs/adr/0018-independent-continuum-photon-moments.md),
+then [ADR 0019](../../../../../../docs/adr/0019-independent-mf6-capture-photon-balance.md).

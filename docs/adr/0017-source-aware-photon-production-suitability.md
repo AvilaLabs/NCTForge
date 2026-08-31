@@ -4,6 +4,8 @@
 
 **Date:** 2026-08-31
 
+**Subsequent refinement:** [ADR 0019](0019-independent-mf6-capture-photon-balance.md)
+
 ## Context
 
 ADR 0013 intentionally treated every NJOY2016.78

@@ -12,10 +12,14 @@ use clap::{Args, Parser, Subcommand};
 use nctforge_dicom::synthetic::generate_nf_bnct_001;
 use nctforge_dicom::verify_nf_bnct_001;
 use nctforge_njoy::{
-    DEFAULT_NJOY_PRINT_RELATIVE_TOLERANCE, DEFAULT_NJOY_TIMEOUT_SECONDS,
-    DEFAULT_SPECTRUM_NORMALIZATION_TOLERANCE, EndfContinuumPhotonMomentReport,
-    EndfContinuumPhotonMomentReportDocument, EndfPhotonProductionInventory,
-    EndfPhotonProductionInventoryDocument, NjoyExecutionOptions, NjoyExecutionReceipt,
+    DEFAULT_CAPTURE_ENERGY_BALANCE_RELATIVE_TOLERANCE,
+    DEFAULT_NJOY_CAPTURE_PRINT_RELATIVE_TOLERANCE, DEFAULT_NJOY_PRINT_RELATIVE_TOLERANCE,
+    DEFAULT_NJOY_TIMEOUT_SECONDS, DEFAULT_SPECTRUM_NORMALIZATION_TOLERANCE,
+    EndfContinuumPhotonMomentReport, EndfContinuumPhotonMomentReportDocument,
+    EndfMf6CapturePhotonBalanceQualification, EndfMf6CapturePhotonBalanceReport,
+    EndfMf6CapturePhotonBalanceReportDocument, EndfPhotonProductionInventory,
+    EndfPhotonProductionInventoryDocument, NjoyCapturePhotonMomentComparison,
+    NjoyCapturePhotonMomentComparisonDocument, NjoyExecutionOptions, NjoyExecutionReceipt,
     NjoyExecutionReceiptDocument, NjoyInputArtifacts, NjoyInputBundle, NjoyPhotonMomentComparison,
     NjoyPhotonMomentComparisonDocument, NjoySourceAwareSuitabilityReport,
     NjoySourceAwareSuitabilityReportDocument, NjoySuitabilityComparison,
@@ -202,6 +206,78 @@ enum NjoyCommand {
         /// Independently calculated continuum photon-moment report.
         #[arg(long)]
         moment_report: PathBuf,
+        /// External execution receipt used as the trust anchor.
+        #[arg(long)]
+        receipt: PathBuf,
+        /// Complete execution directory bound by the receipt.
+        #[arg(long)]
+        execution_directory: PathBuf,
+        /// Comparison report to validate and regenerate.
+        #[arg(long)]
+        comparison_report: PathBuf,
+    },
+    /// Independently test an MF=6/MT=102 photon source against its capture energy budget.
+    CalculateCapturePhotonBalance {
+        /// Case-scoped evaluated-neutron source-selection manifest.
+        #[arg(long)]
+        selection: PathBuf,
+        /// Directory containing exactly the selected extracted ENDF files.
+        #[arg(long)]
+        evaluations_directory: PathBuf,
+        /// Verified source-bound photon-production inventory.
+        #[arg(long)]
+        photon_inventory: PathBuf,
+        /// Nuclide identifier in the source selection (for example, N15).
+        #[arg(long)]
+        nuclide: String,
+        /// Maximum accepted absolute spectrum-normalization error.
+        #[arg(long, default_value_t = DEFAULT_SPECTRUM_NORMALIZATION_TOLERANCE)]
+        normalization_tolerance: f64,
+        /// Maximum accepted relative residual in the capture energy budget.
+        #[arg(long, default_value_t = DEFAULT_CAPTURE_ENERGY_BALANCE_RELATIVE_TOLERANCE)]
+        relative_energy_tolerance: f64,
+        /// New source-bound capture-balance JSON report; it must not already exist.
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Regenerate and verify an independent MF=6 capture photon-balance report.
+    VerifyCapturePhotonBalance {
+        /// Case-scoped evaluated-neutron source-selection manifest.
+        #[arg(long)]
+        selection: PathBuf,
+        /// Directory containing exactly the selected extracted ENDF files.
+        #[arg(long)]
+        evaluations_directory: PathBuf,
+        /// Verified source-bound photon-production inventory.
+        #[arg(long)]
+        photon_inventory: PathBuf,
+        /// Capture photon-balance report to validate and regenerate.
+        #[arg(long)]
+        balance_report: PathBuf,
+    },
+    /// Compare independent capture moments with NJOY's photon and recoil print tables.
+    CompareCapturePhotonMoments {
+        /// Independently calculated MF=6 capture photon-balance report.
+        #[arg(long)]
+        balance_report: PathBuf,
+        /// External execution receipt used as the trust anchor.
+        #[arg(long)]
+        receipt: PathBuf,
+        /// Complete execution directory bound by the receipt.
+        #[arg(long)]
+        execution_directory: PathBuf,
+        /// Relative tolerance appropriate to NJOY's five-significant-digit printout.
+        #[arg(long, default_value_t = DEFAULT_NJOY_CAPTURE_PRINT_RELATIVE_TOLERANCE)]
+        relative_tolerance: f64,
+        /// New content-bound comparison JSON path; it must not already exist.
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Regenerate and verify an NJOY MF=6 capture-moment print comparison.
+    VerifyCapturePhotonMomentComparison {
+        /// Independently calculated MF=6 capture photon-balance report.
+        #[arg(long)]
+        balance_report: PathBuf,
         /// External execution receipt used as the trust anchor.
         #[arg(long)]
         receipt: PathBuf,
@@ -809,6 +885,173 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                     }
                 );
             }
+            NjoyCommand::CalculateCapturePhotonBalance {
+                selection,
+                evaluations_directory,
+                photon_inventory,
+                nuclide,
+                normalization_tolerance,
+                relative_energy_tolerance,
+                output,
+            } => {
+                let selection = EvaluatedNeutronSourceSelectionDocument::from_path(&selection)?;
+                let inventory =
+                    EndfPhotonProductionInventoryDocument::from_path(&photon_inventory)?;
+                let report = EndfMf6CapturePhotonBalanceReport::calculate(
+                    &selection,
+                    &evaluations_directory,
+                    &inventory,
+                    &nuclide,
+                    normalization_tolerance,
+                    relative_energy_tolerance,
+                )?;
+                let result = report.write_new(&output)?;
+                println!("calculated independent MF=6 capture photon balance");
+                println!("report: {}", result.report_path.display());
+                println!("report SHA-256: {}", result.report_sha256);
+                println!("nuclide: {}", result.report.nuclide);
+                println!("incident-energy samples: {}", result.report.sample_count);
+                println!(
+                    "failed normalization samples: {}",
+                    result.report.failed_normalization_sample_count
+                );
+                println!(
+                    "failed energy-balance samples: {}",
+                    result.report.failed_energy_balance_sample_count
+                );
+                println!(
+                    "maximum absolute relative energy residual: {:.12e}",
+                    result.report.maximum_absolute_relative_energy_residual
+                );
+                println!(
+                    "qualification: {}",
+                    qualification_name(result.report.qualification)
+                );
+                if result.report.failed_normalization_sample_count > 0
+                    || result.report.failed_energy_balance_sample_count > 0
+                    || result.report.sample_count == 0
+                {
+                    return Err(io::Error::other(format!(
+                        "{} MF=6 capture photon source did not pass the independent screening gate; report was preserved",
+                        result.report.nuclide
+                    ))
+                    .into());
+                }
+            }
+            NjoyCommand::VerifyCapturePhotonBalance {
+                selection,
+                evaluations_directory,
+                photon_inventory,
+                balance_report,
+            } => {
+                let selection = EvaluatedNeutronSourceSelectionDocument::from_path(&selection)?;
+                let inventory =
+                    EndfPhotonProductionInventoryDocument::from_path(&photon_inventory)?;
+                let report = EndfMf6CapturePhotonBalanceReportDocument::from_path(&balance_report)?;
+                report.verify_against_sources(&selection, &evaluations_directory, &inventory)?;
+                println!(
+                    "verified MF=6 capture photon balance {}",
+                    balance_report.display()
+                );
+                println!("report SHA-256: {}", report.sha256);
+                println!("nuclide: {}", report.report.nuclide);
+                println!("incident-energy samples: {}", report.report.sample_count);
+                println!(
+                    "failed normalization samples: {}",
+                    report.report.failed_normalization_sample_count
+                );
+                println!(
+                    "failed energy-balance samples: {}",
+                    report.report.failed_energy_balance_sample_count
+                );
+                println!(
+                    "qualification: {}",
+                    qualification_name(report.report.qualification)
+                );
+            }
+            NjoyCommand::CompareCapturePhotonMoments {
+                balance_report,
+                receipt,
+                execution_directory,
+                relative_tolerance,
+                output,
+            } => {
+                let balance =
+                    EndfMf6CapturePhotonBalanceReportDocument::from_path(&balance_report)?;
+                let execution = NjoyExecutionReceiptDocument::from_path(&receipt)?;
+                let comparison = NjoyCapturePhotonMomentComparison::compare(
+                    &balance,
+                    &execution,
+                    &execution_directory,
+                    relative_tolerance,
+                )?;
+                let result = comparison.write_new(&output)?;
+                println!("compared independent capture moments with NJOY diagnostics");
+                println!("comparison: {}", result.comparison_path.display());
+                println!("comparison SHA-256: {}", result.comparison_sha256);
+                println!(
+                    "compared diagnostic samples: {}",
+                    result.comparison.compared_sample_count
+                );
+                println!(
+                    "uncompared independent samples: {}",
+                    result.comparison.uncompared_independent_sample_count
+                );
+                println!(
+                    "skipped processor-only samples: {}",
+                    result.comparison.skipped_processor_sample_count
+                );
+                println!(
+                    "maximum relative difference: {:.12e}",
+                    result.comparison.maximum_relative_difference
+                );
+                if result.comparison.failed_sample_count == 0 {
+                    println!(
+                        "qualification: independent_capture_moments_match_processor_print_unreviewed"
+                    );
+                } else {
+                    println!("qualification: processor_capture_print_mismatch_rejected");
+                    return Err(io::Error::other(format!(
+                        "{} capture-moment sample(s) disagree with NJOY diagnostics; comparison was preserved",
+                        result.comparison.failed_sample_count
+                    ))
+                    .into());
+                }
+            }
+            NjoyCommand::VerifyCapturePhotonMomentComparison {
+                balance_report,
+                receipt,
+                execution_directory,
+                comparison_report,
+            } => {
+                let balance =
+                    EndfMf6CapturePhotonBalanceReportDocument::from_path(&balance_report)?;
+                let execution = NjoyExecutionReceiptDocument::from_path(&receipt)?;
+                let comparison =
+                    NjoyCapturePhotonMomentComparisonDocument::from_path(&comparison_report)?;
+                comparison.verify_against_evidence(&balance, &execution, &execution_directory)?;
+                println!(
+                    "verified NJOY capture-moment comparison {}",
+                    comparison_report.display()
+                );
+                println!("comparison SHA-256: {}", comparison.sha256);
+                println!(
+                    "compared diagnostic samples: {}",
+                    comparison.comparison.compared_sample_count
+                );
+                println!(
+                    "failed samples: {}",
+                    comparison.comparison.failed_sample_count
+                );
+                println!(
+                    "qualification: {}",
+                    if comparison.comparison.failed_sample_count == 0 {
+                        "independent_capture_moments_match_processor_print_unreviewed"
+                    } else {
+                        "processor_capture_print_mismatch_rejected"
+                    }
+                );
+            }
             NjoyCommand::Execute {
                 selection,
                 material,
@@ -1135,4 +1378,21 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
 
 fn bytes_to_gib(bytes: u64) -> f64 {
     bytes as f64 / 1024.0_f64.powi(3)
+}
+
+fn qualification_name(qualification: EndfMf6CapturePhotonBalanceQualification) -> &'static str {
+    match qualification {
+        EndfMf6CapturePhotonBalanceQualification::MissingCapturePhotonDataRejected => {
+            "missing_capture_photon_data_rejected"
+        }
+        EndfMf6CapturePhotonBalanceQualification::SpectrumNormalizationRejected => {
+            "spectrum_normalization_rejected"
+        }
+        EndfMf6CapturePhotonBalanceQualification::CapturePhotonEnergyBalanceRejected => {
+            "capture_photon_energy_balance_rejected"
+        }
+        EndfMf6CapturePhotonBalanceQualification::CapturePhotonEnergyBalanceCheckedUnreviewed => {
+            "capture_photon_energy_balance_checked_unreviewed"
+        }
+    }
 }

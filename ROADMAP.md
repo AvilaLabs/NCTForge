@@ -135,9 +135,13 @@ Implementation status:
 - complete: independently integrate all eight supported N-15 File 13/File 15
   continuum photon-energy moments for both selections and reproduce 58 shared-
   node NJOY diagnostics within their five-digit print precision;
-- in progress: independently close the complete per-reaction energy balance,
-  beginning with N-15 MF=6/MT=102 photon and recoil treatment, before defining
-  a reviewed response treatment;
+- complete: independently reconstruct JEFF N-15 MF=6/MT=102 photon first and
+  second moments, photon-momentum recoil, and Q-value balance; 33 of 37 source
+  nodes fail a conservative 1% screen even though all spectra normalize and
+  NJOY's self-bounded kinematic check reports zero violations;
+- in progress: extend independent reaction-balance diagnostics to the five
+  remaining JEFF-4.0 failures, beginning with O-16's single violation, before
+  defining a reviewed response treatment;
 - pending: generate the first reviewable response tables only after the
   diagnostic blocker is resolved through a versioned, reviewed data profile;
 - pending: smoke execution, statepoint import, and independent estimator

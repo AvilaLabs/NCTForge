@@ -576,6 +576,26 @@ pub(crate) fn parse_evaluation(
     bytes: &[u8],
     expected_mat: u16,
 ) -> Result<Vec<ParsedSection>, EndfPhotonInventoryError> {
+    parse_evaluation_matching(bytes, expected_mat, |file_number, reaction_mt| {
+        RELEVANT_FILES.contains(&file_number) && reaction_mt > 0
+    })
+}
+
+pub(crate) fn parse_evaluation_sections(
+    bytes: &[u8],
+    expected_mat: u16,
+    selected_sections: &[(u16, u16)],
+) -> Result<Vec<ParsedSection>, EndfPhotonInventoryError> {
+    parse_evaluation_matching(bytes, expected_mat, |file_number, reaction_mt| {
+        selected_sections.contains(&(file_number, reaction_mt))
+    })
+}
+
+fn parse_evaluation_matching(
+    bytes: &[u8],
+    expected_mat: u16,
+    mut include: impl FnMut(u16, u16) -> bool,
+) -> Result<Vec<ParsedSection>, EndfPhotonInventoryError> {
     let mut sections = Vec::new();
     let mut current: Option<SectionBuilder> = None;
     let mut seen = BTreeSet::new();
@@ -614,7 +634,7 @@ pub(crate) fn parse_evaluation(
             if mf != builder.file_number || mt != builder.reaction_mt {
                 return Err(EndfPhotonInventoryError::MalformedEndf {
                     line: line_number,
-                    message: "photon-data section changed before SEND".into(),
+                    message: "selected ENDF section changed before SEND".into(),
                 });
             }
             if mat != expected_mat {
@@ -628,7 +648,7 @@ pub(crate) fn parse_evaluation(
             continue;
         }
 
-        if RELEVANT_FILES.contains(&mf) && mt > 0 {
+        if include(mf, mt) {
             if mat != expected_mat {
                 return Err(EndfPhotonInventoryError::UnexpectedEndfMaterial {
                     line: line_number,

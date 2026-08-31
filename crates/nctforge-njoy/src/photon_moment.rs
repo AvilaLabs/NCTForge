@@ -487,19 +487,19 @@ impl EndfContinuumPhotonMomentReportDocument {
 }
 
 #[derive(Debug, Clone)]
-struct TabulatedFunction {
-    interpolation: Vec<InterpolationRegion>,
-    points: Vec<(f64, f64)>,
+pub(crate) struct TabulatedFunction {
+    pub(crate) interpolation: Vec<InterpolationRegion>,
+    pub(crate) points: Vec<(f64, f64)>,
 }
 
 #[derive(Debug, Clone, Copy)]
-struct InterpolationRegion {
-    upper_point_index: usize,
-    law: i64,
+pub(crate) struct InterpolationRegion {
+    pub(crate) upper_point_index: usize,
+    pub(crate) law: i64,
 }
 
 impl TabulatedFunction {
-    fn evaluate(&self, x: f64) -> Result<f64, EndfPhotonMomentError> {
+    pub(crate) fn evaluate(&self, x: f64) -> Result<f64, EndfPhotonMomentError> {
         if !x.is_finite() {
             return Err(EndfPhotonMomentError::InterpolationOutsideDomain(x));
         }
@@ -517,8 +517,14 @@ impl TabulatedFunction {
     }
 
     fn integrate(&self) -> Result<(f64, f64), EndfPhotonMomentError> {
+        let (integral, first_moment, _) = self.integrate_moments()?;
+        Ok((integral, first_moment))
+    }
+
+    pub(crate) fn integrate_moments(&self) -> Result<(f64, f64, f64), EndfPhotonMomentError> {
         let mut integral = 0.0;
         let mut first_moment = 0.0;
+        let mut second_moment = 0.0;
         for (segment, points) in self.points.windows(2).enumerate() {
             let (x0, y0) = points[0];
             let (x1, y1) = points[1];
@@ -529,6 +535,7 @@ impl TabulatedFunction {
                 1 => {
                     integral += y0 * (x1 - x0);
                     first_moment += y0 * (x1 * x1 - x0 * x0) / 2.0;
+                    second_moment += y0 * (x1.powi(3) - x0.powi(3)) / 3.0;
                 }
                 2 => {
                     let slope = (y1 - y0) / (x1 - x0);
@@ -536,11 +543,15 @@ impl TabulatedFunction {
                     first_moment += y0 * (x1 * x1 - x0 * x0) / 2.0
                         + slope
                             * ((x1.powi(3) - x0.powi(3)) / 3.0 - x0 * (x1 * x1 - x0 * x0) / 2.0);
+                    second_moment += y0 * (x1.powi(3) - x0.powi(3)) / 3.0
+                        + slope
+                            * ((x1.powi(4) - x0.powi(4)) / 4.0
+                                - x0 * (x1.powi(3) - x0.powi(3)) / 3.0);
                 }
                 law => return Err(EndfPhotonMomentError::UnsupportedInterpolation(law)),
             }
         }
-        Ok((integral, first_moment))
+        Ok((integral, first_moment, second_moment))
     }
 
     fn law_for_segment(&self, zero_based_segment: usize) -> Result<i64, EndfPhotonMomentError> {
@@ -633,7 +644,7 @@ fn parse_single_component_file15(
     })
 }
 
-fn parse_tab1(
+pub(crate) fn parse_tab1(
     section: &ParsedSection,
     cursor: &mut usize,
 ) -> Result<(EndfRecord, TabulatedFunction), EndfPhotonMomentError> {
@@ -657,7 +668,7 @@ fn parse_tab1(
     ))
 }
 
-fn parse_tab2(
+pub(crate) fn parse_tab2(
     section: &ParsedSection,
     cursor: &mut usize,
 ) -> Result<(EndfRecord, Vec<InterpolationRegion>), EndfPhotonMomentError> {
@@ -708,7 +719,7 @@ fn validate_points(points: &[(f64, f64)]) -> Result<(), EndfPhotonMomentError> {
     Ok(())
 }
 
-fn take_words(
+pub(crate) fn take_words(
     section: &ParsedSection,
     cursor: &mut usize,
     word_count: usize,
@@ -736,7 +747,7 @@ fn take_words(
     Ok(words)
 }
 
-fn take_control(
+pub(crate) fn take_control(
     section: &ParsedSection,
     cursor: &mut usize,
 ) -> Result<EndfRecord, EndfPhotonMomentError> {
@@ -745,7 +756,10 @@ fn take_control(
     Ok(record)
 }
 
-fn control(section: &ParsedSection, index: usize) -> Result<EndfRecord, EndfPhotonMomentError> {
+pub(crate) fn control(
+    section: &ParsedSection,
+    index: usize,
+) -> Result<EndfRecord, EndfPhotonMomentError> {
     let record = section
         .records
         .get(index)
@@ -757,11 +771,11 @@ fn control(section: &ParsedSection, index: usize) -> Result<EndfRecord, EndfPhot
     Ok(record)
 }
 
-fn value(record: EndfRecord, index: usize) -> Result<f64, EndfPhotonMomentError> {
+pub(crate) fn value(record: EndfRecord, index: usize) -> Result<f64, EndfPhotonMomentError> {
     record.values[index].ok_or(EndfPhotonMomentError::InvalidTabulation)
 }
 
-fn find_section(
+pub(crate) fn find_section(
     sections: &[ParsedSection],
     file_number: u16,
     reaction_mt: u16,
@@ -775,7 +789,10 @@ fn find_section(
         })
 }
 
-fn require_consumed(section: &ParsedSection, cursor: usize) -> Result<(), EndfPhotonMomentError> {
+pub(crate) fn require_consumed(
+    section: &ParsedSection,
+    cursor: usize,
+) -> Result<(), EndfPhotonMomentError> {
     if cursor == section.records.len() {
         Ok(())
     } else {
@@ -828,7 +845,7 @@ fn exact_i64(value: f64) -> Result<i64, EndfPhotonMomentError> {
     }
 }
 
-fn positive_usize(value: i64) -> Result<usize, EndfPhotonMomentError> {
+pub(crate) fn positive_usize(value: i64) -> Result<usize, EndfPhotonMomentError> {
     usize::try_from(value)
         .ok()
         .filter(|value| *value > 0)
@@ -965,6 +982,8 @@ mod tests {
         let (integral, moment) = function.integrate().unwrap();
         assert_eq!(integral, 1.0);
         assert_eq!(moment, 2.0);
+        let (_, _, second_moment) = function.integrate_moments().unwrap();
+        assert!((second_moment - 16.0 / 3.0).abs() < 1.0e-14);
     }
 
     #[test]
@@ -979,6 +998,8 @@ mod tests {
         let (integral, moment) = function.integrate().unwrap();
         assert_eq!(integral, 1.0);
         assert!((moment - 4.0 / 3.0).abs() < 1.0e-15);
+        let (_, _, second_moment) = function.integrate_moments().unwrap();
+        assert_eq!(second_moment, 2.0);
     }
 
     #[test]

@@ -1,6 +1,8 @@
 # ADR 0018: Independent Continuum Photon-Energy Moments
 
-**Status:** Accepted and implemented; full reaction balance remains pending
+**Status:** Accepted and implemented
+
+**Subsequent refinement:** [ADR 0019](0019-independent-mf6-capture-photon-balance.md)
 
 **Date:** 2026-08-31
 
@@ -97,12 +99,12 @@ Evidence hashes:
 - This result rules out the supported continuum photon moments as the cause of
   the different N-15 suitability outcomes. It does not prove which remaining
   term causes that difference.
-- The next causal check is the complete per-reaction energy balance, beginning
-  with N-15 MF=6/MT=102 photon and recoil treatment, then the five remaining
-  JEFF-4.0 failures.
+- ADR 0019 now completes the next causal check for N-15 MF=6/MT=102. It
+  independently rejects the JEFF-4.0 capture photon source despite NJOY's zero
+  capture kinematic violations.
 - No response table is promoted. Discrete photons, all MF=6 product laws,
   recoil energy, Q-value balance, and the complete MT 301 construction remain
-  outside this contract.
+  outside this contract itself; ADR 0019 covers the bounded MF=6 capture case.
 
 ## Primary sources
 
