@@ -1,5 +1,12 @@
 # NCTForge
 
+[![CI](https://github.com/AvilaLabs/NCTForge/actions/workflows/ci.yml/badge.svg)](https://github.com/AvilaLabs/NCTForge/actions/workflows/ci.yml)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![Status: early research](https://img.shields.io/badge/status-early_research-orange.svg)](ROADMAP.md)
+[![Clinical use: not validated](https://img.shields.io/badge/clinical_use-not_validated-red.svg)](DISCLAIMER.md)
+
+**English** | [日本語](README.ja.md)
+
 NCTForge is a proposed transport-neutral, DICOM-native research and independent
 verification workbench for boron neutron capture therapy (BNCT).
 
