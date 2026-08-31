@@ -19,7 +19,8 @@ use nctforge_njoy::{
     EndfMf6CapturePhotonBalanceQualification, EndfMf6CapturePhotonBalanceReport,
     EndfMf6CapturePhotonBalanceReportDocument, EndfPhotonProductionInventory,
     EndfPhotonProductionInventoryDocument, NjoyCapturePhotonMomentComparison,
-    NjoyCapturePhotonMomentComparisonDocument, NjoyExecutionOptions, NjoyExecutionReceipt,
+    NjoyCapturePhotonMomentComparisonDocument, NjoyDomainAwareSuitabilityReport,
+    NjoyDomainAwareSuitabilityReportDocument, NjoyExecutionOptions, NjoyExecutionReceipt,
     NjoyExecutionReceiptDocument, NjoyInputArtifacts, NjoyInputBundle, NjoyPhotonMomentComparison,
     NjoyPhotonMomentComparisonDocument, NjoySourceAwareSuitabilityReport,
     NjoySourceAwareSuitabilityReportDocument, NjoySuitabilityComparison,
@@ -29,7 +30,7 @@ use nctforge_njoy::{
 use nctforge_openmc::{
     DataAcquisitionClient, DataAcquisitionProfileDocument, DataAcquisitionReceiptDocument,
     EvaluatedNeutronSourceSelectionDocument, EvaluatedSourceQualification, NuclearDataManifest,
-    OpenMcBackend,
+    OpenMcBackend, OpenMcNeutronTransportDomain, OpenMcNeutronTransportDomainDocument,
 };
 use nctforge_transport::{MaterialDefinition, TransportBackend};
 
@@ -399,6 +400,66 @@ enum NjoyCommand {
         #[arg(long)]
         source_aware_report: PathBuf,
     },
+    /// Scope source-aware kinematic findings to a content-bound transport domain.
+    AssessDomainAware {
+        /// Verified source-aware v0.2 transported-photon suitability report.
+        #[arg(long)]
+        source_aware_report: PathBuf,
+        /// Verified legacy v0.1 transported-photon suitability report.
+        #[arg(long)]
+        legacy_report: PathBuf,
+        /// External execution receipt used as the trust anchor.
+        #[arg(long)]
+        receipt: PathBuf,
+        /// Complete execution directory bound by the receipt.
+        #[arg(long)]
+        execution_directory: PathBuf,
+        /// Exact NJOY input manifest bound by the execution receipt.
+        #[arg(long)]
+        input_manifest: PathBuf,
+        /// Exact OpenMC nuclear-data manifest used to derive the domain.
+        #[arg(long)]
+        nuclear_data_manifest: PathBuf,
+        /// Exact material JSON shared by the NJOY run and transport domain.
+        #[arg(long)]
+        material: PathBuf,
+        /// Derived OpenMC neutron transport-domain document.
+        #[arg(long)]
+        transport_domain: PathBuf,
+        /// New v0.3 JSON report path; it must not already exist.
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Regenerate and verify a transport-domain-aware v0.3 suitability report.
+    VerifyDomainAware {
+        /// Verified source-aware v0.2 transported-photon suitability report.
+        #[arg(long)]
+        source_aware_report: PathBuf,
+        /// Verified legacy v0.1 transported-photon suitability report.
+        #[arg(long)]
+        legacy_report: PathBuf,
+        /// External execution receipt used as the trust anchor.
+        #[arg(long)]
+        receipt: PathBuf,
+        /// Complete execution directory bound by the receipt.
+        #[arg(long)]
+        execution_directory: PathBuf,
+        /// Exact NJOY input manifest bound by the execution receipt.
+        #[arg(long)]
+        input_manifest: PathBuf,
+        /// Exact OpenMC nuclear-data manifest used to derive the domain.
+        #[arg(long)]
+        nuclear_data_manifest: PathBuf,
+        /// Exact material JSON shared by the NJOY run and transport domain.
+        #[arg(long)]
+        material: PathBuf,
+        /// Derived OpenMC neutron transport-domain document.
+        #[arg(long)]
+        transport_domain: PathBuf,
+        /// Domain-aware v0.3 report to validate and regenerate.
+        #[arg(long)]
+        domain_aware_report: PathBuf,
+    },
     /// Compare a candidate suitability report against a rejected baseline.
     CompareSuitability {
         /// Rejected baseline transported-photon suitability report.
@@ -474,6 +535,30 @@ enum OpenMcDataCommand {
         /// Optional material definition whose required capabilities must pass.
         #[arg(long)]
         material: Option<PathBuf>,
+    },
+    /// Derive the common neutron transport interval for an exact material.
+    DeriveTransportDomain {
+        /// Case-scoped OpenMC nuclear-data capability manifest.
+        #[arg(long)]
+        manifest: PathBuf,
+        /// Exact material definition selecting nuclides and temperature.
+        #[arg(long)]
+        material: PathBuf,
+        /// New content-bound transport-domain JSON path.
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Regenerate and verify a neutron transport-domain document.
+    VerifyTransportDomain {
+        /// Case-scoped OpenMC nuclear-data capability manifest.
+        #[arg(long)]
+        manifest: PathBuf,
+        /// Exact material definition selecting nuclides and temperature.
+        #[arg(long)]
+        material: PathBuf,
+        /// Transport-domain document to validate and regenerate.
+        #[arg(long)]
+        transport_domain: PathBuf,
     },
 }
 
@@ -650,6 +735,46 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                         manifest.validate_for_material(&material)?;
                         println!("material capabilities: verified");
                     }
+                }
+                OpenMcDataCommand::DeriveTransportDomain {
+                    manifest,
+                    material,
+                    output,
+                } => {
+                    let manifest_bytes = fs::read(manifest)?;
+                    let material_bytes = fs::read(material)?;
+                    let domain =
+                        OpenMcNeutronTransportDomain::derive(&manifest_bytes, &material_bytes)?;
+                    let result = domain.write_new(&output)?;
+                    println!("derived OpenMC neutron transport domain");
+                    println!("domain: {}", result.domain_path.display());
+                    println!("domain SHA-256: {}", result.domain_sha256);
+                    println!(
+                        "closed diagnostic interval: [{}, {}] eV",
+                        result.domain.energy_range_ev[0], result.domain.energy_range_ev[1]
+                    );
+                    println!("qualification: backend_capability_derived_unreviewed");
+                }
+                OpenMcDataCommand::VerifyTransportDomain {
+                    manifest,
+                    material,
+                    transport_domain,
+                } => {
+                    let manifest_bytes = fs::read(manifest)?;
+                    let material_bytes = fs::read(material)?;
+                    let domain =
+                        OpenMcNeutronTransportDomainDocument::from_path(&transport_domain)?;
+                    domain.verify_against_inputs(&manifest_bytes, &material_bytes)?;
+                    println!(
+                        "verified OpenMC neutron transport domain {}",
+                        transport_domain.display()
+                    );
+                    println!("domain SHA-256: {}", domain.sha256);
+                    println!(
+                        "closed diagnostic interval: [{}, {}] eV",
+                        domain.domain.energy_range_ev[0], domain.domain.energy_range_ev[1]
+                    );
+                    println!("qualification: backend_capability_derived_unreviewed");
                 }
             },
         },
@@ -1284,6 +1409,121 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                 println!(
                     "informational File 13 findings: {}",
                     report.report.informational_processor_finding_count
+                );
+                println!(
+                    "qualification: {}",
+                    if report.report.rejected_run_count == 0 {
+                        "transported_photon_kerma_candidate_unreviewed"
+                    } else {
+                        "transported_photon_kerma_rejected"
+                    }
+                );
+            }
+            NjoyCommand::AssessDomainAware {
+                source_aware_report,
+                legacy_report,
+                receipt,
+                execution_directory,
+                input_manifest,
+                nuclear_data_manifest,
+                material,
+                transport_domain,
+                output,
+            } => {
+                let source_aware =
+                    NjoySourceAwareSuitabilityReportDocument::from_path(&source_aware_report)?;
+                let legacy = NjoySuitabilityReportDocument::from_path(&legacy_report)?;
+                let execution = NjoyExecutionReceiptDocument::from_path(&receipt)?;
+                legacy.verify_against_execution(&execution, &execution_directory)?;
+                let input_manifest = fs::read(input_manifest)?;
+                let nuclear_data_manifest = fs::read(nuclear_data_manifest)?;
+                let material = fs::read(material)?;
+                let transport_domain =
+                    OpenMcNeutronTransportDomainDocument::from_path(&transport_domain)?;
+                let report = NjoyDomainAwareSuitabilityReport::assess(
+                    &source_aware,
+                    &legacy,
+                    &execution,
+                    &input_manifest,
+                    &nuclear_data_manifest,
+                    &material,
+                    &transport_domain,
+                )?;
+                let result = report.write_new(&output)?;
+                println!("assessed transport-domain-aware suitability");
+                println!("report: {}", result.report_path.display());
+                println!("report SHA-256: {}", result.report_sha256);
+                println!(
+                    "kinematic violations: {} full / {} in-domain / {} out-of-domain",
+                    result.report.full_evaluation_kinematic_violation_count,
+                    result.report.in_domain_kinematic_violation_count,
+                    result.report.out_of_domain_kinematic_violation_count
+                );
+                println!(
+                    "reclassified nuclide runs: {}",
+                    result.report.reclassified_run_count
+                );
+                println!(
+                    "rejected nuclide runs: {}",
+                    result.report.rejected_run_count
+                );
+                if result.report.rejected_run_count == 0 {
+                    println!("qualification: transported_photon_kerma_candidate_unreviewed");
+                } else {
+                    println!("qualification: transported_photon_kerma_rejected");
+                    return Err(io::Error::other(format!(
+                        "{} NJOY run(s) remain unsuitable in the bound transport domain; report was preserved",
+                        result.report.rejected_run_count
+                    ))
+                    .into());
+                }
+            }
+            NjoyCommand::VerifyDomainAware {
+                source_aware_report,
+                legacy_report,
+                receipt,
+                execution_directory,
+                input_manifest,
+                nuclear_data_manifest,
+                material,
+                transport_domain,
+                domain_aware_report,
+            } => {
+                let source_aware =
+                    NjoySourceAwareSuitabilityReportDocument::from_path(&source_aware_report)?;
+                let legacy = NjoySuitabilityReportDocument::from_path(&legacy_report)?;
+                let execution = NjoyExecutionReceiptDocument::from_path(&receipt)?;
+                legacy.verify_against_execution(&execution, &execution_directory)?;
+                let input_manifest = fs::read(input_manifest)?;
+                let nuclear_data_manifest = fs::read(nuclear_data_manifest)?;
+                let material = fs::read(material)?;
+                let transport_domain =
+                    OpenMcNeutronTransportDomainDocument::from_path(&transport_domain)?;
+                let report =
+                    NjoyDomainAwareSuitabilityReportDocument::from_path(&domain_aware_report)?;
+                report.verify_against_evidence(
+                    &source_aware,
+                    &legacy,
+                    &execution,
+                    &input_manifest,
+                    &nuclear_data_manifest,
+                    &material,
+                    &transport_domain,
+                )?;
+                println!(
+                    "verified domain-aware suitability report {}",
+                    domain_aware_report.display()
+                );
+                println!("report SHA-256: {}", report.sha256);
+                println!(
+                    "kinematic violations: {} full / {} in-domain / {} out-of-domain",
+                    report.report.full_evaluation_kinematic_violation_count,
+                    report.report.in_domain_kinematic_violation_count,
+                    report.report.out_of_domain_kinematic_violation_count
+                );
+                println!(
+                    "reclassified nuclide runs: {}",
+                    report.report.reclassified_run_count
                 );
                 println!(
                     "qualification: {}",

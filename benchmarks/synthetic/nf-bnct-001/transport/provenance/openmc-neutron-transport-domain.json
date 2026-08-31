@@ -1,0 +1,22 @@
+{
+  "schema_version": "nctforge.openmc-neutron-transport-domain/0.1.0",
+  "id": "nctforge.nf-bnct-001.openmc-endfb81-official-library.b7ad59cb4a3d.v1.nctforge.nf-bnct-001.material.v1.neutron-transport-domain",
+  "backend_id": "openmc",
+  "openmc_version": "0.16.0",
+  "openmc_source_commit": "617d35a5063c57796b43428bc401e627d2011046",
+  "material": {
+    "id": "nctforge.nf-bnct-001.material.v1",
+    "sha256": "096e236d234acabc18f3027ae53be3c94f5608a86a1dec866cefc8bb330db813"
+  },
+  "nuclear_data_manifest": {
+    "id": "nctforge.nf-bnct-001.openmc-endfb81-official-library.b7ad59cb4a3d.v1",
+    "sha256": "3eaae09921172199c34f3fb236ae082ea5ace4567e0e04d2afcce357add73fb1"
+  },
+  "energy_range_ev": [
+    9.999999999999999e-6,
+    20000000.0
+  ],
+  "derivation": "common_selected_nuclide_temperature_grid_intersection",
+  "diagnostic_boundary_policy": "closed_conservative",
+  "qualification": "backend_capability_derived_unreviewed"
+}

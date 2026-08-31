@@ -287,6 +287,19 @@ photon tables and passes the material-specific transport capability preflight.
 The publisher provides no archive digest, so the receipt remains
 `acquisition_only`.
 
+The exact manifest and material derive the content-bound neutron diagnostic
+domain in
+[`transport/provenance/openmc-neutron-transport-domain.json`](transport/provenance/openmc-neutron-transport-domain.json),
+with SHA-256
+`1554dfb3167c0aa804cd6c893ce22a363cefbc0cba1b8f7781eeae1c2dccf89e`.
+Its closed interval is approximately 10 micro-eV through 20 MeV. Applying that
+same interval to the baseline retains all 72 findings and all four rejected
+nuclides in
+[`transport/provenance/njoy2016-78-transported-photon-domain-aware-suitability.json`](transport/provenance/njoy2016-78-transported-photon-domain-aware-suitability.json),
+SHA-256
+`e270708da7aabf0be6246d8b89fabf031af4ec01c155b015432e2ee174eb9d09`.
+ADR 0020 defines the conservative boundary and its candidate use.
+
 The pointwise official-OpenMC/NJOY MT 301 comparison is frozen in
 [`transport/provenance/openmc-njoy-mt301-comparison.json`](transport/provenance/openmc-njoy-mt301-comparison.json),
 with SHA-256
@@ -417,6 +430,8 @@ evaluated-neutron-source-selection.json
 nctforge-njoy-input-manifest.json
 nctforge-njoy-execution-receipt.json
 nctforge-njoy-transported-photon-suitability.json
+nctforge-openmc-neutron-transport-domain.json
+nctforge-njoy-transported-photon-domain-aware-suitability.json
 openmc-njoy-mt301-comparison.json
 njoy-inputs/
 njoy-outputs/

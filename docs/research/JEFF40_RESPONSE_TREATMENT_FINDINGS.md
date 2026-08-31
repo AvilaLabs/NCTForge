@@ -3,7 +3,7 @@
 **Recorded:** 2026-08-31
 
 **Evidence state:** Controlled candidate rejected after independent capture-
-balance refinement; not a qualified response table
+balance and transport-domain refinements; not a qualified response table
 
 ## Question
 
@@ -44,7 +44,7 @@ source files are the intended independent variable.
 | H-2 | candidate | rejected | 15 kinematic violations |
 | N-14 | candidate | candidate | no recognized blocker |
 | N-15 | rejected | rejected by deeper gate | valid File 13/14/15 path plus MF=6/MT=102 clears the narrow processor check, but 33 of 37 capture-balance nodes fail independently |
-| O-16 | rejected | rejected | one kinematic violation; recognized warning is absent |
+| O-16 | rejected | candidate under bound domain | sole finding is at 30 MeV, above the common 20 MeV OpenMC domain |
 | O-17 | rejected | rejected | 45 kinematic violations; recognized warning is absent |
 | O-18 | rejected | rejected | 27 kinematic violations; no-photon local fallback |
 
@@ -63,6 +63,13 @@ rejections are introduced, so the candidate remains rejected.
 That v0.2 aggregate describes its intentionally narrow source-aware processor
 gate. ADR 0019 adds a deeper source-level conservation gate and rejects N-15
 again; it does not mutate the immutable v0.2 evidence.
+
+ADR 0020 then derives the common OpenMC transport interval from the exact
+processed-data manifest and material instead of supplying a loose cutoff. Its
+closed diagnostic interval ends at 20 MeV. The domain-aware v0.3 report retains
+all 120 JEFF findings, classifies 114 in domain and six above it, and clears
+only O-16. C-13, H-2, O-17, and O-18 remain rejected. Together with the
+independent N-15 rejection, the candidate still has five unresolved nuclides.
 
 Both exact ten-nuclide inventories have zero format-pairing findings and eight
 evaluations with a HEATR photon source. This establishes record availability,
@@ -87,7 +94,13 @@ not energy-balance validity.
 - JEFF-4.0 MF=6 capture-balance SHA-256:
   `306a0d893f7ea8e3b5490a7cc6f5556a6de523e0171bb98dc23571bec1febbce`;
 - JEFF-4.0 capture-moment print-comparison SHA-256:
-  `e3b995922e91214d07f708c307c38f19166fe4b51c38e0611c6fcc01d5bdd831`.
+  `e3b995922e91214d07f708c307c38f19166fe4b51c38e0611c6fcc01d5bdd831`;
+- content-bound OpenMC transport-domain SHA-256:
+  `1554dfb3167c0aa804cd6c893ce22a363cefbc0cba1b8f7781eeae1c2dccf89e`;
+- baseline domain-aware suitability SHA-256:
+  `e270708da7aabf0be6246d8b89fabf031af4ec01c155b015432e2ee174eb9d09`;
+- JEFF-4.0 domain-aware suitability SHA-256:
+  `6e46b627d9b766e596ad2219eaafca970bd9f3c5df1d5e400ad644397c44ce55`.
 
 The baseline-comparison artifact is intentionally the immutable v0.1
 log-only comparison. ADR 0017 and the v0.2 report supersede only its treatment
@@ -100,9 +113,10 @@ external artifacts are not redistributed in the repository.
 
 JEFF-4.0 does not solve the response-treatment blocker under this method. The
 mixed changes are still diagnostically useful: O-16 loses the recognized
-incomplete-discrete-photon warning and drops from 15 violations to one, while
-O-17 loses the local-fallback warning but increases to 45 violations. That
-separates “photon records exist” from “the energy-balance response passes.”
+incomplete-discrete-photon warning and its sole remaining finding occurs at
+30 MeV, outside the bound first-calculation domain. O-17 loses the local-
+fallback warning but retains 43 in-domain violations. That separates “photon
+records exist” from “the energy-balance response passes.”
 
 The exact MF=6/12/13/14/15 inventory and source-aware interpretation are now
 complete. NCTForge has also independently integrated all eight supported N-15
@@ -120,9 +134,11 @@ including a 42.3 keV thermal excess. NJOY reports zero violations because its
 File 6 kinematic limits are set to the calculated File 6 result itself; that is
 not an independent conservation test.
 
-The next high-value causal target is O-16's single remaining JEFF violation,
-then C-13, H-2, O-17, and O-18. Further whole-library candidates remain useful
-controls, but they should not displace those reaction-level investigations.
+O-16's scope question is now resolved without deleting its full-range
+diagnostic. The next high-value causal targets are the 114 in-domain findings
+across C-13, H-2, O-17, and O-18. Further whole-library candidates remain
+useful controls, but they should not displace those reaction-level
+investigations.
 
 ## Primary sources
 
@@ -132,3 +148,4 @@ controls, but they should not displace those reaction-level investigations.
 - [Source-aware photon-production decision](../adr/0017-source-aware-photon-production-suitability.md)
 - [Independent continuum photon-moment decision](../adr/0018-independent-continuum-photon-moments.md)
 - [Independent MF=6 capture-balance decision](../adr/0019-independent-mf6-capture-photon-balance.md)
+- [Content-bound transport-domain decision](../adr/0020-content-bound-transport-domain-suitability.md)

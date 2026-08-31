@@ -267,6 +267,17 @@ have no photon-production files, N-15 lacks File 12, and O-16 has a potentially
 incomplete discrete photon sequence. See [ADR
 0013](docs/adr/0013-transported-photon-kerma-suitability.md).
 
+That immutable v0.1 report records the processor messages conservatively.
+Source-aware v0.2 evidence subsequently recognizes valid File 13 alternatives,
+and domain-aware v0.3 evidence scopes kinematic findings to a material- and
+manifest-bound OpenMC interval without deleting full-range diagnostics. For
+the JEFF-4.0 investigation this clears O-16's sole 30 MeV finding from the
+bounded 20 MeV decision, while 114 in-domain findings and the independent N-15
+capture-balance failure keep the candidate rejected. See [ADR
+0017](docs/adr/0017-source-aware-photon-production-suitability.md), [ADR
+0019](docs/adr/0019-independent-mf6-capture-photon-balance.md), and [ADR
+0020](docs/adr/0020-content-bound-transport-domain-suitability.md).
+
 ## License and use boundary
 
 Code is licensed under Apache-2.0. Synthetic benchmark data will receive an

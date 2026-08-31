@@ -131,7 +131,7 @@ Implementation status:
 - complete: inventory exact MF=6/12/13/14/15 source records for both
   ten-nuclide selections and add source-aware suitability schema `0.2.0`; this
   corrects NJOY's File 12 message to informational when File 13 is valid,
-  clearing JEFF N-15 while leaving five genuine candidate rejections;
+  clearing JEFF N-15 while leaving five full-evaluation candidate rejections;
 - complete: independently integrate all eight supported N-15 File 13/File 15
   continuum photon-energy moments for both selections and reproduce 58 shared-
   node NJOY diagnostics within their five-digit print precision;
@@ -139,9 +139,15 @@ Implementation status:
   second moments, photon-momentum recoil, and Q-value balance; 33 of 37 source
   nodes fail a conservative 1% screen even though all spectra normalize and
   NJOY's self-bounded kinematic check reports zero violations;
-- in progress: extend independent reaction-balance diagnostics to the five
-  remaining JEFF-4.0 failures, beginning with O-16's single violation, before
-  defining a reviewed response treatment;
+- complete: derive and content-bind the common OpenMC neutron transport domain
+  from the exact processed-data manifest and material, then apply it
+  symmetrically through domain-aware suitability schema `0.3.0`; all 72
+  baseline violations remain in domain, while six of 120 JEFF findings are
+  above 20 MeV and O-16 alone clears with zero in-domain violations;
+- in progress: extend independent reaction/source diagnostics to the 114
+  in-domain JEFF-4.0 findings across C-13, H-2, O-17, and O-18 before defining
+  a reviewed response treatment; N-15 remains independently rejected by its
+  capture-balance gate;
 - pending: generate the first reviewable response tables only after the
   diagnostic blocker is resolved through a versioned, reviewed data profile;
 - pending: smoke execution, statepoint import, and independent estimator

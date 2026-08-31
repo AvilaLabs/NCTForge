@@ -309,9 +309,13 @@ result exists. Cross-code agreement alone remains `cross_code_research_only`.
   energy moments and match NJOY at 58 shared source nodes. Complete:
   independently reconstruct JEFF N-15 MF=6/MT=102 photon and recoil moments
   and reject 33 of 37 source nodes on a 1% Q-value balance screen, while also
-  matching NJOY's printed photon/recoil moments at 23 shared nodes. Pending:
-  diagnose the five remaining JEFF failures, then define, justify, and review
-  a passing versioned response treatment.
+  matching NJOY's printed photon/recoil moments at 23 shared nodes. Complete:
+  derive a content-bound common OpenMC transport domain from the exact
+  manifest and material and apply it symmetrically; all baseline findings
+  remain in domain, while O-16's sole JEFF finding is retained at 30 MeV but
+  no longer rejects the bounded 20 MeV calculation. Pending: diagnose the 114
+  in-domain JEFF findings across C-13, H-2, O-17, and O-18, then define,
+  justify, and review a passing versioned response treatment.
 - Do not use reaction-filtered neutron heating as a component partition; retain
   it only as a diagnostic under ADR 0005.
 - Do not publish “golden” OpenMC dose arrays before an independent calculation is

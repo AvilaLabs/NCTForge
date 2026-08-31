@@ -368,12 +368,23 @@ impl NuclearDataManifest {
         &self,
         case: &TransportCase,
     ) -> Result<[f64; 2], NuclearDataError> {
-        self.validate_for_case(case)?;
+        case.validate()
+            .map_err(|error| NuclearDataError::InvalidTransportCase(error.to_string()))?;
+        self.neutron_transport_energy_range_for_material(&case.material)
+    }
+
+    /// Return the common energy interval exposed by every selected neutron
+    /// table at the material temperature.
+    pub fn neutron_transport_energy_range_for_material(
+        &self,
+        material: &MaterialDefinition,
+    ) -> Result<[f64; 2], NuclearDataError> {
+        self.validate_for_material(material)?;
 
         let mut common_lower = 0.0_f64;
         let mut common_upper = f64::INFINITY;
         for table in &self.neutron_tables {
-            let index = selected_temperature_index(table, case.material.temperature_k)?;
+            let index = selected_temperature_index(table, material.temperature_k)?;
             let [lower, upper] = table.energy_ranges_ev[index];
             common_lower = common_lower.max(lower);
             common_upper = common_upper.min(upper);
@@ -1036,6 +1047,12 @@ mod tests {
         let mut manifest = manifest();
         manifest.neutron_tables[0].energy_ranges_ev[0] = [2.0e-5, 19.0e6];
 
+        assert_eq!(
+            manifest
+                .neutron_transport_energy_range_for_material(&case().material)
+                .unwrap(),
+            [2.0e-5, 19.0e6]
+        );
         assert_eq!(
             manifest
                 .neutron_transport_energy_range_for_case(&case())

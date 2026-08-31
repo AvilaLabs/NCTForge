@@ -114,9 +114,10 @@ Evidence hashes:
   not establish conservation.
 - The immutable source-aware v0.2 report remains reproducible historical
   evidence. ADR 0019 adds a deeper gate; it does not rewrite that schema.
-- No response table is promoted. The next causal work is the five remaining
-  JEFF-4.0 failures, beginning with O-16's single violation, followed by a
-  separately reviewed response-treatment decision.
+- No response table is promoted. ADR 0020 subsequently establishes that
+  O-16's sole JEFF-4.0 finding is above the content-bound 20 MeV transport
+  domain. The remaining causal work is C-13, H-2, O-17, and O-18, followed by
+  a separately reviewed response-treatment decision.
 
 ## Primary sources
 

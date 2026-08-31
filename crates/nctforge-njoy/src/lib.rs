@@ -29,6 +29,7 @@ use thiserror::Error;
 mod capture_balance;
 mod capture_balance_comparison;
 mod comparison;
+mod domain_aware;
 mod execution;
 mod photon_inventory;
 mod photon_moment;
@@ -56,6 +57,11 @@ pub use comparison::{
     NjoySuitabilityComparisonDocument, NjoySuitabilityComparisonError,
     NjoySuitabilityComparisonOutcome, NjoySuitabilityComparisonQualification,
     NjoySuitabilityComparisonResult, NjoySuitabilityComparisonRun,
+};
+pub use domain_aware::{
+    NJOY_DOMAIN_AWARE_SUITABILITY_SCHEMA, NjoyDomainAwareSuitabilityError,
+    NjoyDomainAwareSuitabilityReport, NjoyDomainAwareSuitabilityReportDocument,
+    NjoyDomainAwareSuitabilityResult, NjoyDomainAwareSuitabilityRun,
 };
 
 pub use execution::{

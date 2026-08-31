@@ -4,7 +4,8 @@
 
 **Date:** 2026-08-31
 
-**Subsequent refinement:** [ADR 0019](0019-independent-mf6-capture-photon-balance.md)
+**Subsequent refinements:** [ADR 0019](0019-independent-mf6-capture-photon-balance.md)
+and [ADR 0020](0020-content-bound-transport-domain-suitability.md)
 
 ## Context
 

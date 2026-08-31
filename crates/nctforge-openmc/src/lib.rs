@@ -12,6 +12,7 @@ use thiserror::Error;
 
 mod acquisition;
 mod data;
+mod domain;
 mod evaluated;
 mod input;
 
@@ -30,6 +31,12 @@ pub use data::{
     TARGET_DISTRIBUTION_ARCHIVE_SIZE_BYTES, TARGET_DISTRIBUTION_SOURCE_URI,
     TARGET_EVALUATED_DATA_RELEASE, TARGET_INSPECTION_METHOD, TARGET_NUCLEAR_DATA_MANIFEST_SCHEMA,
     TARGET_OPENMC_SOURCE_COMMIT, TARGET_OPENMC_VERSION, TEMPERATURE_TOLERANCE_K,
+};
+pub use domain::{
+    OPENMC_NEUTRON_TRANSPORT_DOMAIN_SCHEMA, OpenMcDiagnosticBoundaryPolicy,
+    OpenMcNeutronTransportDomain, OpenMcNeutronTransportDomainDocument,
+    OpenMcNeutronTransportDomainResult, OpenMcTransportDomainDerivation,
+    OpenMcTransportDomainError, OpenMcTransportDomainQualification,
 };
 pub use evaluated::{
     EVALUATED_SOURCE_SELECTION_CANDIDATE_SCHEMA, EVALUATED_SOURCE_SELECTION_SCHEMA,
