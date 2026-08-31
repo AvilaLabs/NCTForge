@@ -2,7 +2,7 @@
 
 **Adopted:** 2026-08-31
 
-**Status:** R1 complete; transport work remains gated at R2
+**Status:** R1 complete; R2 research contracts in progress
 
 **Style:** Evidence-gated, not feature-count or calendar driven
 
@@ -71,6 +71,16 @@ Exit evidence:
 R2 also requires the response-generation and classification ledger specified by
 `NF-BNCT-001`, plus an independent estimator comparison. OpenMC output alone is
 not promoted to a reference result.
+
+Implementation status:
+
+- complete: OpenMC 0.16.0 estimator boundary and reaction-filter limitation
+  recorded in ADR 0005;
+- in progress: versioned component, material, source, and response-ledger
+  contracts;
+- pending: deterministic OpenMC input preparation and nuclear-data preflight;
+- pending: smoke execution, statepoint import, and independent estimator
+  comparison.
 
 ## R3 — End-to-end research alpha
 

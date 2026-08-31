@@ -67,6 +67,12 @@ limited to H-1 elastic scattering when that would leave neutron energy
 unclassified. Physical-total uncertainty must not assume that component tallies
 from shared particle histories are independent.
 
+OpenMC-specific estimator behavior remains inside `nctforge-openmc`. In the
+0.16.0 adapter, reaction-filtered neutron heating is diagnostic only because it
+does not expose reaction-wise KERMA. Reported component definitions and their
+hashed response ledger stay backend-neutral. See
+`docs/adr/0005-openmc-016-estimator-boundary.md`.
+
 ## GUI process model
 
 egui/eframe is the initial native interface. The GUI thread must never execute

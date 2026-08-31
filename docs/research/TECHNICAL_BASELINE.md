@@ -99,6 +99,14 @@ The current OpenMC tally system provides the necessary starting primitives:
 - direct photon energy-deposition scoring; and
 - batch means and standard deviations in statepoint files.
 
+OpenMC 0.16.0 also adds `ReactionFilter`, but it does not expose
+reaction-specific neutron KERMA. In the 0.16.0 scoring implementation a
+reaction filter forces a collision estimator while neutron heating continues to
+use a total heating response; the source explicitly notes that there is no
+reaction-wise heating cross section. Reaction-filtered heating is therefore a
+diagnostic event partition, not the reported B-10, N-14, or residual-neutron
+component estimator. See ADR 0005.
+
 Important limits remain:
 
 - standard `heating` data are not reaction-specific;
@@ -118,7 +126,7 @@ only. Microdosimetry is a different solver and validation problem.
 
 The first candidate run is pinned to:
 
-- OpenMC `0.15.3`;
+- OpenMC `0.16.0`;
 - the official OpenMC ENDF/B-VIII.1 HDF5 incident-neutron, photoatomic, atomic
   relaxation, and thermal-scattering distribution;
 - material temperature `293.6 K`;
@@ -228,7 +236,9 @@ result exists. Cross-code agreement alone remains `cross_code_research_only`.
 - [IAEA, *Advances in Boron Neutron Capture Therapy* (2023)](https://www.iaea.org/publications/15339/advances-in-boron-neutron-capture-therapy): four principal components, macroscopic KERMA guidance, nuclear-data risks, QA phantoms, and the need for cross-code and measurement comparisons.
 - [IAEA-TECDOC-1223](https://www-pub.iaea.org/MTCD/Publications/PDF/te_1223_prn.pdf): historical reporting requirement to retain the four physical components separately from biological weighting.
 - [OpenMC tally guide](https://docs.openmc.org/en/stable/usersguide/tallies.html): score units, filters, reaction-rate scores, heating, and tally normalization.
-- [OpenMC 0.15.3 release](https://github.com/openmc-dev/openmc/releases/tag/v0.15.3): released implementation pinned by the first candidate run.
+- [OpenMC 0.16.0 release](https://github.com/openmc-dev/openmc/releases/tag/v0.16.0): released implementation pinned by the first candidate run.
+- [OpenMC 0.16.0 neutron-heating scoring](https://github.com/openmc-dev/openmc/blob/v0.16.0/src/tallies/tally_scoring.cpp): total rather than reaction-wise neutron-heating response used by the estimator.
+- [OpenMC ReactionFilter](https://docs.openmc.org/en/v0.16.0/pythonapi/generated/openmc.ReactionFilter.html): event-reaction filter added in 0.16.0.
 - [OpenMC energy-deposition methods](https://docs.openmc.org/en/stable/methods/energy_deposition.html): MT=301/901 KERMA behavior and charged-particle energy-deposition assumptions.
 - [OpenMC tally statistics](https://docs.openmc.org/en/stable/methods/tallies.html): batch means and standard-deviation estimation.
 - [OpenMC official data libraries](https://openmc.org/data/): processed nuclear-data releases and temperatures.
@@ -252,6 +262,8 @@ result exists. Cross-code agreement alone remains `cross_code_research_only`.
   interchange schema.
 - Do not freeze KERMA response tables until their derivation, units, interpolation,
   and hashes are independently reviewed.
+- Do not use reaction-filtered neutron heating as a component partition; retain
+  it only as a diagnostic under ADR 0005.
 - Do not publish “golden” OpenMC dose arrays before an independent calculation is
   available.
 - Do not implement boron-map recomposition or optimization in this benchmark;
@@ -259,8 +271,9 @@ result exists. Cross-code agreement alone remains `cross_code_research_only`.
 
 ## Ready implementation milestone
 
-R1 starts with a new `nctforge-dicom` crate and a benchmark generator/validator,
-not the GUI or OpenMC adapter. The milestone is complete when a CLI command can
-generate `NF-BNCT-001`, import it in arbitrary file order, reproduce every
-declared affine and ROI mask, pass the external IOD check, and reject the frozen
-malformed variants. Only then does transport input generation begin.
+R1 is complete: one CLI command generates `NF-BNCT-001`, arbitrary file order
+does not change the imported geometry, every declared affine and ROI mask is
+reproduced, external DICOM IOD/entity validation is warning-free, and frozen
+malformed variants fail closed. R2 begins with the response ledger and
+transport-neutral material/source contracts before deterministic OpenMC 0.16.0
+input preparation is enabled.
