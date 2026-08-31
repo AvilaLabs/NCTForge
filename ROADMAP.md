@@ -76,8 +76,10 @@ Implementation status:
 
 - complete: OpenMC 0.16.0 estimator boundary and reaction-filter limitation
   recorded in ADR 0005;
-- in progress: versioned component, material, source, and response-ledger
-  contracts;
+- complete: canonical four-component physical-dose bundle with content-hashed
+  profile identity, absolute voxel uncertainty, and independently derived
+  physical-total uncertainty;
+- in progress: versioned material, source, and response-ledger contracts;
 - pending: deterministic OpenMC input preparation and nuclear-data preflight;
 - pending: smoke execution, statepoint import, and independent estimator
   comparison.

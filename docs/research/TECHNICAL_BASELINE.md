@@ -254,12 +254,12 @@ result exists. Cross-code agreement alone remains `cross_code_research_only`.
 
 ## Implementation gates raised by this research
 
-- Replace the literal `HydrogenRecoil` contract with the conventional but
-  explicitly defined `hydrogen` component before R2.
-- Add absolute uncertainty and an undefined-relative-uncertainty representation
-  before importing a statepoint.
-- Add a component-definition/profile identifier and contributor metadata to the
-  interchange schema.
+- Complete: replace the literal `HydrogenRecoil` contract with the conventional
+  but explicitly defined `hydrogen` component.
+- Complete: store absolute uncertainty, derive relative uncertainty only for a
+  nonzero mean, and retain independently estimated physical-total uncertainty.
+- Complete: bind the interchange bundle to a content-hashed component profile;
+  pending: freeze that profile's contributor ledger before transport.
 - Do not freeze KERMA response tables until their derivation, units, interpolation,
   and hashes are independently reviewed.
 - Do not use reaction-filtered neutron heating as a component partition; retain

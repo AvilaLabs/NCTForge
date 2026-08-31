@@ -1,6 +1,6 @@
 # ADR 0002: Macroscopic BNCT Dose Semantics
 
-**Status:** Accepted for implementation
+**Status:** Accepted and implemented
 
 **Date:** 2026-08-31
 
@@ -41,14 +41,15 @@ charged-particle/KERMA approximation. It does not define cellular dose.
 
 ## Data-model consequences
 
-Before R2:
+Implemented at the start of R2:
 
-1. migrate `DoseComponent::HydrogenRecoil` to a serialized `hydrogen` value;
-2. bind every bundle to a component-definition profile;
-3. store absolute one-sigma uncertainty, allowing uncertainty to be absent;
-4. represent relative uncertainty as derived and undefined when the mean is
+1. migrated `DoseComponent::HydrogenRecoil` to a serialized `hydrogen` value;
+2. bound every bundle to a content-hashed component-definition profile;
+3. stored absolute one-sigma uncertainty, allowing uncertainty to be absent;
+4. represented relative uncertainty as derived and undefined when the mean is
    zero; and
-5. represent total-dose uncertainty independently of component uncertainties.
+5. represented total-dose uncertainty independently of component uncertainties,
+   with its derivation method explicit.
 
 Because this repository has no release or consumer, the early schema can break
 cleanly rather than preserving an ambiguous serialized name.
