@@ -285,8 +285,10 @@ result exists. Cross-code agreement alone remains `cross_code_research_only`.
   response energy coverage; and emit a hashed input manifest. Pending: supply
   real reviewed response tables and pass a controlled OpenMC smoke execution.
 - Complete: freeze the NJOY2016.78 MT 407/403 partial-KERMA method and MT 301
-  residual classification in ADR 0007 and bind the evaluated inputs; pending:
-  generate tables and pass every declared review gate.
+  residual classification in ADR 0007, bind each evaluated ENDF material, and
+  generate byte-stable production and diagnostic input decks; pending: execute
+  through the controlled evidence path, generate tables, and pass every
+  declared review gate.
 - Do not use reaction-filtered neutron heating as a component partition; retain
   it only as a diagnostic under ADR 0005.
 - Do not publish “golden” OpenMC dose arrays before an independent calculation is

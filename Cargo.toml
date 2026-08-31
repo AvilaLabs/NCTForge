@@ -6,6 +6,7 @@ members = [
   "crates/nctforge-transport",
   "crates/nctforge-evidence",
   "crates/nctforge-openmc",
+  "crates/nctforge-njoy",
   "crates/nctforge-cli",
   "crates/nctforge-gui",
 ]

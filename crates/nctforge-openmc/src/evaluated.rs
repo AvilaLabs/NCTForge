@@ -4,7 +4,7 @@
 
 use std::collections::BTreeSet;
 use std::fs::{self, File};
-use std::io::{self, Read};
+use std::io::{self, BufRead, BufReader, Read};
 use std::path::{Component, Path, PathBuf};
 
 use nctforge_core::ContentReference;
@@ -56,6 +56,7 @@ pub struct EvaluatedSourceAcquisition {
 #[serde(deny_unknown_fields)]
 pub struct EvaluatedNeutronArtifact {
     pub nuclide: String,
+    pub endf_mat: u16,
     pub archive_path: String,
     pub extracted_filename: String,
     pub size_bytes: u64,
@@ -143,6 +144,7 @@ impl EvaluatedNeutronSourceSelection {
 
         let mut archive_paths = BTreeSet::new();
         let mut filenames = BTreeSet::new();
+        let mut endf_materials = BTreeSet::new();
         for (index, evaluation) in self.evaluations.iter().enumerate() {
             if evaluation.nuclide.trim().is_empty() {
                 return Err(EvaluatedSourceError::EmptyIdentifier("evaluations.nuclide"));
@@ -166,6 +168,17 @@ impl EvaluatedNeutronSourceSelection {
                 || !filenames.insert(evaluation.extracted_filename.as_str())
             {
                 return Err(EvaluatedSourceError::DuplicateArtifactIdentity);
+            }
+            if evaluation.endf_mat == 0 || evaluation.endf_mat > 9_999 {
+                return Err(EvaluatedSourceError::InvalidEndfMaterialNumber {
+                    nuclide: evaluation.nuclide.clone(),
+                    value: evaluation.endf_mat,
+                });
+            }
+            if !endf_materials.insert(evaluation.endf_mat) {
+                return Err(EvaluatedSourceError::DuplicateEndfMaterial(
+                    evaluation.endf_mat,
+                ));
             }
             if evaluation.size_bytes == 0 {
                 return Err(EvaluatedSourceError::EmptyEvaluation(
@@ -319,7 +332,7 @@ impl EvaluatedNeutronSourceSelection {
             }
             let observed_sha256 =
                 sha256_file(&canonical_path).map_err(|source| EvaluatedSourceError::Io {
-                    path: canonical_path,
+                    path: canonical_path.clone(),
                     source,
                 })?;
             if observed_sha256 != evaluation.sha256 {
@@ -329,9 +342,59 @@ impl EvaluatedNeutronSourceSelection {
                     observed: observed_sha256,
                 });
             }
+            let observed_mat = endf_material(&canonical_path)?;
+            if observed_mat != evaluation.endf_mat {
+                return Err(EvaluatedSourceError::EndfMaterialMismatch {
+                    nuclide: evaluation.nuclide.clone(),
+                    expected: evaluation.endf_mat,
+                    observed: observed_mat,
+                });
+            }
         }
         Ok(())
     }
+}
+
+fn endf_material(path: &Path) -> Result<u16, EvaluatedSourceError> {
+    let file = File::open(path).map_err(|source| EvaluatedSourceError::Io {
+        path: path.to_path_buf(),
+        source,
+    })?;
+    let mut reader = BufReader::new(file);
+    let mut line = Vec::with_capacity(82);
+    loop {
+        line.clear();
+        let count =
+            reader
+                .read_until(b'\n', &mut line)
+                .map_err(|source| EvaluatedSourceError::Io {
+                    path: path.to_path_buf(),
+                    source,
+                })?;
+        if count == 0 {
+            return Err(EvaluatedSourceError::MissingEndfMaterial(
+                path.to_path_buf(),
+            ));
+        }
+        while matches!(line.last(), Some(b'\n' | b'\r')) {
+            line.pop();
+        }
+        if line.len() < 75 {
+            continue;
+        }
+        let mat = fixed_width_u16(&line[66..70]);
+        let mf = fixed_width_u16(&line[70..72]);
+        let mt = fixed_width_u16(&line[72..75]);
+        if mf == Some(1) && mt == Some(451) {
+            return mat
+                .filter(|value| *value > 0)
+                .ok_or_else(|| EvaluatedSourceError::InvalidEndfMaterial(path.to_path_buf()));
+        }
+    }
+}
+
+fn fixed_width_u16(value: &[u8]) -> Option<u16> {
+    std::str::from_utf8(value).ok()?.trim().parse().ok()
 }
 
 fn validate_sha256(label: &'static str, value: &str) -> Result<(), EvaluatedSourceError> {
@@ -416,6 +479,10 @@ pub enum EvaluatedSourceError {
     ArchiveFilenameMismatch { nuclide: String },
     #[error("evaluated-source paths or filenames contain a duplicate")]
     DuplicateArtifactIdentity,
+    #[error("ENDF MAT {value} for {nuclide} is outside the supported 1..=9999 range")]
+    InvalidEndfMaterialNumber { nuclide: String, value: u16 },
+    #[error("ENDF MAT {0} is assigned to more than one selected evaluation")]
+    DuplicateEndfMaterial(u16),
     #[error("evaluation for {0} is empty")]
     EmptyEvaluation(String),
     #[error("material definition is invalid: {0}")]
@@ -451,6 +518,18 @@ pub enum EvaluatedSourceError {
         path: String,
         expected: String,
         observed: String,
+    },
+    #[error("no MF=1 MT=451 material header was found in {0}")]
+    MissingEndfMaterial(PathBuf),
+    #[error("the MF=1 MT=451 material header is invalid in {0}")]
+    InvalidEndfMaterial(PathBuf),
+    #[error(
+        "ENDF MAT mismatch for {nuclide}: selection requires {expected}, file declares {observed}"
+    )]
+    EndfMaterialMismatch {
+        nuclide: String,
+        expected: u16,
+        observed: u16,
     },
     #[error("I/O operation failed for {path}: {source}")]
     Io {
@@ -518,22 +597,50 @@ mod tests {
     #[test]
     fn selected_file_verifier_rejects_tampering_and_extras() {
         let root = tempfile::tempdir().unwrap();
-        let body = b"synthetic evaluation";
         let mut selection = frozen_selection();
         selection.evaluations = vec![EvaluatedNeutronArtifact {
             nuclide: "H1".into(),
+            endf_mat: 125,
             archive_path: "archive/n-001_H_001.endf".into(),
             extracted_filename: "n-001_H_001.endf".into(),
-            size_bytes: body.len() as u64,
-            sha256: sha256_bytes(body),
+            size_bytes: 81,
+            sha256: String::new(),
         }];
-        fs::write(root.path().join("n-001_H_001.endf"), body).unwrap();
+        let body = format!("{:<66}{:>4}{:>2}{:>3}{:>5}\n", "", 125, 1, 451, 1);
+        selection.evaluations[0].size_bytes = body.len() as u64;
+        selection.evaluations[0].sha256 = sha256_bytes(body.as_bytes());
+        fs::write(root.path().join("n-001_H_001.endf"), body.as_bytes()).unwrap();
         selection.verify_files(root.path()).unwrap();
 
-        fs::write(root.path().join("unexpected.endf"), body).unwrap();
+        fs::write(root.path().join("unexpected.endf"), body.as_bytes()).unwrap();
         assert!(matches!(
             selection.verify_files(root.path()),
             Err(EvaluatedSourceError::SelectionDirectoryMismatch)
+        ));
+    }
+
+    #[test]
+    fn selected_file_verifier_rejects_endf_material_mismatch() {
+        let root = tempfile::tempdir().unwrap();
+        let body = format!("{:<66}{:>4}{:>2}{:>3}{:>5}\n", "", 128, 1, 451, 1);
+        let mut selection = frozen_selection();
+        selection.evaluations = vec![EvaluatedNeutronArtifact {
+            nuclide: "H1".into(),
+            endf_mat: 125,
+            archive_path: "archive/n-001_H_001.endf".into(),
+            extracted_filename: "n-001_H_001.endf".into(),
+            size_bytes: body.len() as u64,
+            sha256: sha256_bytes(body.as_bytes()),
+        }];
+        fs::write(root.path().join("n-001_H_001.endf"), body.as_bytes()).unwrap();
+
+        assert!(matches!(
+            selection.verify_files(root.path()),
+            Err(EvaluatedSourceError::EndfMaterialMismatch {
+                expected: 125,
+                observed: 128,
+                ..
+            })
         ));
     }
 }

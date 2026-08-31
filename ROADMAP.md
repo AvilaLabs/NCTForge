@@ -94,10 +94,13 @@ Implementation status:
   freeze the ten `NF-BNCT-001` evaluations by path, size, and SHA-256 as an
   unqualified candidate, preserving the different OpenMC-recipe archive digest
   and unresolved equivalence state;
+- complete: validate every selected ENDF material identity and generate the ten
+  byte-stable NJOY2016.78 production/diagnostic decks with a content-bound,
+  no-overwrite `input_preparation_only` manifest;
 - complete: byte-stable OpenMC 0.16 input generation with complete scoring and
   audit tally ledgers;
-- in progress: evaluated-data binding, response-table generation, and
-  independent method checks;
+- in progress: controlled NJOY execution, diagnostic parsing, response-table
+  generation, and independent method checks;
 - pending: acquire and inspect the processed official OpenMC ENDF/B-VIII.1
   distribution, compare it with the selected evaluated sources, and generate
   the first reviewable response tables;

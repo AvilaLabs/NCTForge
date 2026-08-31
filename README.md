@@ -33,6 +33,9 @@ contains:
 - a case-scoped ENDF/B-VIII.1 evaluated-neutron candidate selection that binds
   the current NNDC archive, acquisition receipt, frozen material, and all ten
   selected evaluation files by SHA-256;
+- a standalone, no-overwrite NJOY2016.78 input generator that verifies every
+  source and content binding, emits ten deterministic partial-KERMA decks, and
+  freezes their `input_preparation_only` manifest;
 - a byte-stable OpenMC 0.16 input-deck generator that verifies content
   bindings and selected nuclear-data files before emitting the complete tally
   ledger;
@@ -103,6 +106,7 @@ crates/nctforge-view/       patient-aligned tri-planar view geometry
 crates/nctforge-transport/  backend interface and normalized run lifecycle
 crates/nctforge-evidence/   hashes, manifests, and qualification boundary
 crates/nctforge-openmc/     OpenMC preflight and deterministic input generator
+crates/nctforge-njoy/       deterministic NJOY partial-KERMA input preparation
 crates/nctforge-cli/        headless entry point
 crates/nctforge-gui/        native egui application shell
 bindings/python/            future scientific extension surface
@@ -164,6 +168,27 @@ overwriting completed output. The official processed archive currently has no
 published digest, so its receipt deliberately remains `acquisition_only`; a
 locally calculated SHA-256 is byte identity, not scientific qualification. See
 [ADR 0010](docs/adr/0010-verifiable-nuclear-data-acquisition.md).
+
+### NJOY input preparation
+
+After acquiring and extracting the exact evaluated-neutron selection, generate
+a new reviewable bundle with:
+
+```text
+cargo run --bin nctforge -- njoy prepare \
+  --selection benchmarks/synthetic/nf-bnct-001/transport/evaluated-neutron-source-selection.json \
+  --material benchmarks/synthetic/nf-bnct-001/transport/material.json \
+  --generation-method benchmarks/synthetic/nf-bnct-001/transport/response-generation-method.json \
+  --profile profiles/openmc/endfb81-neutron-evaluations.json \
+  --receipt benchmarks/synthetic/nf-bnct-001/transport/provenance/endfb81-neutron-acquisition-receipt.json \
+  --evaluations-directory PATH-TO-EXACT-SELECTION \
+  --output NEW-OUTPUT-DIRECTORY
+```
+
+The command executes no external processor and refuses an existing output
+directory. The frozen benchmark copy is under
+`benchmarks/synthetic/nf-bnct-001/transport/njoy/`; see [ADR
+0011](docs/adr/0011-deterministic-njoy-input-preparation.md).
 
 ## License and use boundary
 

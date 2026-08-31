@@ -2422,6 +2422,7 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "nctforge-dicom",
+ "nctforge-njoy",
  "nctforge-openmc",
  "nctforge-transport",
  "serde_json",
@@ -2471,6 +2472,20 @@ dependencies = [
  "nctforge-openmc",
  "nctforge-transport",
  "nctforge-view",
+]
+
+[[package]]
+name = "nctforge-njoy"
+version = "0.1.0"
+dependencies = [
+ "nctforge-core",
+ "nctforge-openmc",
+ "nctforge-transport",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "thiserror 2.0.20",
 ]
 
 [[package]]

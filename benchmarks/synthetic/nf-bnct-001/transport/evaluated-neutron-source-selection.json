@@ -19,6 +19,7 @@
   "evaluations": [
     {
       "nuclide": "B10",
+      "endf_mat": 525,
       "archive_path": "neutrons-version.VIII.1/n-005_B_010.endf",
       "extracted_filename": "n-005_B_010.endf",
       "size_bytes": 869364,
@@ -26,6 +27,7 @@
     },
     {
       "nuclide": "C12",
+      "endf_mat": 625,
       "archive_path": "neutrons-version.VIII.1/n-006_C_012.endf",
       "extracted_filename": "n-006_C_012.endf",
       "size_bytes": 3805168,
@@ -33,6 +35,7 @@
     },
     {
       "nuclide": "C13",
+      "endf_mat": 628,
       "archive_path": "neutrons-version.VIII.1/n-006_C_013.endf",
       "extracted_filename": "n-006_C_013.endf",
       "size_bytes": 3476848,
@@ -40,6 +43,7 @@
     },
     {
       "nuclide": "H1",
+      "endf_mat": 125,
       "archive_path": "neutrons-version.VIII.1/n-001_H_001.endf",
       "extracted_filename": "n-001_H_001.endf",
       "size_bytes": 671232,
@@ -47,6 +51,7 @@
     },
     {
       "nuclide": "H2",
+      "endf_mat": 128,
       "archive_path": "neutrons-version.VIII.1/n-001_H_002.endf",
       "extracted_filename": "n-001_H_002.endf",
       "size_bytes": 139156,
@@ -54,6 +59,7 @@
     },
     {
       "nuclide": "N14",
+      "endf_mat": 725,
       "archive_path": "neutrons-version.VIII.1/n-007_N_014.endf",
       "extracted_filename": "n-007_N_014.endf",
       "size_bytes": 1253924,
@@ -61,6 +67,7 @@
     },
     {
       "nuclide": "N15",
+      "endf_mat": 728,
       "archive_path": "neutrons-version.VIII.1/n-007_N_015.endf",
       "extracted_filename": "n-007_N_015.endf",
       "size_bytes": 243428,
@@ -68,6 +75,7 @@
     },
     {
       "nuclide": "O16",
+      "endf_mat": 825,
       "archive_path": "neutrons-version.VIII.1/n-008_O_016.endf",
       "extracted_filename": "n-008_O_016.endf",
       "size_bytes": 42486584,
@@ -75,6 +83,7 @@
     },
     {
       "nuclide": "O17",
+      "endf_mat": 828,
       "archive_path": "neutrons-version.VIII.1/n-008_O_017.endf",
       "extracted_filename": "n-008_O_017.endf",
       "size_bytes": 81548,
@@ -82,6 +91,7 @@
     },
     {
       "nuclide": "O18",
+      "endf_mat": 831,
       "archive_path": "neutrons-version.VIII.1/n-008_O_018.endf",
       "extracted_filename": "n-008_O_018.endf",
       "size_bytes": 126996,

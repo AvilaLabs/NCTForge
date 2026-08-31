@@ -374,6 +374,8 @@ engine-manifest.json
 data-acquisition-profile.json
 data-acquisition-receipt.json
 evaluated-neutron-source-selection.json
+nctforge-njoy-input-manifest.json
+njoy-inputs/
 nuclear-data-manifest.json
 run-settings.json
 inputs/
@@ -413,7 +415,9 @@ profiles.
 Geometry, material, source, classification, response-generation method, and
 OpenMC smoke execution profile are frozen by this version. The current NNDC
 archive and exact ten-member evaluated-neutron selection are acquired, hashed,
-and receipt-bound as an unqualified candidate. The benchmark cannot enter
+and receipt-bound as an unqualified candidate. The ten deterministic NJOY decks
+and their `input_preparation_only` manifest are also frozen, but they are not
+response tables or execution evidence. The benchmark cannot enter transport
 execution until the archive drift is resolved at the response level, generated
 KERMA tables pass the ADR 0007 gates, the processed OpenMC distribution is
 inspected, and the required independent review is complete. Changing any frozen

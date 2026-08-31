@@ -10,6 +10,7 @@ use std::process::ExitCode;
 use clap::{Args, Parser, Subcommand};
 use nctforge_dicom::synthetic::generate_nf_bnct_001;
 use nctforge_dicom::verify_nf_bnct_001;
+use nctforge_njoy::{NjoyInputArtifacts, NjoyInputBundle};
 use nctforge_openmc::{
     DataAcquisitionClient, DataAcquisitionProfileDocument, DataAcquisitionReceiptDocument,
     EvaluatedNeutronSourceSelectionDocument, OpenMcBackend,
@@ -35,6 +36,8 @@ enum Command {
     Benchmark(BenchmarkArgs),
     /// Prepare and audit OpenMC-specific research artifacts.
     Openmc(OpenMcArgs),
+    /// Prepare deterministic NJOY response-generation artifacts.
+    Njoy(NjoyArgs),
 }
 
 #[derive(Debug, Args)]
@@ -73,6 +76,40 @@ enum OpenMcCommand {
 struct OpenMcDataArgs {
     #[command(subcommand)]
     command: OpenMcDataCommand,
+}
+
+#[derive(Debug, Args)]
+struct NjoyArgs {
+    #[command(subcommand)]
+    command: NjoyCommand,
+}
+
+#[derive(Debug, Subcommand)]
+enum NjoyCommand {
+    /// Verify every binding and write deterministic per-nuclide NJOY decks.
+    Prepare {
+        /// Case-scoped evaluated-neutron source-selection manifest.
+        #[arg(long)]
+        selection: PathBuf,
+        /// Exact material JSON bound by the response-generation method.
+        #[arg(long)]
+        material: PathBuf,
+        /// Frozen response-generation method JSON.
+        #[arg(long)]
+        generation_method: PathBuf,
+        /// Reviewed acquisition profile bound by the source selection.
+        #[arg(long)]
+        profile: PathBuf,
+        /// Publisher-matched acquisition receipt bound by the source selection.
+        #[arg(long)]
+        receipt: PathBuf,
+        /// Directory containing exactly the selected extracted ENDF files.
+        #[arg(long)]
+        evaluations_directory: PathBuf,
+        /// New output directory; it must not already exist.
+        #[arg(long)]
+        output: PathBuf,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -258,6 +295,41 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                     println!("qualification: candidate_archive_equivalence_unresolved");
                 }
             },
+        },
+        Some(Command::Njoy(args)) => match args.command {
+            NjoyCommand::Prepare {
+                selection,
+                material,
+                generation_method,
+                profile,
+                receipt,
+                evaluations_directory,
+                output,
+            } => {
+                let selection_json = fs::read(selection)?;
+                let material_json = fs::read(material)?;
+                let generation_method_json = fs::read(generation_method)?;
+                let acquisition_profile_json = fs::read(profile)?;
+                let acquisition_receipt_json = fs::read(receipt)?;
+                let bundle = NjoyInputBundle::generate(
+                    &evaluations_directory,
+                    NjoyInputArtifacts {
+                        evaluated_source_selection_json: &selection_json,
+                        material_json: &material_json,
+                        generation_method_json: &generation_method_json,
+                        acquisition_profile_json: &acquisition_profile_json,
+                        acquisition_receipt_json: &acquisition_receipt_json,
+                    },
+                )?;
+                bundle.write_new(&output)?;
+                println!("prepared NJOY2016.78 inputs at {}", output.display());
+                println!("nuclide runs: {}", bundle.manifest.runs.len());
+                println!(
+                    "source selection SHA-256: {}",
+                    bundle.manifest.bindings.evaluated_source_selection.sha256
+                );
+                println!("qualification: input_preparation_only");
+            }
         },
         None => {
             println!("NCTForge research scaffold");

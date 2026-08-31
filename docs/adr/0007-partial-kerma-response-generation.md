@@ -1,6 +1,6 @@
 # ADR 0007: Partial-KERMA Response Generation
 
-**Status:** Method accepted; tables pending evaluated-data processing and review
+**Status:** Method and canonical inputs accepted; tables pending processing and review
 
 **Date:** 2026-08-31
 
@@ -33,6 +33,11 @@ The first response-generation method is frozen as
 - material total neutron KERMA from each nuclide's MT 301; and
 - the conventional `hydrogen` response as material total minus the boron and
   nitrogen responses.
+
+ADR 0011 implements the content-bound, byte-stable NJOY input generator and
+freezes the ten canonical decks. This raises the evidence state only to
+`input_preparation_only`; processor execution, output parsing, and every gate
+below remain pending.
 
 The response generator uses the exact material weight fractions and the atomic
 weight ratios in the selected OpenMC HDF5 tables, matching OpenMC's conversion
