@@ -82,3 +82,4 @@ inspection.
 - [ADR 0022: LAW=7 processor-approximation attribution](0022-law7-processor-attribution.md)
 - [ADR 0023: Reaction-evidence-aware transported-photon suitability](0023-reaction-evidence-aware-suitability.md)
 - [Integration case](../../integrations/avila-core/njoy-evidence-aware/README.md)
+- [Avila Core use-case record](../research/AVILA_CORE_USE_CASE_LOG.md)

@@ -51,3 +51,7 @@ The generated `claims.json` preserves the categorical qualification separately
 from the exact count. The count drives the technical requirement; the category
 is not encoded as an invented number and does not by itself become a Core
 verdict.
+
+The observed development effect and explicitly qualified counterfactual are
+kept in the [Avila Core use-case
+record](../../../docs/research/AVILA_CORE_USE_CASE_LOG.md).
