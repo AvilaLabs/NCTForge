@@ -2,7 +2,7 @@
 
 **Adopted:** 2026-08-31
 
-**Status:** R1 complete; R2 response qualification in progress
+**Status:** R1 complete; R2 response qualification paused at its external-evidence gate
 
 **Style:** Evidence-gated, not feature-count or calendar driven
 
@@ -152,10 +152,15 @@ Implementation status:
   external-checker protocol, preserving the categorical qualification and
   exact remaining-finding count as separate claims while NCTForge retains all
   domain logic;
-- in progress: extend independent reaction/source diagnostics to the 102
-  remaining in-domain JEFF-4.0 findings across C-13, O-17, and O-18 before
-  defining a reviewed response treatment; N-15 remains independently rejected
-  by its capture-balance gate;
+- complete: partition the 102 remaining in-domain JEFF-4.0 findings into 59
+  source-data-blocked C-13/O-18 findings and a 43-finding O-17 reaction queue;
+- complete: reproduce all 43 O-17 MT 301 excesses from NJOY's printed
+  per-reaction File 6 energy-balance remainders, while retaining all 43 for
+  independent physical validation and waiving none;
+- paused: continue response qualification only with a controlled alternative
+  source profile or a reviewed independent O-17 reaction calculation; C-13 and
+  O-18 still lack transported-photon sources, and N-15 remains independently
+  rejected by its capture-balance gate;
 - pending: generate the first reviewable response tables only after the
   diagnostic blocker is resolved through a versioned, reviewed data profile;
 - pending: smoke execution, statepoint import, and independent estimator

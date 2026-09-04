@@ -2,8 +2,8 @@
 
 **Recorded:** 2026-08-31
 
-**Evidence state:** Controlled candidate rejected after reaction-evidence-aware
-v0.4 refinement; not a qualified response table
+**Evidence state:** Controlled candidate rejected after O-17 processor
+attribution; not a qualified response table
 
 ## Question
 
@@ -45,7 +45,7 @@ source files are the intended independent variable.
 | N-14 | candidate | candidate | no recognized blocker |
 | N-15 | rejected | rejected by deeper gate | valid File 13/14/15 path plus MF=6/MT=102 clears the narrow processor check, but 33 of 37 capture-balance nodes fail independently |
 | O-16 | rejected | candidate under bound domain | sole finding is at 30 MeV, above the common 20 MeV OpenMC domain |
-| O-17 | rejected | rejected | 45 kinematic violations; recognized warning is absent |
+| O-17 | rejected | rejected | 43 in-domain findings reproduce NJOY's printed File 6 energy-balance accounting, but still require independent physical validation |
 | O-18 | rejected | rejected | 27 kinematic violations; no-photon local fallback |
 
 “Recognized warning is absent” means only that none of the three messages
@@ -74,15 +74,25 @@ ADR 0023's evidence-aware v0.4 report then binds the independent H-2 source
 calculation and receipt-bound processor attribution, clearing H-2 alone. It
 also incorporates the independent N-15 capture-balance gate instead of
 mistaking the narrower processor pass for suitability. The integrated rejected
-set is C-13, N-15, O-17, and O-18. The 102 still-unexplained in-domain
-kinematic findings belong to C-13 (32), O-17 (43), and O-18 (27).
+set is C-13, N-15, O-17, and O-18. The 102 unresolved in-domain kinematic
+findings belong to C-13 (32), O-17 (43), and O-18 (27).
 
 ADR 0025 preserves that exact total but separates the investigation queue.
 C-13 and O-18 have no supported MF=6/12/13/14/15 photon-production source and
 are already rejected by their exact `local_deposition_fallback` condition.
 Their 59 findings remain visible as source-data-blocked; they are not waived or
 numerically explained. O-17's 43 findings remain the sole independent
-reaction-diagnostic queue.
+reaction-diagnostic queue in that immutable triage report.
+
+ADR 0026 adds a separate processor-accounting attribution without rewriting
+the triage or evidence-aware result. It exactly reproduces the full 45-finding
+final-table sequence, scopes 43 findings to the bound 20 MeV interval, and
+attributes all 43 to the sum of NJOY's printed reaction-level File 6 `ebal`
+terms. The worst remainder/excess relative difference is
+`3.721276397804447e-4`; MT 443 equals the printed kinematic maximum at every
+sample. This establishes the processor mechanism, not independent physical
+validity. The artifact consequently records 43 physical validations still
+required and zero waived findings.
 
 Both exact ten-nuclide inventories have zero format-pairing findings and eight
 evaluations with a HEATR photon source. This establishes record availability,
@@ -122,6 +132,8 @@ not energy-balance validity.
   `68b22afd510d477eb997fd514a37bcca9c45730e7fab22fd7ad9186d37f2baa0`.
 - JEFF-4.0 diagnostic-triage SHA-256:
   `6ba92bce735cf290dd3dbe3e068ceff1e25cbc1869b21d5ecd64db8b8d206020`.
+- JEFF-4.0 O-17 processor energy-balance attribution SHA-256:
+  `1c38d1e5fb6a6b26e5d99fc1505bd3aa15b25a2b01116e47aed5566381e093d8`.
 
 The baseline-comparison artifact is intentionally the immutable v0.1
 log-only comparison. ADR 0017 and the v0.2 report supersede only its treatment
@@ -167,9 +179,25 @@ reports, the immutable v0.3 domain assessment, and the N-15 independent gate.
 It clears only H-2 and leaves C-13, O-17, and O-18 untouched. H-2 is still
 `candidate_unreviewed`, not a qualified response treatment.
 
-The next bounded test is therefore O-17 reaction-level attribution. C-13 and
-O-18 stay rejected unless a different transported-photon source is supplied;
-reinterpreting their kinematic messages cannot repair the missing source.
+The bounded O-17 processor-attribution test is now complete. It identifies why
+NJOY emits the high MT 301 flags: applicable File 6 `ebal` remainders are added
+to total and partial KERMA while the printed kinematic maximum follows the
+separate heating calculation. At thermal energy MT 107 alone accounts for the
+excess; at higher energies positive and negative terms from several reactions
+combine. The report preserves those contributions sample by sample.
+
+This is not an independent reaction-energy calculation because both sides of
+the identity come from the same receipt-bound NJOY output. The attempted reuse
+of the narrower MF=6/MT=102 capture calculator rejected O-17's more complex
+tabulation. A defensible source-level extension would need an explicitly
+reviewed treatment of the relevant product distributions and reference-frame
+transformations across 15 contributing MTs.
+
+The response-qualification path is therefore paused. Resume it with either a
+controlled alternative source profile that addresses C-13/O-18 as well as the
+other failures, or an independently reviewed O-17 physical calculation. O-17
+attribution alone could not qualify the response while C-13/O-18 lack a source
+and N-15 independently fails its capture-balance gate.
 
 ## Primary sources
 
@@ -184,3 +212,4 @@ reinterpreting their kinematic messages cannot repair the missing source.
 - [LAW=7 processor-attribution decision](../adr/0022-law7-processor-attribution.md)
 - [Reaction-evidence-aware suitability decision](../adr/0023-reaction-evidence-aware-suitability.md)
 - [Diagnostic-triage decision](../adr/0025-diagnostic-triage-of-remaining-njoy-findings.md)
+- [O-17 processor energy-balance attribution decision](../adr/0026-o17-processor-energy-balance-attribution.md)

@@ -64,7 +64,7 @@
       },
       "producer": {
         "package_id": "com.avilalabs/nctforge-cli@0.1.0",
-        "sha256": "sha256:183767300d129b51280b921bc2ca27efb46244117867e5e461846c3beed1854a"
+        "sha256": "sha256:3a0197ac3fd7d365ad9ce236296ef6d3566b87f6f354d509f8f621368196c8ed"
       },
       "claim": {
         "model": "exact",
@@ -84,7 +84,7 @@
       },
       "producer": {
         "package_id": "com.avilalabs/nctforge-cli@0.1.0",
-        "sha256": "sha256:183767300d129b51280b921bc2ca27efb46244117867e5e461846c3beed1854a"
+        "sha256": "sha256:3a0197ac3fd7d365ad9ce236296ef6d3566b87f6f354d509f8f621368196c8ed"
       },
       "claim": {
         "model": "unquantified",
@@ -101,7 +101,7 @@
       },
       "producer": {
         "package_id": "com.avilalabs/nctforge-cli@0.1.0",
-        "sha256": "sha256:183767300d129b51280b921bc2ca27efb46244117867e5e461846c3beed1854a"
+        "sha256": "sha256:3a0197ac3fd7d365ad9ce236296ef6d3566b87f6f354d509f8f621368196c8ed"
       },
       "claim": {
         "model": "unquantified",

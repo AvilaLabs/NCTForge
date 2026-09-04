@@ -44,7 +44,7 @@ rebuild has another SHA-256, Core will refuse execution. Inspect the change and
 deliberately update the capability and committed producer identities; do not
 bypass the pin.
 
-## Use it during the O-17 investigation
+## Use it after the O-17 processor attribution
 
 All seven scientific inputs are declared free. Pass a changed report with
 `--input NAME=PATH`; pass every changed member of the evidence chain in the
@@ -56,6 +56,12 @@ The generated claims keep the exact queue count, response category, and triage
 category distinct. The count drives a quantitative verdict. The response
 category drives a closed-vocabulary categorical verdict without being encoded
 as an invented number.
+
+The O-17 attribution is intentionally not used to rewrite this package's
+scientific inputs or expected result. It explains NJOY's internal accounting
+but retains all 43 findings for independent physical validation. Rerunning this
+unchanged contract after the attribution should therefore still produce both
+FAIL verdicts. That is a regression control, not a limitation to work around.
 
 The observed development effect and explicitly qualified counterfactual are
 kept in the [Avila Core use-case

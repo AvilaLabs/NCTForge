@@ -19,7 +19,7 @@
       "document_id": "claims",
       "role": "claims",
       "path": "claims.json",
-      "sha256": "sha256:a2baf46fdfb18d30d5dc9e757251aae8bdc34e903635a7285500241ebdb1a217"
+      "sha256": "sha256:1f5fb8432632c374c669e9c22265e4ccbcbf5a6ac4a30af8c646f9575722f4ad"
     },
     {
       "document_id": "nctforge.njoy/diagnostic-triage-check@1",
@@ -95,7 +95,7 @@
       "capability_id": "nctforge-cli",
       "package_id": "com.avilalabs/nctforge-cli@0.1.0",
       "source_repository": "https://github.com/AvilaLabs/NCTForge",
-      "executable_sha256": "sha256:183767300d129b51280b921bc2ca27efb46244117867e5e461846c3beed1854a"
+      "executable_sha256": "sha256:3a0197ac3fd7d365ad9ce236296ef6d3566b87f6f354d509f8f621368196c8ed"
     }
   ],
   "executions": [

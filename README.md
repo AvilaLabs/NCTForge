@@ -287,8 +287,10 @@ NJOY's excluded File 6 energy-balance remainder. Evidence-aware v0.4 consumes
 that exact evidence and reclassifies only H-2 while independently restoring
 N-15's capture-balance rejection. C-13, O-17, and O-18 retain 102 in-domain
 findings. Diagnostic triage preserves all 102 while separating 59 findings on
-the source-data-blocked C-13/O-18 runs from the 43 O-17 findings that still
-need independent reaction diagnostics; the candidate remains rejected. See [ADR
+the source-data-blocked C-13/O-18 runs from 43 O-17 findings. All 43 O-17
+excesses now reproduce NJOY's printed per-reaction energy-balance accounting,
+but that same-processor attribution waives none of them and cannot replace an
+independent physical validation; the candidate remains rejected. See [ADR
 0017](docs/adr/0017-source-aware-photon-production-suitability.md), [ADR
 0019](docs/adr/0019-independent-mf6-capture-photon-balance.md), and [ADR
 0020](docs/adr/0020-content-bound-transport-domain-suitability.md), followed by
@@ -298,7 +300,9 @@ The processor attribution is frozen in [ADR
 is specified by [ADR
 0023](docs/adr/0023-reaction-evidence-aware-suitability.md), and the bounded
 work queue by [ADR
-0025](docs/adr/0025-diagnostic-triage-of-remaining-njoy-findings.md).
+0025](docs/adr/0025-diagnostic-triage-of-remaining-njoy-findings.md), and the
+O-17 attribution and response-path pause by [ADR
+0026](docs/adr/0026-o17-processor-energy-balance-attribution.md).
 
 The derived diagnostic-triage gate is also a live dogfood case for Avila Core.
 NCTForge keeps the domain verification and emits a deterministic machine

@@ -264,3 +264,130 @@ Use the unchanged Core path for the O-17 reaction diagnostic and record how
 many attempts, compiler/runtime interventions, and manual control steps it
 requires. That is the first opportunity to observe reuse rather than Core
 feature construction.
+
+## 2026-09-03 — O-17 processor energy-balance attribution
+
+**Starting NCTForge revision:** `c52a31c`
+
+**Implemented NCTForge revision:** `5729f8a` (`Attribute the O17 NJOY
+energy-balance findings`)
+
+**Core revision exercised:** `2e58d1d` (`Gate Aftermatter route readiness
+categorically`); no Core source change was made for this NCTForge slice
+
+**Package and evidence:**
+[`integrations/avila-core/njoy-evidence-aware/`](../../integrations/avila-core/njoy-evidence-aware/),
+[ADR 0026](../adr/0026-o17-processor-energy-balance-attribution.md), and the
+ignored local workspace `runs/avila-core-o17-regression/`
+
+### Starting point
+
+The previous triage left exactly 43 O-17 findings in the independent reaction
+queue. A prospective start was recorded at `2026-09-03T23:30:51-04:00`, along
+with the starting revision, the O-17 processor-output SHA-256
+`e7ec927a4d7faeb49a2f6c7cc89c0a22c322818252763899b950e41d39f38e61`,
+and a targeted 50-test baseline that completed in 15.22 seconds.
+
+The intended slice was bounded: identify whether those findings have a
+deterministic reaction-level cause, preserve any distinction between processor
+attribution and physical validation, then run the existing Core gate without
+adding a Core feature.
+
+### What Core did
+
+- Reused the same contract, registry, adapter, expected output, requirements,
+  and compiled snapshot as the diagnostic-triage pass.
+- Required a deliberate executable and claims-producer re-pin after the
+  NCTForge binary changed; no hash bypass was used.
+- Re-hashed 4 package documents and 8 artifacts, staged 7 inputs, verified 10
+  evidence records, executed the unchanged check in 40 ms, and reproduced the
+  committed output SHA-256
+  `aff141e8786f8c7cd4729e6a0a7f29ecb5c0db5bdabab7636d633db789b3cdf0`.
+- Preserved separate numeric and categorical failures after the new diagnostic
+  was added to NCTForge.
+
+### Observed result
+
+NCTForge added a receipt-bound processor-accounting report. For all 43
+in-domain O-17 findings, the summed printed File 6 `ebal` contributions match
+the final `MT301 - kinematic maximum` excess within the declared `2e-3` print
+tolerance. The maximum observed relative difference is
+`3.721276397804447e-4`; MT 443 matches the kinematic maximum at every sample.
+The report preserves 43 physical validations required and zero waivers.
+
+The generic MF=6/MT=102 capture calculator was tried first and returned
+`invalid ENDF tabulation`. Inspection showed that O-17's capture source and
+other contributing reactions exceed that calculator's narrow supported shape.
+This was a useful rejected attempt, but its error text did not identify the
+unsupported representation; source and processor-output inspection supplied
+that diagnosis.
+
+The fresh Core run required no compiler/runtime intervention and no Core code
+change. It completed in 0.49 seconds wall time and correctly returned:
+
+- `FAIL / bounded.le.exceeds` for 43 against 0; and
+- `FAIL / categorical.equals.mismatch` for
+  `transported_photon_kerma_rejected` versus
+  `transported_photon_kerma_candidate_unreviewed`.
+
+The Core manifest SHA-256 is
+`4bbd8fb986cf4346f8cfcdfa6035808b9846b7a0cc3febe322a47c3eb509863d`,
+the unchanged compiled snapshot is
+`7c44c22e634c6e65349ba075c97c206a838b7a7040b25a9f7954e102235624a3`,
+the execution receipt is
+`d8a291d4296e6ab8556bc51eed5436990a418d8eaf8136b11dfe75fff6dd2fcd`,
+and the campaign is
+`3ff49adb71b537dc4ebee3f2d8710431a2394bd60cc195692fb725a56b8b316f`.
+
+### Development effect
+
+This is the first NCTForge reuse that required no Core capability or semantic
+change. Core did not discover the O-17 mechanism; NCTForge did. Core's value
+was making the non-effect on readiness executable: adding an explanatory
+artifact could not silently turn processor attribution into a passing physical
+gate. The integration work was limited to re-pinning the rebuilt executable in
+the package and its committed producer identities.
+
+The NCTForge verifier independently regenerated the 48,149-byte attribution
+and checked the entire external execution root in 1.53 seconds. These command
+timings are single observations, not benchmark distributions. No reliable
+active-development duration or controlled A/B implementation was measured.
+
+### Likely result without Core — inferred
+
+The processor mechanism and scientific pause decision would almost certainly
+be the same; they come from NCTForge's parser, the pinned NJOY source, and the
+frozen output. A likely non-Core workflow would rerun the NCTForge verifier,
+inspect that the old triage JSON had not changed, and record the conclusion in
+the ADR. That would be adequate and slightly less package maintenance for this
+one slice.
+
+Without Core, the unchanged count and rejected category would be more likely
+to remain a human regression check. Core supplied a uniform proof that the
+same executable still reproduced the complete evidence chain and that both
+requirements remained failed after an attractive mechanistic explanation was
+introduced.
+
+**Counterfactual confidence:**
+
+- **High** that the O-17 accounting result and pause decision would be
+  unchanged.
+- **High** that the direct NCTForge verifier would be the fallback.
+- **Medium** that the response category would otherwise be checked manually;
+  a small project-specific regression script was also plausible.
+- **Not estimated** for time saved. This pass demonstrates behavioral reuse and
+  consistency, not a measured productivity advantage.
+
+### What this entry does not establish
+
+It does not independently validate O-17 reaction physics, reduce the triage
+queue, qualify a response table, solve C-13/O-18's absent photon sources, or
+reverse N-15's independent capture-balance rejection. It also does not show
+that Core accelerated the scientific diagnosis.
+
+### Follow-up
+
+Pause this response-qualification path until a controlled alternative data
+profile or independently reviewed O-17 physical calculation is available. The
+next Core use should come from a genuinely needed project slice rather than
+extending either repository solely to manufacture reuse evidence.
