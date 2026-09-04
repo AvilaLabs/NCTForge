@@ -1,0 +1,130 @@
+{
+  "schema_version": "avila.core/case-package/v0.1-draft",
+  "case_id": "NCTFORGE-NF-BNCT-001-JEFF40-RESPONSE-READINESS",
+  "title": "NCTForge JEFF-4.0 evidence-aware response-readiness gate",
+  "documents": [
+    {
+      "document_id": "contract",
+      "role": "contract",
+      "path": "contract.json",
+      "sha256": "sha256:7e97e8885960bee3702aeb8522157dda451aa92fdd7f2572305193c076ce7144"
+    },
+    {
+      "document_id": "registry",
+      "role": "registry",
+      "path": "registry.json",
+      "sha256": "sha256:5ece2c38b572be049ff2af96ef77b523dcb1e65342db6750296168b4c0fc6e99"
+    },
+    {
+      "document_id": "claims",
+      "role": "claims",
+      "path": "claims.json",
+      "sha256": "sha256:7f10ff7a3661c13f3b021a56bd01e7a661ee0e4edea95531b19dc65096258d08"
+    },
+    {
+      "document_id": "nctforge.njoy/evidence-aware-check@1",
+      "role": "external_checker_adapter",
+      "path": "adapter.json",
+      "sha256": "sha256:8c60c8d4b3f85962fee2a4134e036ae96fa1ff3b7955287f3340c6a441a8ae70"
+    }
+  ],
+  "artifacts": [
+    {
+      "artifact_id": "domain-aware-report",
+      "evidence_ids": ["input:domain-aware-report"],
+      "source_root": "nctforge",
+      "path": "benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/njoy2016-78-transported-photon-domain-aware-suitability.json",
+      "sha256": "sha256:6e46b627d9b766e596ad2219eaafca970bd9f3c5df1d5e400ad644397c44ce55"
+    },
+    {
+      "artifact_id": "law7-residual-report",
+      "evidence_ids": ["input:law7-residual-report"],
+      "source_root": "nctforge",
+      "path": "benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-mf6-mt16-law7-implicit-residual.json",
+      "sha256": "sha256:0cfaaf52c67f359b3fd2c70b147e92dd9e004e3495bb860f9ad5ab7707acd1d5"
+    },
+    {
+      "artifact_id": "law7-comparison-report",
+      "evidence_ids": ["input:law7-comparison-report"],
+      "source_root": "nctforge",
+      "path": "benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-vs-njoy2016-78-law7-implicit-residual.json",
+      "sha256": "sha256:64b3985ed5fc3d57c7a41c55b58e13f8bba069403c72bafe50235a13e0ae5687"
+    },
+    {
+      "artifact_id": "capture-balance-report",
+      "evidence_ids": ["input:capture-balance-report"],
+      "source_root": "nctforge",
+      "path": "benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-mf6-mt102-capture-photon-balance.json",
+      "sha256": "sha256:306a0d893f7ea8e3b5490a7cc6f5556a6de523e0171bb98dc23571bec1febbce"
+    },
+    {
+      "artifact_id": "capture-comparison-report",
+      "evidence_ids": ["input:capture-comparison-report"],
+      "source_root": "nctforge",
+      "path": "benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-vs-njoy2016-78-mf6-capture-photon-moments.json",
+      "sha256": "sha256:e3b995922e91214d07f708c307c38f19166fe4b51c38e0611c6fcc01d5bdd831"
+    },
+    {
+      "artifact_id": "evidence-aware-report",
+      "evidence_ids": ["input:evidence-aware-report"],
+      "source_root": "nctforge",
+      "path": "benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/njoy2016-78-transported-photon-evidence-aware-suitability.json",
+      "sha256": "sha256:68b22afd510d477eb997fd514a37bcca9c45730e7fab22fd7ad9186d37f2baa0"
+    },
+    {
+      "artifact_id": "reference-check-result",
+      "evidence_ids": [
+        "nctforge-remaining-in-domain-findings",
+        "nctforge-suitability-qualification"
+      ],
+      "source_root": "case",
+      "path": "expected/evidence-aware-check.json",
+      "sha256": "sha256:7e90a7bc6636cc1fbb27ba7baa554e3d7a1f18bd02d71155d18dcffbf02548e7"
+    }
+  ],
+  "capabilities": [
+    {
+      "capability_id": "nctforge-cli",
+      "package_id": "com.avilalabs/nctforge-cli@0.1.0",
+      "source_repository": "https://github.com/AvilaLabs/NCTForge",
+      "executable_sha256": "sha256:5d080a97834e6bf4f8ece419960f1281467c3bdf83b942918ffc583d69ee044b"
+    }
+  ],
+  "executions": [
+    {
+      "step_id": "verify-evidence-aware",
+      "adapter": "nctforge.njoy/evidence-aware-check@1",
+      "capability_id": "nctforge-cli",
+      "inputs": [
+        { "input_slot": "domain-aware-report", "workspace_path": "inputs/domain-aware-report.json" },
+        { "input_slot": "law7-residual-report", "workspace_path": "inputs/law7-residual-report.json" },
+        { "input_slot": "law7-comparison-report", "workspace_path": "inputs/law7-comparison-report.json" },
+        { "input_slot": "capture-balance-report", "workspace_path": "inputs/capture-balance-report.json" },
+        { "input_slot": "capture-comparison-report", "workspace_path": "inputs/capture-comparison-report.json" },
+        { "input_slot": "evidence-aware-report", "workspace_path": "inputs/evidence-aware-report.json" }
+      ],
+      "outputs": [
+        {
+          "output_slot": "remaining-in-domain-findings",
+          "claim_id": "nctforge-remaining-in-domain-findings"
+        },
+        {
+          "output_slot": "qualification",
+          "claim_id": "nctforge-suitability-qualification"
+        }
+      ]
+    }
+  ],
+  "free_inputs": [
+    "domain-aware-report",
+    "law7-residual-report",
+    "law7-comparison-report",
+    "capture-balance-report",
+    "capture-comparison-report",
+    "evidence-aware-report"
+  ],
+  "limitations": [
+    "This is a research workflow integration, not a response-table approval or clinical qualification.",
+    "The committed executable digest identifies the local Rust build used for this specimen and is not a cross-platform release identity."
+  ]
+}

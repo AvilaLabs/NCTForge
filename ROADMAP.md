@@ -148,6 +148,10 @@ Implementation status:
   source and processor-attribution reports to the immutable domain assessment,
   clear all 15 attributed H-2 findings without deleting them, and integrate
   N-15's independent capture-balance rejection;
+- complete: expose that evidence-aware gate through Avila Core's hash-bound
+  external-checker protocol, preserving the categorical qualification and
+  exact remaining-finding count as separate claims while NCTForge retains all
+  domain logic;
 - in progress: extend independent reaction/source diagnostics to the 102
   remaining in-domain JEFF-4.0 findings across C-13, O-17, and O-18 before
   defining a reviewed response treatment; N-15 remains independently rejected

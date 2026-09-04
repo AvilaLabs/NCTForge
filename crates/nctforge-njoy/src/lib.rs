@@ -29,6 +29,7 @@ use thiserror::Error;
 mod capture_balance;
 mod capture_balance_comparison;
 mod comparison;
+mod core_check;
 mod domain_aware;
 mod evidence_aware;
 mod execution;
@@ -60,6 +61,10 @@ pub use comparison::{
     NjoySuitabilityComparisonDocument, NjoySuitabilityComparisonError,
     NjoySuitabilityComparisonOutcome, NjoySuitabilityComparisonQualification,
     NjoySuitabilityComparisonResult, NjoySuitabilityComparisonRun,
+};
+pub use core_check::{
+    NJOY_EVIDENCE_AWARE_CHECK_SCHEMA, NjoyEvidenceAwareCheckResult,
+    NjoyEvidenceAwareCheckVerification,
 };
 pub use domain_aware::{
     NJOY_DOMAIN_AWARE_SUITABILITY_SCHEMA, NjoyDomainAwareSuitabilityError,

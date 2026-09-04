@@ -24,14 +24,15 @@ use nctforge_njoy::{
     EndfPhotonProductionInventory, EndfPhotonProductionInventoryDocument,
     NjoyCapturePhotonMomentComparison, NjoyCapturePhotonMomentComparisonDocument,
     NjoyDomainAwareSuitabilityReport, NjoyDomainAwareSuitabilityReportDocument,
-    NjoyEvidenceAwareSuitabilityReport, NjoyEvidenceAwareSuitabilityReportDocument,
-    NjoyExecutionOptions, NjoyExecutionReceipt, NjoyExecutionReceiptDocument, NjoyInputArtifacts,
-    NjoyInputBundle, NjoyLaw7ImplicitResidualComparison,
-    NjoyLaw7ImplicitResidualComparisonDocument, NjoyLaw7ImplicitResidualComparisonQualification,
-    NjoyPhotonMomentComparison, NjoyPhotonMomentComparisonDocument,
-    NjoySourceAwareSuitabilityReport, NjoySourceAwareSuitabilityReportDocument,
-    NjoySuitabilityComparison, NjoySuitabilityComparisonDocument,
-    NjoySuitabilityComparisonQualification, NjoySuitabilityReport, NjoySuitabilityReportDocument,
+    NjoyEvidenceAwareCheckResult, NjoyEvidenceAwareSuitabilityReport,
+    NjoyEvidenceAwareSuitabilityReportDocument, NjoyExecutionOptions, NjoyExecutionReceipt,
+    NjoyExecutionReceiptDocument, NjoyInputArtifacts, NjoyInputBundle,
+    NjoyLaw7ImplicitResidualComparison, NjoyLaw7ImplicitResidualComparisonDocument,
+    NjoyLaw7ImplicitResidualComparisonQualification, NjoyPhotonMomentComparison,
+    NjoyPhotonMomentComparisonDocument, NjoySourceAwareSuitabilityReport,
+    NjoySourceAwareSuitabilityReportDocument, NjoySuitabilityComparison,
+    NjoySuitabilityComparisonDocument, NjoySuitabilityComparisonQualification,
+    NjoySuitabilityQualification, NjoySuitabilityReport, NjoySuitabilityReportDocument,
 };
 use nctforge_openmc::{
     DataAcquisitionClient, DataAcquisitionProfileDocument, DataAcquisitionReceiptDocument,
@@ -582,6 +583,30 @@ enum NjoyCommand {
         /// Evidence-aware v0.4 report to validate and regenerate.
         #[arg(long)]
         evidence_aware_report: PathBuf,
+    },
+    /// Verify v0.4 evidence and write a compact machine-facing check result.
+    CheckEvidenceAware {
+        /// Verified domain-aware v0.3 transported-photon suitability report.
+        #[arg(long)]
+        domain_aware_report: PathBuf,
+        /// Independent H-2 LAW=7 implicit-residual report.
+        #[arg(long)]
+        law7_residual_report: PathBuf,
+        /// Receipt-bound H-2 LAW=7 processor attribution.
+        #[arg(long)]
+        law7_comparison_report: PathBuf,
+        /// Independent N-15 MF=6 capture-balance report.
+        #[arg(long)]
+        capture_balance_report: PathBuf,
+        /// Receipt-bound N-15 capture-moment comparison.
+        #[arg(long)]
+        capture_comparison_report: PathBuf,
+        /// Evidence-aware v0.4 report to validate and regenerate.
+        #[arg(long)]
+        evidence_aware_report: PathBuf,
+        /// New deterministic JSON result; it must not already exist.
+        #[arg(long)]
+        output: PathBuf,
     },
     /// Compare a candidate suitability report against a rejected baseline.
     CompareSuitability {
@@ -1951,6 +1976,53 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                     } else {
                         "transported_photon_kerma_rejected"
                     }
+                );
+            }
+            NjoyCommand::CheckEvidenceAware {
+                domain_aware_report,
+                law7_residual_report,
+                law7_comparison_report,
+                capture_balance_report,
+                capture_comparison_report,
+                evidence_aware_report,
+                output,
+            } => {
+                let domain =
+                    NjoyDomainAwareSuitabilityReportDocument::from_path(&domain_aware_report)?;
+                let law7_residual =
+                    EndfMf6Law7ImplicitResidualReportDocument::from_path(&law7_residual_report)?;
+                let law7_comparison =
+                    NjoyLaw7ImplicitResidualComparisonDocument::from_path(&law7_comparison_report)?;
+                let capture_balance =
+                    EndfMf6CapturePhotonBalanceReportDocument::from_path(&capture_balance_report)?;
+                let capture_comparison = NjoyCapturePhotonMomentComparisonDocument::from_path(
+                    &capture_comparison_report,
+                )?;
+                let report =
+                    NjoyEvidenceAwareSuitabilityReportDocument::from_path(&evidence_aware_report)?;
+                let result = NjoyEvidenceAwareCheckResult::verify_and_build(
+                    &report,
+                    &domain,
+                    &law7_residual,
+                    &law7_comparison,
+                    &capture_balance,
+                    &capture_comparison,
+                )?;
+                result.write_new(&output)?;
+                println!("verified evidence-aware suitability and wrote machine check");
+                println!("result: {}", output.display());
+                println!(
+                    "qualification: {}",
+                    match result.qualification {
+                        NjoySuitabilityQualification::TransportedPhotonKermaCandidateUnreviewed =>
+                            "transported_photon_kerma_candidate_unreviewed",
+                        NjoySuitabilityQualification::TransportedPhotonKermaRejected =>
+                            "transported_photon_kerma_rejected",
+                    }
+                );
+                println!(
+                    "remaining in-domain kinematic violations: {}",
+                    result.remaining_in_domain_kinematic_violation_count
                 );
             }
             NjoyCommand::CompareSuitability {

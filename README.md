@@ -137,6 +137,7 @@ benchmarks/synthetic/       public, non-patient validation corpus
 profiles/                   reviewed external-data acquisition profiles
 schemas/                    versioned interchange schemas
 docs/                       architecture, decisions, and qualification records
+integrations/               bounded external orchestration specimens
 ```
 
 ## Build
@@ -294,6 +295,13 @@ The processor attribution is frozen in [ADR
 0022](docs/adr/0022-law7-processor-attribution.md), and the integrated decision
 is specified by [ADR
 0023](docs/adr/0023-reaction-evidence-aware-suitability.md).
+
+The same v0.4 gate is also a live dogfood case for Avila Core. NCTForge keeps
+the domain verification and emits a deterministic machine result; Core binds
+the exact executable and inputs, records the run, preserves the categorical
+qualification, and evaluates the separate zero-finding requirement. See the
+[integration case](integrations/avila-core/njoy-evidence-aware/README.md) and
+[ADR 0024](docs/adr/0024-avila-core-evidence-loop.md).
 
 ## License and use boundary
 
