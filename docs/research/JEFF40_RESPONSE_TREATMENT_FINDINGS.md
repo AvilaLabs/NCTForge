@@ -77,6 +77,13 @@ mistaking the narrower processor pass for suitability. The integrated rejected
 set is C-13, N-15, O-17, and O-18. The 102 still-unexplained in-domain
 kinematic findings belong to C-13 (32), O-17 (43), and O-18 (27).
 
+ADR 0025 preserves that exact total but separates the investigation queue.
+C-13 and O-18 have no supported MF=6/12/13/14/15 photon-production source and
+are already rejected by their exact `local_deposition_fallback` condition.
+Their 59 findings remain visible as source-data-blocked; they are not waived or
+numerically explained. O-17's 43 findings remain the sole independent
+reaction-diagnostic queue.
+
 Both exact ten-nuclide inventories have zero format-pairing findings and eight
 evaluations with a HEATR photon source. This establishes record availability,
 not energy-balance validity.
@@ -113,6 +120,8 @@ not energy-balance validity.
   `64b3985ed5fc3d57c7a41c55b58e13f8bba069403c72bafe50235a13e0ae5687`.
 - JEFF-4.0 evidence-aware v0.4 suitability SHA-256:
   `68b22afd510d477eb997fd514a37bcca9c45730e7fab22fd7ad9186d37f2baa0`.
+- JEFF-4.0 diagnostic-triage SHA-256:
+  `6ba92bce735cf290dd3dbe3e068ceff1e25cbc1869b21d5ecd64db8b8d206020`.
 
 The baseline-comparison artifact is intentionally the immutable v0.1
 log-only comparison. ADR 0017 and the v0.2 report supersede only its treatment
@@ -158,6 +167,10 @@ reports, the immutable v0.3 domain assessment, and the N-15 independent gate.
 It clears only H-2 and leaves C-13, O-17, and O-18 untouched. H-2 is still
 `candidate_unreviewed`, not a qualified response treatment.
 
+The next bounded test is therefore O-17 reaction-level attribution. C-13 and
+O-18 stay rejected unless a different transported-photon source is supplied;
+reinterpreting their kinematic messages cannot repair the missing source.
+
 ## Primary sources
 
 - [JEFF-4.0 evaluated nuclear data library](https://data.oecd-nea.org/records/e9ajn-a3p20)
@@ -170,3 +183,4 @@ It clears only H-2 and leaves C-13, O-17, and O-18 untouched. H-2 is still
 - [Independent LAW=7 implicit-residual decision](../adr/0021-independent-law7-implicit-residual-balance.md)
 - [LAW=7 processor-attribution decision](../adr/0022-law7-processor-attribution.md)
 - [Reaction-evidence-aware suitability decision](../adr/0023-reaction-evidence-aware-suitability.md)
+- [Diagnostic-triage decision](../adr/0025-diagnostic-triage-of-remaining-njoy-findings.md)

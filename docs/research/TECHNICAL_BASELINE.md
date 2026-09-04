@@ -320,9 +320,13 @@ result exists. Cross-code agreement alone remains `cross_code_research_only`.
   excluded File 6 energy-balance remainder. Complete: add reaction-evidence-
   aware suitability schema `0.4.0`, clear only H-2 under that exact
   attribution, and incorporate N-15's independent capture-balance rejection;
-  102 in-domain findings remain across C-13, O-17, and O-18. Pending: diagnose
-  those three nuclides, then define, justify, and review a passing versioned
-  response treatment.
+  102 in-domain findings remain across C-13, O-17, and O-18. Complete: preserve
+  all 102 in a fail-closed diagnostic triage, classify 59 on C-13/O-18 as
+  attached to runs already blocked by missing photon-production sources, and
+  retain 43 O-17 findings in the independent diagnostic queue. Pending:
+  diagnose O-17, then define, justify, and review a passing versioned response
+  treatment; C-13/O-18 require a different photon source before they can enter
+  that path.
 - Do not use reaction-filtered neutron heating as a component partition; retain
   it only as a diagnostic under ADR 0005.
 - Do not publish “golden” OpenMC dose arrays before an independent calculation is

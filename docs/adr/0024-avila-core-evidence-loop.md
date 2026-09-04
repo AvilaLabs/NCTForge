@@ -54,6 +54,15 @@ NCTForge; every mutually dependent changed report must be supplied together.
 Replay against the frozen case is then not applicable rather than silently
 treated as a mismatch.
 
+## Follow-on
+
+[ADR 0025](0025-diagnostic-triage-of-remaining-njoy-findings.md) reuses and
+revises this same package after the first investigation pass. The package now
+binds a seventh diagnostic-triage input, gates the 43-finding independent queue,
+and—using Core's closed categorical requirements—also gates response
+qualification directly. The description above remains the historical first
+slice rather than being rewritten as though that capability existed initially.
+
 ## Boundary
 
 This integration does not approve a response table, qualify transport, make a
@@ -65,8 +74,8 @@ inspection.
 
 ## Consequences
 
-- The next C-13/O-17/O-18 investigation can exercise Core's iteration and
-  feedback loop against real NCTForge evidence.
+- The follow-on triage uses this integration for real NCTForge evidence and
+  narrows the next independent investigation to O-17.
 - A domain rejection remains a valid, queryable result while process failures
   remain unmistakable failures.
 - NCTForge exposes one narrow stable machine surface instead of asking an
@@ -81,5 +90,6 @@ inspection.
 - [ADR 0021: Independent LAW=7 implicit-residual balance](0021-independent-law7-implicit-residual-balance.md)
 - [ADR 0022: LAW=7 processor-approximation attribution](0022-law7-processor-attribution.md)
 - [ADR 0023: Reaction-evidence-aware transported-photon suitability](0023-reaction-evidence-aware-suitability.md)
+- [ADR 0025: Diagnostic triage of remaining NJOY findings](0025-diagnostic-triage-of-remaining-njoy-findings.md)
 - [Integration case](../../integrations/avila-core/njoy-evidence-aware/README.md)
 - [Avila Core use-case record](../research/AVILA_CORE_USE_CASE_LOG.md)

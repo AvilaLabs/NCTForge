@@ -286,7 +286,9 @@ proton, and a receipt-bound comparison attributes all 15 H-2 findings to
 NJOY's excluded File 6 energy-balance remainder. Evidence-aware v0.4 consumes
 that exact evidence and reclassifies only H-2 while independently restoring
 N-15's capture-balance rejection. C-13, O-17, and O-18 retain 102 in-domain
-findings, so the candidate remains rejected. See [ADR
+findings. Diagnostic triage preserves all 102 while separating 59 findings on
+the source-data-blocked C-13/O-18 runs from the 43 O-17 findings that still
+need independent reaction diagnostics; the candidate remains rejected. See [ADR
 0017](docs/adr/0017-source-aware-photon-production-suitability.md), [ADR
 0019](docs/adr/0019-independent-mf6-capture-photon-balance.md), and [ADR
 0020](docs/adr/0020-content-bound-transport-domain-suitability.md), followed by
@@ -294,12 +296,15 @@ findings, so the candidate remains rejected. See [ADR
 The processor attribution is frozen in [ADR
 0022](docs/adr/0022-law7-processor-attribution.md), and the integrated decision
 is specified by [ADR
-0023](docs/adr/0023-reaction-evidence-aware-suitability.md).
+0023](docs/adr/0023-reaction-evidence-aware-suitability.md), and the bounded
+work queue by [ADR
+0025](docs/adr/0025-diagnostic-triage-of-remaining-njoy-findings.md).
 
-The same v0.4 gate is also a live dogfood case for Avila Core. NCTForge keeps
-the domain verification and emits a deterministic machine result; Core binds
-the exact executable and inputs, records the run, preserves the categorical
-qualification, and evaluates the separate zero-finding requirement. See the
+The derived diagnostic-triage gate is also a live dogfood case for Avila Core.
+NCTForge keeps the domain verification and emits a deterministic machine
+result; Core binds the exact executable and inputs, records the run, evaluates
+the 43-finding queue, and independently enforces the closed response category.
+See the
 [integration case](integrations/avila-core/njoy-evidence-aware/README.md) and
 [ADR 0024](docs/adr/0024-avila-core-evidence-loop.md).
 

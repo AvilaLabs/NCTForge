@@ -132,3 +132,135 @@ For the next bounded NCTForge task, record the starting state and start time
 before using Core, then capture interventions, failed attempts, output changes,
 and elapsed active work. Reuse this package shape where it fits rather than
 expanding Core merely to make the record look favorable.
+
+## 2026-09-03 — Triage the 102 remaining NJOY findings
+
+**Starting NCTForge revision:** `e561226`
+
+**Implemented NCTForge revision:** `0629ba8` (`Triage the remaining NJOY
+diagnostics`)
+
+**Core revision exercised:** `51e2b59` (`Add closed-set categorical
+requirements`)
+
+**Package and evidence:**
+[`integrations/avila-core/njoy-evidence-aware/`](../../integrations/avila-core/njoy-evidence-aware/)
+and [ADR 0025](../adr/0025-diagnostic-triage-of-remaining-njoy-findings.md)
+
+### Starting point
+
+The frozen Core gate reproduced one exact result: 102 in-domain findings
+against a limit of zero. The category
+`transported_photon_kerma_rejected` was preserved in claims but could not be a
+requirement. The 102 findings were already attributable by nuclide—C-13 (32),
+O-17 (43), and O-18 (27)—but the active investigation queue did not distinguish
+runs blocked by missing photon-production sources from runs needing an
+independent reaction diagnostic.
+
+A prospective baseline was captured before changing the slice:
+
+| Observation | Result |
+| --- | ---: |
+| NCTForge debug build wall time | 0.71 s |
+| Original Core checker execution stage | 20 ms |
+| Original cold `cargo run` wall time | 5.74 s |
+| Original technical result | `FAIL`, 102 against 0 |
+
+The cold Core wall time includes compiling Core and is not comparable to a
+warm deployed runner. It is retained as setup evidence, not a speed claim.
+
+### What Core did
+
+- Reused the existing package boundary to bind seven inputs, the NCTForge
+  executable, the checker descriptor, and one deterministic output.
+- Exposed a concrete compiler gap: a categorical scientific rejection could
+  be transported but not required.
+- Added a general, role-owned closed categorical vocabulary and explicit
+  `equals` / `in_set` requirements in Core rather than an NCTForge-specific
+  exception.
+- Independently evaluated the exact diagnostic queue and response category.
+- Re-hashed 4 package documents and 8 artifacts, staged 7 inputs, verified the
+  execution receipt and reproduced output, generated 3 typed claims, admitted
+  all 10 evidence records, and compared generated claims with the committed
+  claims document.
+
+### Observed result
+
+- NCTForge preserved all 102 findings and partitioned them into 59 findings on
+  source-data-blocked C-13/O-18 runs and 43 O-17 findings requiring an
+  independent reaction diagnostic.
+- The response qualification did not change:
+  `transported_photon_kerma_rejected`.
+- A fresh complete Core run reproduced the expected output and returned two
+  separate verdicts:
+  `FAIL / bounded.le.exceeds` for 43 against 0, and
+  `FAIL / categorical.equals.mismatch` for rejected versus
+  candidate-unreviewed.
+- The final warm end-to-end invocation took 0.44 s wall time; the checker stage
+  took 40 ms. These are single observations, not a benchmark distribution.
+- One setup invocation used the pre-rebuild NCTForge binary and rejected the
+  new subcommand as unknown. Rebuilding fixed it. Core did not prevent that
+  retry; the final executable hash pin prevents that stale binary from entering
+  the recorded run.
+
+The deterministic identities were:
+
+- triage report:
+  `6ba92bce735cf290dd3dbe3e068ceff1e25cbc1869b21d5ecd64db8b8d206020`;
+- checker result:
+  `aff141e8786f8c7cd4729e6a0a7f29ecb5c0db5bdabab7636d633db789b3cdf0`;
+- compiled Core snapshot:
+  `7c44c22e634c6e65349ba075c97c206a838b7a7040b25a9f7954e102235624a3`;
+- campaign:
+  `5feff819d1abe6abeb6ffdd9e691bc3193f9cc6d45be690267a2133f97a7c417`.
+
+### Development effect
+
+The scientific partition is NCTForge's result, not Core's. Core's direct value
+was control and feedback: it made the count/category distinction executable,
+made stale or mismatched bytes fail closed, and replaced separate manual hash,
+staging, extraction, expected-output, admission, and verdict checks with one
+repeatable path.
+
+This pass was still infrastructure investment. Supporting the real use case
+required Core commit `51e2b59`, which changed 31 files (+1,113/-83). It was
+almost certainly slower than writing a one-off script for this single frozen
+case. The reusable value must be judged on later slices that consume the
+categorical facility without extending Core again.
+
+### Likely result without Core — inferred
+
+NCTForge would probably have reached the same 59/43 partition and unchanged
+scientific rejection, because those are derived and verified inside NCTForge.
+The likely fallback is a direct `nctforge` invocation followed by a JSON diff
+or small project-specific script. That would be adequate for the immediate
+physics result.
+
+Without Core, it is less likely that both the numeric queue and response
+category would have been encoded as independent, reusable requirements in the
+same attempt record. The category would probably have remained a human-read
+field while the count alone drove a scripted gate. The exact seven-input
+lineage, executable identity, generated-claim comparison, and uniform failure
+surface would also have required bespoke work or manual checking.
+
+**Counterfactual confidence:**
+
+- **High** that the 59/43 partition and rejection would be unchanged.
+- **Medium** that the fallback would check the count automatically but inspect
+  the category manually; no parallel implementation was built.
+- **High** that a one-off path would have been faster for this single pass,
+  because Core itself needed a material categorical-requirement extension.
+- **Not estimated** for cumulative time saved. Reuse has not yet been measured.
+
+### What this entry does not establish
+
+It does not explain O-17's 43 findings, solve C-13/O-18's absent photon source,
+qualify a response treatment, or prove a net productivity gain. The two wall
+times are different cache states and must not be treated as an A/B comparison.
+
+### Follow-up
+
+Use the unchanged Core path for the O-17 reaction diagnostic and record how
+many attempts, compiler/runtime interventions, and manual control steps it
+requires. That is the first opportunity to observe reuse rather than Core
+feature construction.
