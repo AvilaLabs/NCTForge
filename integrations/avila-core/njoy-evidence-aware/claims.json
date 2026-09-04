@@ -1,7 +1,7 @@
 {
   "schema_version": "avila.core/evidence-claims/v0.2-draft",
   "semantic_profile": "avila.core/semantic/0.2-draft",
-  "compiled_snapshot_sha256": "sha256:df8275da4ceea44347985b174d04178e3a883e182d9926841a1066c9814557e7",
+  "compiled_snapshot_sha256": "sha256:7c44c22e634c6e65349ba075c97c206a838b7a7040b25a9f7954e102235624a3",
   "inputs": [
     {
       "input_id": "capture-balance-report",
@@ -14,6 +14,13 @@
       "input_id": "capture-comparison-report",
       "artifact": {
         "sha256": "sha256:e3b995922e91214d07f708c307c38f19166fe4b51c38e0611c6fcc01d5bdd831",
+        "media_type": "application/json"
+      }
+    },
+    {
+      "input_id": "diagnostic-triage-report",
+      "artifact": {
+        "sha256": "sha256:6ba92bce735cf290dd3dbe3e068ceff1e25cbc1869b21d5ecd64db8b8d206020",
         "media_type": "application/json"
       }
     },
@@ -48,37 +55,57 @@
   ],
   "claims": [
     {
-      "claim_id": "nctforge-remaining-in-domain-findings",
-      "step_id": "verify-evidence-aware",
-      "output_slot": "remaining-in-domain-findings",
+      "claim_id": "nctforge-independent-diagnostic-findings",
+      "step_id": "verify-diagnostic-triage",
+      "output_slot": "independent-diagnostic-findings",
       "artifact": {
-        "sha256": "sha256:7e90a7bc6636cc1fbb27ba7baa554e3d7a1f18bd02d71155d18dcffbf02548e7",
-        "media_type": "application/vnd.nctforge.njoy-evidence-aware-check+json"
+        "sha256": "sha256:aff141e8786f8c7cd4729e6a0a7f29ecb5c0db5bdabab7636d633db789b3cdf0",
+        "media_type": "application/vnd.nctforge.njoy-diagnostic-triage-check+json"
       },
       "producer": {
         "package_id": "com.avilalabs/nctforge-cli@0.1.0",
-        "sha256": "sha256:5d080a97834e6bf4f8ece419960f1281467c3bdf83b942918ffc583d69ee044b"
+        "sha256": "sha256:183767300d129b51280b921bc2ca27efb46244117867e5e461846c3beed1854a"
       },
       "claim": {
         "model": "exact",
-        "nominal": { "value": "102", "unit": "1" }
+        "nominal": {
+          "value": "43",
+          "unit": "1"
+        }
       }
     },
     {
-      "claim_id": "nctforge-suitability-qualification",
-      "step_id": "verify-evidence-aware",
-      "output_slot": "qualification",
+      "claim_id": "nctforge-response-qualification",
+      "step_id": "verify-diagnostic-triage",
+      "output_slot": "response-qualification",
       "artifact": {
-        "sha256": "sha256:7e90a7bc6636cc1fbb27ba7baa554e3d7a1f18bd02d71155d18dcffbf02548e7",
-        "media_type": "application/vnd.nctforge.njoy-evidence-aware-check+json"
+        "sha256": "sha256:aff141e8786f8c7cd4729e6a0a7f29ecb5c0db5bdabab7636d633db789b3cdf0",
+        "media_type": "application/vnd.nctforge.njoy-diagnostic-triage-check+json"
       },
       "producer": {
         "package_id": "com.avilalabs/nctforge-cli@0.1.0",
-        "sha256": "sha256:5d080a97834e6bf4f8ece419960f1281467c3bdf83b942918ffc583d69ee044b"
+        "sha256": "sha256:183767300d129b51280b921bc2ca27efb46244117867e5e461846c3beed1854a"
       },
       "claim": {
         "model": "unquantified",
         "value": "transported_photon_kerma_rejected"
+      }
+    },
+    {
+      "claim_id": "nctforge-triage-qualification",
+      "step_id": "verify-diagnostic-triage",
+      "output_slot": "triage-qualification",
+      "artifact": {
+        "sha256": "sha256:aff141e8786f8c7cd4729e6a0a7f29ecb5c0db5bdabab7636d633db789b3cdf0",
+        "media_type": "application/vnd.nctforge.njoy-diagnostic-triage-check+json"
+      },
+      "producer": {
+        "package_id": "com.avilalabs/nctforge-cli@0.1.0",
+        "sha256": "sha256:183767300d129b51280b921bc2ca27efb46244117867e5e461846c3beed1854a"
+      },
+      "claim": {
+        "model": "unquantified",
+        "value": "independent_reaction_diagnostics_required"
       }
     }
   ]

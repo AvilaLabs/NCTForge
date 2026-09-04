@@ -1,0 +1,17 @@
+{
+  "schema_version": "nctforge.njoy-diagnostic-triage-check/0.1.0",
+  "source_report": {
+    "id": "nctforge.nf-bnct-001.jeff40-neutron-source-selection.v1.njoy2016-78-inputs.execution.1788195965.8a37cf70cf80.transported-photon-kerma-suitability.source-aware-v2.domain-aware-v3.evidence-aware-v4.diagnostic-triage-v1",
+    "sha256": "6ba92bce735cf290dd3dbe3e068ceff1e25cbc1869b21d5ecd64db8b8d206020"
+  },
+  "response_qualification": "transported_photon_kerma_rejected",
+  "triage_qualification": "independent_reaction_diagnostics_required",
+  "original_remaining_in_domain_kinematic_violation_count": 102,
+  "source_data_blocked_in_domain_kinematic_violation_count": 59,
+  "independent_diagnostic_required_in_domain_kinematic_violation_count": 43,
+  "verification": "regenerated_and_matched",
+  "limitations": [
+    "Source-data-blocked findings remain rejecting and are not waived by diagnostic triage.",
+    "This check does not approve response tables, qualify transport, or establish clinical validity."
+  ]
+}

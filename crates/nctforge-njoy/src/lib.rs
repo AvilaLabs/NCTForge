@@ -30,6 +30,8 @@ mod capture_balance;
 mod capture_balance_comparison;
 mod comparison;
 mod core_check;
+mod diagnostic_triage;
+mod diagnostic_triage_check;
 mod domain_aware;
 mod evidence_aware;
 mod execution;
@@ -65,6 +67,15 @@ pub use comparison::{
 pub use core_check::{
     NJOY_EVIDENCE_AWARE_CHECK_SCHEMA, NjoyEvidenceAwareCheckResult,
     NjoyEvidenceAwareCheckVerification,
+};
+pub use diagnostic_triage::{
+    NJOY_DIAGNOSTIC_TRIAGE_SCHEMA, NjoyDiagnosticTriageDisposition, NjoyDiagnosticTriageError,
+    NjoyDiagnosticTriageQualification, NjoyDiagnosticTriageReport,
+    NjoyDiagnosticTriageReportDocument, NjoyDiagnosticTriageResult, NjoyDiagnosticTriageRun,
+};
+pub use diagnostic_triage_check::{
+    NJOY_DIAGNOSTIC_TRIAGE_CHECK_SCHEMA, NjoyDiagnosticTriageCheckError,
+    NjoyDiagnosticTriageCheckResult, NjoyDiagnosticTriageCheckVerification,
 };
 pub use domain_aware::{
     NJOY_DOMAIN_AWARE_SUITABILITY_SCHEMA, NjoyDomainAwareSuitabilityError,

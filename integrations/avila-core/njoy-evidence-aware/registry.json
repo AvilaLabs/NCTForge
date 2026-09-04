@@ -2,7 +2,7 @@
   "schema_version": "avila.core/registry-snapshot/v0.2-draft",
   "semantic_profile": "avila.core/semantic/0.2-draft",
   "registry_id": "nctforge.nf-bnct-001.core-integration.registry",
-  "revision": 1,
+  "revision": 2,
   "kinds": [
     {
       "kind_id": "core.count",
@@ -23,68 +23,90 @@
     {
       "role": { "id": "nctforge.njoy.domain-aware-suitability", "major": 1 },
       "owner": "avila-labs.nctforge",
-      "validator": "nctforge.njoy/check-evidence-aware@1",
+      "validator": "nctforge.njoy/check-diagnostic-triage@1",
       "accepted_media_types": ["application/json"],
       "permitted_claim_models": [{ "model": "unquantified" }]
     },
     {
       "role": { "id": "nctforge.njoy.law7-residual", "major": 1 },
       "owner": "avila-labs.nctforge",
-      "validator": "nctforge.njoy/check-evidence-aware@1",
+      "validator": "nctforge.njoy/check-diagnostic-triage@1",
       "accepted_media_types": ["application/json"],
       "permitted_claim_models": [{ "model": "unquantified" }]
     },
     {
       "role": { "id": "nctforge.njoy.law7-attribution", "major": 1 },
       "owner": "avila-labs.nctforge",
-      "validator": "nctforge.njoy/check-evidence-aware@1",
+      "validator": "nctforge.njoy/check-diagnostic-triage@1",
       "accepted_media_types": ["application/json"],
       "permitted_claim_models": [{ "model": "unquantified" }]
     },
     {
       "role": { "id": "nctforge.njoy.capture-balance", "major": 1 },
       "owner": "avila-labs.nctforge",
-      "validator": "nctforge.njoy/check-evidence-aware@1",
+      "validator": "nctforge.njoy/check-diagnostic-triage@1",
       "accepted_media_types": ["application/json"],
       "permitted_claim_models": [{ "model": "unquantified" }]
     },
     {
       "role": { "id": "nctforge.njoy.capture-attribution", "major": 1 },
       "owner": "avila-labs.nctforge",
-      "validator": "nctforge.njoy/check-evidence-aware@1",
+      "validator": "nctforge.njoy/check-diagnostic-triage@1",
       "accepted_media_types": ["application/json"],
       "permitted_claim_models": [{ "model": "unquantified" }]
     },
     {
       "role": { "id": "nctforge.njoy.evidence-aware-suitability", "major": 1 },
       "owner": "avila-labs.nctforge",
-      "validator": "nctforge.njoy/check-evidence-aware@1",
+      "validator": "nctforge.njoy/check-diagnostic-triage@1",
       "accepted_media_types": ["application/json"],
       "permitted_claim_models": [{ "model": "unquantified" }]
     },
     {
-      "role": { "id": "nctforge.njoy.remaining-in-domain-findings", "major": 1 },
+      "role": { "id": "nctforge.njoy.diagnostic-triage", "major": 1 },
       "owner": "avila-labs.nctforge",
-      "validator": "nctforge.njoy/check-evidence-aware@1",
+      "validator": "nctforge.njoy/check-diagnostic-triage@1",
+      "accepted_media_types": ["application/json"],
+      "permitted_claim_models": [{ "model": "unquantified" }]
+    },
+    {
+      "role": { "id": "nctforge.njoy.independent-diagnostic-findings", "major": 1 },
+      "owner": "avila-labs.nctforge",
+      "validator": "nctforge.njoy/check-diagnostic-triage@1",
       "quantity_kind": "core.count",
       "unit_class": "core.count.units@1",
-      "accepted_media_types": ["application/vnd.nctforge.njoy-evidence-aware-check+json"],
+      "accepted_media_types": ["application/vnd.nctforge.njoy-diagnostic-triage-check+json"],
       "permitted_claim_models": [{ "model": "exact" }]
     },
     {
-      "role": { "id": "nctforge.njoy.suitability-qualification", "major": 1 },
+      "role": { "id": "nctforge.njoy.response-qualification", "major": 1 },
       "owner": "avila-labs.nctforge",
-      "validator": "nctforge.njoy/check-evidence-aware@1",
-      "accepted_media_types": ["application/vnd.nctforge.njoy-evidence-aware-check+json"],
+      "validator": "nctforge.njoy/check-diagnostic-triage@1",
+      "accepted_media_types": ["application/vnd.nctforge.njoy-diagnostic-triage-check+json"],
       "permitted_claim_models": [{ "model": "unquantified" }],
+      "categorical_values": [
+        "transported_photon_kerma_candidate_unreviewed",
+        "transported_photon_kerma_rejected"
+      ],
       "non_claims": [
-        "The category is a mechanical evidence status, not response-table approval, transport qualification, or clinical validation."
+        "Candidate-unreviewed status is a mechanical evidence state, not response-table approval, transport qualification, or clinical validation."
+      ]
+    },
+    {
+      "role": { "id": "nctforge.njoy.diagnostic-triage-qualification", "major": 1 },
+      "owner": "avila-labs.nctforge",
+      "validator": "nctforge.njoy/check-diagnostic-triage@1",
+      "accepted_media_types": ["application/vnd.nctforge.njoy-diagnostic-triage-check+json"],
+      "permitted_claim_models": [{ "model": "unquantified" }],
+      "categorical_values": [
+        "independent_reaction_diagnostics_required",
+        "independent_reaction_diagnostic_queue_clear_unreviewed"
       ]
     }
   ],
   "capability_types": [
     {
-      "capability_type": { "id": "nctforge.njoy.evidence-aware-check", "major": 1 },
+      "capability_type": { "id": "nctforge.njoy.diagnostic-triage-check", "major": 1 },
       "owner": "avila-labs.nctforge",
       "reproducibility": { "determinism": "deterministic" },
       "inputs": [
@@ -93,24 +115,31 @@
         { "slot_id": "law7-comparison-report", "role": { "id": "nctforge.njoy.law7-attribution", "major": 1 }, "accepted_media_types": ["application/json"] },
         { "slot_id": "capture-balance-report", "role": { "id": "nctforge.njoy.capture-balance", "major": 1 }, "accepted_media_types": ["application/json"] },
         { "slot_id": "capture-comparison-report", "role": { "id": "nctforge.njoy.capture-attribution", "major": 1 }, "accepted_media_types": ["application/json"] },
-        { "slot_id": "evidence-aware-report", "role": { "id": "nctforge.njoy.evidence-aware-suitability", "major": 1 }, "accepted_media_types": ["application/json"] }
+        { "slot_id": "evidence-aware-report", "role": { "id": "nctforge.njoy.evidence-aware-suitability", "major": 1 }, "accepted_media_types": ["application/json"] },
+        { "slot_id": "diagnostic-triage-report", "role": { "id": "nctforge.njoy.diagnostic-triage", "major": 1 }, "accepted_media_types": ["application/json"] }
       ],
       "outputs": [
         {
-          "slot_id": "remaining-in-domain-findings",
-          "role": { "id": "nctforge.njoy.remaining-in-domain-findings", "major": 1 },
-          "media_type": "application/vnd.nctforge.njoy-evidence-aware-check+json",
+          "slot_id": "independent-diagnostic-findings",
+          "role": { "id": "nctforge.njoy.independent-diagnostic-findings", "major": 1 },
+          "media_type": "application/vnd.nctforge.njoy-diagnostic-triage-check+json",
           "permitted_claim_models": [{ "model": "exact" }]
         },
         {
-          "slot_id": "qualification",
-          "role": { "id": "nctforge.njoy.suitability-qualification", "major": 1 },
-          "media_type": "application/vnd.nctforge.njoy-evidence-aware-check+json",
+          "slot_id": "response-qualification",
+          "role": { "id": "nctforge.njoy.response-qualification", "major": 1 },
+          "media_type": "application/vnd.nctforge.njoy-diagnostic-triage-check+json",
+          "permitted_claim_models": [{ "model": "unquantified" }]
+        },
+        {
+          "slot_id": "triage-qualification",
+          "role": { "id": "nctforge.njoy.diagnostic-triage-qualification", "major": 1 },
+          "media_type": "application/vnd.nctforge.njoy-diagnostic-triage-check+json",
           "permitted_claim_models": [{ "model": "unquantified" }]
         }
       ],
       "non_claims": [
-        "This capability verifies and summarizes existing NCTForge evidence; it does not resolve findings or review a response treatment."
+        "This capability verifies and partitions existing NCTForge evidence; it does not resolve findings or review a response treatment."
       ]
     }
   ]

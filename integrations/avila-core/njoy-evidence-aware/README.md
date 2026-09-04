@@ -1,20 +1,25 @@
-# Avila Core evidence-aware gate
+# Avila Core diagnostic-triage gate
 
-This is the first NCTForge workflow driven through Avila Core. It does not move
-NCTForge's scientific rules into Core. NCTForge regenerates and verifies the
-five-document evidence-aware assessment; Core binds the exact executable and
-inputs, records a receipt, extracts the result, and evaluates one explicit
-research requirement.
+This NCTForge workflow is driven through Avila Core without moving NCTForge's
+scientific rules into Core. NCTForge regenerates and verifies the complete
+evidence chain plus its diagnostic triage. Core binds the exact executable and
+inputs, records a receipt, extracts typed evidence, and evaluates two explicit
+research requirements.
 
-The frozen JEFF-4.0 case is expected to execute successfully and produce:
+The frozen JEFF-4.0 case is expected to execute successfully and report:
 
-- categorical evidence: `transported_photon_kerma_rejected`;
-- remaining unexplained in-domain kinematic findings: `102`; and
-- Core verdict: `FAIL` against the declared limit of zero.
+- all `102` original in-domain findings preserved;
+- `59` findings attached to source-data-blocked C-13 and O-18 runs;
+- `43` O-17 findings still requiring independent reaction diagnostics;
+- response qualification `transported_photon_kerma_rejected`; and
+- two Core verdicts: `FAIL` for the nonempty diagnostic queue and `FAIL` for
+  the categorical candidate-status requirement.
 
-A scientific rejection is therefore a valid checked result, not a process
-failure. If NCTForge cannot verify the evidence chain or cannot emit its result,
-Core instead rejects the execution and reports a stable runtime finding.
+Triage is not a waiver or a numerical explanation. It prevents work on C-13
+and O-18 from being mistaken for the next useful diagnostic task while keeping
+their rejection visible. A scientific rejection is a valid checked result, not
+a process failure. An unverifiable evidence chain is instead an execution or
+admission failure.
 
 ## Run the frozen case
 
@@ -30,27 +35,27 @@ cargo run -p avila-core-cli -- run \
   --source-root nctforge=../NCTForge \
   --source-root case=../NCTForge/integrations/avila-core/njoy-evidence-aware \
   --capability nctforge-cli=../NCTForge/target/debug/nctforge \
-  --workspace ../NCTForge/runs/avila-core-njoy-evidence-aware \
+  --workspace ../NCTForge/runs/avila-core-njoy-diagnostic-triage \
   --log ../NCTForge/runs/avila-core-attempts.jsonl
 ```
 
 The specimen pins the exact local Linux debug binary used to freeze it. If a
 rebuild has another SHA-256, Core will refuse execution. Inspect the change and
-deliberately update the capability identity and committed producer identities;
-do not bypass the pin.
+deliberately update the capability and committed producer identities; do not
+bypass the pin.
 
-## Use it during the next investigation
+## Use it during the O-17 investigation
 
-All six scientific inputs are declared free. Pass a changed report with
+All seven scientific inputs are declared free. Pass a changed report with
 `--input NAME=PATH`; pass every changed member of the evidence chain in the
-same run. Core then withholds the frozen claims, executes NCTForge over the new
-bytes, binds the new result by receipt, and marks replay against the reference
-case as not applicable.
+same run. Core then withholds the frozen claims, runs NCTForge over the new
+bytes, binds the result by receipt, and marks replay against the reference case
+as not applicable.
 
-The generated `claims.json` preserves the categorical qualification separately
-from the exact count. The count drives the technical requirement; the category
-is not encoded as an invented number and does not by itself become a Core
-verdict.
+The generated claims keep the exact queue count, response category, and triage
+category distinct. The count drives a quantitative verdict. The response
+category drives a closed-vocabulary categorical verdict without being encoded
+as an invented number.
 
 The observed development effect and explicitly qualified counterfactual are
 kept in the [Avila Core use-case

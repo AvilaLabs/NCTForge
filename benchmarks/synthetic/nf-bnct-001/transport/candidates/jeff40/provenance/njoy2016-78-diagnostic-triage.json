@@ -1,0 +1,144 @@
+{
+  "schema_version": "nctforge.njoy-diagnostic-triage/0.1.0",
+  "id": "nctforge.nf-bnct-001.jeff40-neutron-source-selection.v1.njoy2016-78-inputs.execution.1788195965.8a37cf70cf80.transported-photon-kerma-suitability.source-aware-v2.domain-aware-v3.evidence-aware-v4.diagnostic-triage-v1",
+  "case_id": "nf-bnct-001",
+  "qualification": "independent_reaction_diagnostics_required",
+  "response_qualification": "transported_photon_kerma_rejected",
+  "evidence_aware_suitability_report": {
+    "id": "nctforge.nf-bnct-001.jeff40-neutron-source-selection.v1.njoy2016-78-inputs.execution.1788195965.8a37cf70cf80.transported-photon-kerma-suitability.source-aware-v2.domain-aware-v3.evidence-aware-v4",
+    "sha256": "68b22afd510d477eb997fd514a37bcca9c45730e7fab22fd7ad9186d37f2baa0"
+  },
+  "domain_aware_suitability_report": {
+    "id": "nctforge.nf-bnct-001.jeff40-neutron-source-selection.v1.njoy2016-78-inputs.execution.1788195965.8a37cf70cf80.transported-photon-kerma-suitability.source-aware-v2.domain-aware-v3",
+    "sha256": "6e46b627d9b766e596ad2219eaafca970bd9f3c5df1d5e400ad644397c44ce55"
+  },
+  "execution_receipt": {
+    "id": "nctforge.nf-bnct-001.jeff40-neutron-source-selection.v1.njoy2016-78-inputs.execution.1788195965.8a37cf70cf80",
+    "sha256": "b53dd718d944af20d80d8c43d0832e4b5edc7edbf695d04642ab1efafe0803d9"
+  },
+  "assessment_energy_range_ev": [
+    9.999999999999999e-6,
+    20000000.0
+  ],
+  "runs": [
+    {
+      "nuclide": "B10",
+      "heatr_photon_source": "mixed_file6_and_file12_or13",
+      "response_suitability": "candidate_unreviewed",
+      "remaining_in_domain_kinematic_violation_count": 0,
+      "rejecting_nonkinematic_finding_count": 0,
+      "missing_photon_production_finding_count": 0,
+      "disposition": "no_remaining_kinematic_finding",
+      "source_data_blocked_in_domain_kinematic_violation_count": 0,
+      "independent_diagnostic_required_in_domain_kinematic_violation_count": 0
+    },
+    {
+      "nuclide": "C12",
+      "heatr_photon_source": "mixed_file6_and_file12_or13",
+      "response_suitability": "candidate_unreviewed",
+      "remaining_in_domain_kinematic_violation_count": 0,
+      "rejecting_nonkinematic_finding_count": 0,
+      "missing_photon_production_finding_count": 0,
+      "disposition": "no_remaining_kinematic_finding",
+      "source_data_blocked_in_domain_kinematic_violation_count": 0,
+      "independent_diagnostic_required_in_domain_kinematic_violation_count": 0
+    },
+    {
+      "nuclide": "C13",
+      "heatr_photon_source": "local_deposition_fallback",
+      "response_suitability": "rejected",
+      "remaining_in_domain_kinematic_violation_count": 32,
+      "rejecting_nonkinematic_finding_count": 1,
+      "missing_photon_production_finding_count": 1,
+      "disposition": "blocked_by_missing_photon_production_source",
+      "source_data_blocked_in_domain_kinematic_violation_count": 32,
+      "independent_diagnostic_required_in_domain_kinematic_violation_count": 0
+    },
+    {
+      "nuclide": "H1",
+      "heatr_photon_source": "file6_only",
+      "response_suitability": "candidate_unreviewed",
+      "remaining_in_domain_kinematic_violation_count": 0,
+      "rejecting_nonkinematic_finding_count": 0,
+      "missing_photon_production_finding_count": 0,
+      "disposition": "no_remaining_kinematic_finding",
+      "source_data_blocked_in_domain_kinematic_violation_count": 0,
+      "independent_diagnostic_required_in_domain_kinematic_violation_count": 0
+    },
+    {
+      "nuclide": "H2",
+      "heatr_photon_source": "file12_or13_only",
+      "response_suitability": "candidate_unreviewed",
+      "remaining_in_domain_kinematic_violation_count": 0,
+      "rejecting_nonkinematic_finding_count": 0,
+      "missing_photon_production_finding_count": 0,
+      "disposition": "no_remaining_kinematic_finding",
+      "source_data_blocked_in_domain_kinematic_violation_count": 0,
+      "independent_diagnostic_required_in_domain_kinematic_violation_count": 0
+    },
+    {
+      "nuclide": "N14",
+      "heatr_photon_source": "mixed_file6_and_file12_or13",
+      "response_suitability": "candidate_unreviewed",
+      "remaining_in_domain_kinematic_violation_count": 0,
+      "rejecting_nonkinematic_finding_count": 0,
+      "missing_photon_production_finding_count": 0,
+      "disposition": "no_remaining_kinematic_finding",
+      "source_data_blocked_in_domain_kinematic_violation_count": 0,
+      "independent_diagnostic_required_in_domain_kinematic_violation_count": 0
+    },
+    {
+      "nuclide": "N15",
+      "heatr_photon_source": "mixed_file6_and_file12_or13",
+      "response_suitability": "rejected",
+      "remaining_in_domain_kinematic_violation_count": 0,
+      "rejecting_nonkinematic_finding_count": 0,
+      "missing_photon_production_finding_count": 0,
+      "disposition": "no_remaining_kinematic_finding",
+      "source_data_blocked_in_domain_kinematic_violation_count": 0,
+      "independent_diagnostic_required_in_domain_kinematic_violation_count": 0
+    },
+    {
+      "nuclide": "O16",
+      "heatr_photon_source": "mixed_file6_and_file12_or13",
+      "response_suitability": "candidate_unreviewed",
+      "remaining_in_domain_kinematic_violation_count": 0,
+      "rejecting_nonkinematic_finding_count": 0,
+      "missing_photon_production_finding_count": 0,
+      "disposition": "no_remaining_kinematic_finding",
+      "source_data_blocked_in_domain_kinematic_violation_count": 0,
+      "independent_diagnostic_required_in_domain_kinematic_violation_count": 0
+    },
+    {
+      "nuclide": "O17",
+      "heatr_photon_source": "mixed_file6_and_file12_or13",
+      "response_suitability": "rejected",
+      "remaining_in_domain_kinematic_violation_count": 43,
+      "rejecting_nonkinematic_finding_count": 0,
+      "missing_photon_production_finding_count": 0,
+      "disposition": "independent_reaction_diagnostic_required",
+      "source_data_blocked_in_domain_kinematic_violation_count": 0,
+      "independent_diagnostic_required_in_domain_kinematic_violation_count": 43
+    },
+    {
+      "nuclide": "O18",
+      "heatr_photon_source": "local_deposition_fallback",
+      "response_suitability": "rejected",
+      "remaining_in_domain_kinematic_violation_count": 27,
+      "rejecting_nonkinematic_finding_count": 1,
+      "missing_photon_production_finding_count": 1,
+      "disposition": "blocked_by_missing_photon_production_source",
+      "source_data_blocked_in_domain_kinematic_violation_count": 27,
+      "independent_diagnostic_required_in_domain_kinematic_violation_count": 0
+    }
+  ],
+  "original_remaining_in_domain_kinematic_violation_count": 102,
+  "source_data_blocked_in_domain_kinematic_violation_count": 59,
+  "independent_diagnostic_required_in_domain_kinematic_violation_count": 43,
+  "source_data_blocked_run_count": 2,
+  "independent_diagnostic_required_run_count": 1,
+  "limitations": [
+    "A source-data-blocked finding is preserved, not waived or numerically explained; the exact evaluation cannot support transported-photon KERMA for that run.",
+    "A clear independent-diagnostic queue would not make a rejected response candidate suitable or approve response-table generation."
+  ]
+}

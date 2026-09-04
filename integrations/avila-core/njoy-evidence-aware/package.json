@@ -1,31 +1,31 @@
 {
   "schema_version": "avila.core/case-package/v0.1-draft",
-  "case_id": "NCTFORGE-NF-BNCT-001-JEFF40-RESPONSE-READINESS",
-  "title": "NCTForge JEFF-4.0 evidence-aware response-readiness gate",
+  "case_id": "NCTFORGE-NF-BNCT-001-JEFF40-DIAGNOSTIC-TRIAGE",
+  "title": "NCTForge JEFF-4.0 diagnostic-triage gate",
   "documents": [
     {
       "document_id": "contract",
       "role": "contract",
       "path": "contract.json",
-      "sha256": "sha256:7e97e8885960bee3702aeb8522157dda451aa92fdd7f2572305193c076ce7144"
+      "sha256": "sha256:679a9b3dd44f3fef129891598cc712a5d44503e0a6aa6c90dc4f3156a41a3709"
     },
     {
       "document_id": "registry",
       "role": "registry",
       "path": "registry.json",
-      "sha256": "sha256:5ece2c38b572be049ff2af96ef77b523dcb1e65342db6750296168b4c0fc6e99"
+      "sha256": "sha256:0a5b2903ea29d24a4a6b098f52a5da2e2a1d1680048e89d068a9ddb232fc7c44"
     },
     {
       "document_id": "claims",
       "role": "claims",
       "path": "claims.json",
-      "sha256": "sha256:7f10ff7a3661c13f3b021a56bd01e7a661ee0e4edea95531b19dc65096258d08"
+      "sha256": "sha256:a2baf46fdfb18d30d5dc9e757251aae8bdc34e903635a7285500241ebdb1a217"
     },
     {
-      "document_id": "nctforge.njoy/evidence-aware-check@1",
+      "document_id": "nctforge.njoy/diagnostic-triage-check@1",
       "role": "external_checker_adapter",
       "path": "adapter.json",
-      "sha256": "sha256:8c60c8d4b3f85962fee2a4134e036ae96fa1ff3b7955287f3340c6a441a8ae70"
+      "sha256": "sha256:7a85f4e47c54646f244230cc55dd5c6739e5bf92f418833267bb67e4a5ac7cce"
     }
   ],
   "artifacts": [
@@ -72,14 +72,22 @@
       "sha256": "sha256:68b22afd510d477eb997fd514a37bcca9c45730e7fab22fd7ad9186d37f2baa0"
     },
     {
+      "artifact_id": "diagnostic-triage-report",
+      "evidence_ids": ["input:diagnostic-triage-report"],
+      "source_root": "nctforge",
+      "path": "benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/njoy2016-78-diagnostic-triage.json",
+      "sha256": "sha256:6ba92bce735cf290dd3dbe3e068ceff1e25cbc1869b21d5ecd64db8b8d206020"
+    },
+    {
       "artifact_id": "reference-check-result",
       "evidence_ids": [
-        "nctforge-remaining-in-domain-findings",
-        "nctforge-suitability-qualification"
+        "nctforge-independent-diagnostic-findings",
+        "nctforge-response-qualification",
+        "nctforge-triage-qualification"
       ],
       "source_root": "case",
-      "path": "expected/evidence-aware-check.json",
-      "sha256": "sha256:7e90a7bc6636cc1fbb27ba7baa554e3d7a1f18bd02d71155d18dcffbf02548e7"
+      "path": "expected/diagnostic-triage-check.json",
+      "sha256": "sha256:aff141e8786f8c7cd4729e6a0a7f29ecb5c0db5bdabab7636d633db789b3cdf0"
     }
   ],
   "capabilities": [
@@ -87,13 +95,13 @@
       "capability_id": "nctforge-cli",
       "package_id": "com.avilalabs/nctforge-cli@0.1.0",
       "source_repository": "https://github.com/AvilaLabs/NCTForge",
-      "executable_sha256": "sha256:5d080a97834e6bf4f8ece419960f1281467c3bdf83b942918ffc583d69ee044b"
+      "executable_sha256": "sha256:183767300d129b51280b921bc2ca27efb46244117867e5e461846c3beed1854a"
     }
   ],
   "executions": [
     {
-      "step_id": "verify-evidence-aware",
-      "adapter": "nctforge.njoy/evidence-aware-check@1",
+      "step_id": "verify-diagnostic-triage",
+      "adapter": "nctforge.njoy/diagnostic-triage-check@1",
       "capability_id": "nctforge-cli",
       "inputs": [
         { "input_slot": "domain-aware-report", "workspace_path": "inputs/domain-aware-report.json" },
@@ -101,16 +109,21 @@
         { "input_slot": "law7-comparison-report", "workspace_path": "inputs/law7-comparison-report.json" },
         { "input_slot": "capture-balance-report", "workspace_path": "inputs/capture-balance-report.json" },
         { "input_slot": "capture-comparison-report", "workspace_path": "inputs/capture-comparison-report.json" },
-        { "input_slot": "evidence-aware-report", "workspace_path": "inputs/evidence-aware-report.json" }
+        { "input_slot": "evidence-aware-report", "workspace_path": "inputs/evidence-aware-report.json" },
+        { "input_slot": "diagnostic-triage-report", "workspace_path": "inputs/diagnostic-triage-report.json" }
       ],
       "outputs": [
         {
-          "output_slot": "remaining-in-domain-findings",
-          "claim_id": "nctforge-remaining-in-domain-findings"
+          "output_slot": "independent-diagnostic-findings",
+          "claim_id": "nctforge-independent-diagnostic-findings"
         },
         {
-          "output_slot": "qualification",
-          "claim_id": "nctforge-suitability-qualification"
+          "output_slot": "response-qualification",
+          "claim_id": "nctforge-response-qualification"
+        },
+        {
+          "output_slot": "triage-qualification",
+          "claim_id": "nctforge-triage-qualification"
         }
       ]
     }
@@ -121,10 +134,12 @@
     "law7-comparison-report",
     "capture-balance-report",
     "capture-comparison-report",
-    "evidence-aware-report"
+    "evidence-aware-report",
+    "diagnostic-triage-report"
   ],
   "limitations": [
     "This is a research workflow integration, not a response-table approval or clinical qualification.",
+    "Diagnostic triage preserves every original finding; it only distinguishes source-data-blocked runs from the independent diagnostic queue.",
     "The committed executable digest identifies the local Rust build used for this specimen and is not a cross-platform release identity."
   ]
 }

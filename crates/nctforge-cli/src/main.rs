@@ -23,16 +23,18 @@ use nctforge_njoy::{
     EndfMf6Law7ImplicitResidualReport, EndfMf6Law7ImplicitResidualReportDocument,
     EndfPhotonProductionInventory, EndfPhotonProductionInventoryDocument,
     NjoyCapturePhotonMomentComparison, NjoyCapturePhotonMomentComparisonDocument,
-    NjoyDomainAwareSuitabilityReport, NjoyDomainAwareSuitabilityReportDocument,
-    NjoyEvidenceAwareCheckResult, NjoyEvidenceAwareSuitabilityReport,
-    NjoyEvidenceAwareSuitabilityReportDocument, NjoyExecutionOptions, NjoyExecutionReceipt,
-    NjoyExecutionReceiptDocument, NjoyInputArtifacts, NjoyInputBundle,
-    NjoyLaw7ImplicitResidualComparison, NjoyLaw7ImplicitResidualComparisonDocument,
-    NjoyLaw7ImplicitResidualComparisonQualification, NjoyPhotonMomentComparison,
-    NjoyPhotonMomentComparisonDocument, NjoySourceAwareSuitabilityReport,
-    NjoySourceAwareSuitabilityReportDocument, NjoySuitabilityComparison,
-    NjoySuitabilityComparisonDocument, NjoySuitabilityComparisonQualification,
-    NjoySuitabilityQualification, NjoySuitabilityReport, NjoySuitabilityReportDocument,
+    NjoyDiagnosticTriageCheckResult, NjoyDiagnosticTriageReport,
+    NjoyDiagnosticTriageReportDocument, NjoyDomainAwareSuitabilityReport,
+    NjoyDomainAwareSuitabilityReportDocument, NjoyEvidenceAwareCheckResult,
+    NjoyEvidenceAwareSuitabilityReport, NjoyEvidenceAwareSuitabilityReportDocument,
+    NjoyExecutionOptions, NjoyExecutionReceipt, NjoyExecutionReceiptDocument, NjoyInputArtifacts,
+    NjoyInputBundle, NjoyLaw7ImplicitResidualComparison,
+    NjoyLaw7ImplicitResidualComparisonDocument, NjoyLaw7ImplicitResidualComparisonQualification,
+    NjoyPhotonMomentComparison, NjoyPhotonMomentComparisonDocument,
+    NjoySourceAwareSuitabilityReport, NjoySourceAwareSuitabilityReportDocument,
+    NjoySuitabilityComparison, NjoySuitabilityComparisonDocument,
+    NjoySuitabilityComparisonQualification, NjoySuitabilityQualification, NjoySuitabilityReport,
+    NjoySuitabilityReportDocument,
 };
 use nctforge_openmc::{
     DataAcquisitionClient, DataAcquisitionProfileDocument, DataAcquisitionReceiptDocument,
@@ -583,6 +585,57 @@ enum NjoyCommand {
         /// Evidence-aware v0.4 report to validate and regenerate.
         #[arg(long)]
         evidence_aware_report: PathBuf,
+    },
+    /// Separate source-data blockers from findings needing independent diagnostics.
+    AssessDiagnosticTriage {
+        /// Verified reaction-evidence-aware v0.4 suitability report.
+        #[arg(long)]
+        evidence_aware_report: PathBuf,
+        /// Verified domain-aware v0.3 transported-photon suitability report.
+        #[arg(long)]
+        domain_aware_report: PathBuf,
+        /// New diagnostic-triage JSON report; it must not already exist.
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Regenerate and verify a diagnostic-triage report.
+    VerifyDiagnosticTriage {
+        /// Verified reaction-evidence-aware v0.4 suitability report.
+        #[arg(long)]
+        evidence_aware_report: PathBuf,
+        /// Verified domain-aware v0.3 transported-photon suitability report.
+        #[arg(long)]
+        domain_aware_report: PathBuf,
+        /// Diagnostic-triage report to validate and regenerate.
+        #[arg(long)]
+        triage_report: PathBuf,
+    },
+    /// Verify the complete triage evidence chain and write a compact machine result.
+    CheckDiagnosticTriage {
+        /// Verified domain-aware v0.3 transported-photon suitability report.
+        #[arg(long)]
+        domain_aware_report: PathBuf,
+        /// Independent H-2 LAW=7 implicit-residual report.
+        #[arg(long)]
+        law7_residual_report: PathBuf,
+        /// Receipt-bound H-2 LAW=7 processor attribution.
+        #[arg(long)]
+        law7_comparison_report: PathBuf,
+        /// Independent N-15 MF=6 capture-balance report.
+        #[arg(long)]
+        capture_balance_report: PathBuf,
+        /// Receipt-bound N-15 capture-moment comparison.
+        #[arg(long)]
+        capture_comparison_report: PathBuf,
+        /// Verified reaction-evidence-aware v0.4 suitability report.
+        #[arg(long)]
+        evidence_aware_report: PathBuf,
+        /// Verified diagnostic-triage report.
+        #[arg(long)]
+        triage_report: PathBuf,
+        /// New deterministic JSON result; it must not already exist.
+        #[arg(long)]
+        output: PathBuf,
     },
     /// Verify v0.4 evidence and write a compact machine-facing check result.
     CheckEvidenceAware {
@@ -1976,6 +2029,127 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                     } else {
                         "transported_photon_kerma_rejected"
                     }
+                );
+            }
+            NjoyCommand::AssessDiagnosticTriage {
+                evidence_aware_report,
+                domain_aware_report,
+                output,
+            } => {
+                let evidence =
+                    NjoyEvidenceAwareSuitabilityReportDocument::from_path(&evidence_aware_report)?;
+                let domain =
+                    NjoyDomainAwareSuitabilityReportDocument::from_path(&domain_aware_report)?;
+                let report = NjoyDiagnosticTriageReport::assess(&evidence, &domain)?;
+                let result = report.write_new(&output)?;
+                println!("triaged remaining in-domain NJOY diagnostics");
+                println!("report: {}", result.report_path.display());
+                println!("report SHA-256: {}", result.report_sha256);
+                println!(
+                    "remaining findings: {} original / {} source-data-blocked / {} requiring independent diagnostics",
+                    result
+                        .report
+                        .original_remaining_in_domain_kinematic_violation_count,
+                    result
+                        .report
+                        .source_data_blocked_in_domain_kinematic_violation_count,
+                    result
+                        .report
+                        .independent_diagnostic_required_in_domain_kinematic_violation_count
+                );
+                if result
+                    .report
+                    .independent_diagnostic_required_in_domain_kinematic_violation_count
+                    > 0
+                {
+                    return Err(io::Error::other(format!(
+                        "{} in-domain finding(s) still require independent reaction diagnostics; triage report was preserved",
+                        result
+                            .report
+                            .independent_diagnostic_required_in_domain_kinematic_violation_count
+                    ))
+                    .into());
+                }
+            }
+            NjoyCommand::VerifyDiagnosticTriage {
+                evidence_aware_report,
+                domain_aware_report,
+                triage_report,
+            } => {
+                let evidence =
+                    NjoyEvidenceAwareSuitabilityReportDocument::from_path(&evidence_aware_report)?;
+                let domain =
+                    NjoyDomainAwareSuitabilityReportDocument::from_path(&domain_aware_report)?;
+                let triage = NjoyDiagnosticTriageReportDocument::from_path(&triage_report)?;
+                triage.verify_against_evidence(&evidence, &domain)?;
+                println!(
+                    "verified NJOY diagnostic triage {}",
+                    triage_report.display()
+                );
+                println!("report SHA-256: {}", triage.sha256);
+                println!(
+                    "remaining findings: {} original / {} source-data-blocked / {} requiring independent diagnostics",
+                    triage
+                        .report
+                        .original_remaining_in_domain_kinematic_violation_count,
+                    triage
+                        .report
+                        .source_data_blocked_in_domain_kinematic_violation_count,
+                    triage
+                        .report
+                        .independent_diagnostic_required_in_domain_kinematic_violation_count
+                );
+            }
+            NjoyCommand::CheckDiagnosticTriage {
+                domain_aware_report,
+                law7_residual_report,
+                law7_comparison_report,
+                capture_balance_report,
+                capture_comparison_report,
+                evidence_aware_report,
+                triage_report,
+                output,
+            } => {
+                let domain =
+                    NjoyDomainAwareSuitabilityReportDocument::from_path(&domain_aware_report)?;
+                let law7_residual =
+                    EndfMf6Law7ImplicitResidualReportDocument::from_path(&law7_residual_report)?;
+                let law7_comparison =
+                    NjoyLaw7ImplicitResidualComparisonDocument::from_path(&law7_comparison_report)?;
+                let capture_balance =
+                    EndfMf6CapturePhotonBalanceReportDocument::from_path(&capture_balance_report)?;
+                let capture_comparison = NjoyCapturePhotonMomentComparisonDocument::from_path(
+                    &capture_comparison_report,
+                )?;
+                let evidence =
+                    NjoyEvidenceAwareSuitabilityReportDocument::from_path(&evidence_aware_report)?;
+                let triage = NjoyDiagnosticTriageReportDocument::from_path(&triage_report)?;
+                let result = NjoyDiagnosticTriageCheckResult::verify_and_build(
+                    &triage,
+                    &evidence,
+                    &domain,
+                    &law7_residual,
+                    &law7_comparison,
+                    &capture_balance,
+                    &capture_comparison,
+                )?;
+                result.write_new(&output)?;
+                println!("verified diagnostic-triage chain and wrote machine check");
+                println!("result: {}", output.display());
+                println!(
+                    "response qualification: {}",
+                    match result.response_qualification {
+                        NjoySuitabilityQualification::TransportedPhotonKermaCandidateUnreviewed =>
+                            "transported_photon_kerma_candidate_unreviewed",
+                        NjoySuitabilityQualification::TransportedPhotonKermaRejected =>
+                            "transported_photon_kerma_rejected",
+                    }
+                );
+                println!(
+                    "remaining findings: {} original / {} source-data-blocked / {} requiring independent diagnostics",
+                    result.original_remaining_in_domain_kinematic_violation_count,
+                    result.source_data_blocked_in_domain_kinematic_violation_count,
+                    result.independent_diagnostic_required_in_domain_kinematic_violation_count
                 );
             }
             NjoyCommand::CheckEvidenceAware {

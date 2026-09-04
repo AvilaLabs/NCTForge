@@ -1,13 +1,14 @@
 {
   "schema_version": "avila.core/evidence-contract/v0.2-draft",
   "semantic_profile": "avila.core/semantic/0.2-draft",
-  "contract_id": "nctforge.nf-bnct-001.jeff40-response-readiness",
-  "revision": 1,
+  "contract_id": "nctforge.nf-bnct-001.jeff40-diagnostic-triage",
+  "revision": 2,
   "status": "draft",
-  "question": "Does the verified JEFF-4.0 evidence-aware assessment have zero unexplained in-domain kinematic findings before response-table review begins?",
+  "question": "Does the verified JEFF-4.0 diagnostic triage leave no finding awaiting independent reaction diagnostics and preserve candidate-unreviewed response status before response-table review begins?",
   "assumptions": [
     "This gate addresses only the frozen NF-BNCT-001 transported-photon KERMA evidence chain.",
-    "A clear mechanical gate remains unreviewed and does not qualify response tables, transport, or clinical use."
+    "Source-data-blocked findings remain rejecting; triage changes the investigation queue, not their scientific disposition.",
+    "A passing mechanical gate would remain unreviewed and would not qualify response tables, transport, or clinical use."
   ],
   "inputs": [
     {
@@ -45,31 +46,47 @@
       "role": { "id": "nctforge.njoy.evidence-aware-suitability", "major": 1 },
       "media_type": "application/json",
       "claim_model": { "model": "unquantified" }
+    },
+    {
+      "input_id": "diagnostic-triage-report",
+      "role": { "id": "nctforge.njoy.diagnostic-triage", "major": 1 },
+      "media_type": "application/json",
+      "claim_model": { "model": "unquantified" }
     }
   ],
   "workflow": [
     {
-      "step_id": "verify-evidence-aware",
-      "capability_type": { "id": "nctforge.njoy.evidence-aware-check", "major": 1 },
+      "step_id": "verify-diagnostic-triage",
+      "capability_type": { "id": "nctforge.njoy.diagnostic-triage-check", "major": 1 },
       "bindings": [
         { "input_slot": "domain-aware-report", "source": { "source": "contract_input", "input_id": "domain-aware-report" } },
         { "input_slot": "law7-residual-report", "source": { "source": "contract_input", "input_id": "law7-residual-report" } },
         { "input_slot": "law7-comparison-report", "source": { "source": "contract_input", "input_id": "law7-comparison-report" } },
         { "input_slot": "capture-balance-report", "source": { "source": "contract_input", "input_id": "capture-balance-report" } },
         { "input_slot": "capture-comparison-report", "source": { "source": "contract_input", "input_id": "capture-comparison-report" } },
-        { "input_slot": "evidence-aware-report", "source": { "source": "contract_input", "input_id": "evidence-aware-report" } }
+        { "input_slot": "evidence-aware-report", "source": { "source": "contract_input", "input_id": "evidence-aware-report" } },
+        { "input_slot": "diagnostic-triage-report", "source": { "source": "contract_input", "input_id": "diagnostic-triage-report" } }
       ]
     }
   ],
   "requirements": [
     {
-      "requirement_id": "NCT-R2-RESPONSE-READINESS",
-      "statement": "No unexplained in-domain NJOY kinematic finding remains in the verified evidence-aware assessment.",
+      "requirement_id": "NCT-R2-INDEPENDENT-DIAGNOSTIC-QUEUE",
+      "statement": "No in-domain NJOY kinematic finding remains queued for independent reaction diagnostics.",
       "purpose": { "id": "nctforge.response-table-research-gate", "major": 1 },
-      "metric": { "source": "step_output", "step_id": "verify-evidence-aware", "output_slot": "remaining-in-domain-findings" },
+      "metric": { "source": "step_output", "step_id": "verify-diagnostic-triage", "output_slot": "independent-diagnostic-findings" },
       "comparison": "less_than_or_equal",
       "limit": { "kind": "core.count", "value": "0", "unit": "1" },
       "basis": { "kind": "bounded" }
+    }
+  ],
+  "categorical_requirements": [
+    {
+      "requirement_id": "NCT-R3-RESPONSE-QUALIFICATION",
+      "statement": "The verified response assessment must retain candidate-unreviewed status before response-table review begins.",
+      "purpose": { "id": "nctforge.response-table-research-gate", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "verify-diagnostic-triage", "output_slot": "response-qualification" },
+      "predicate": { "operator": "equals", "value": "transported_photon_kerma_candidate_unreviewed" }
     }
   ]
 }

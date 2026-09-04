@@ -1,18 +1,19 @@
 {
   "schema_version": "avila.core/external-checker-adapter/v0.1-draft",
-  "adapter_id": "nctforge.njoy/evidence-aware-check@1",
-  "capability_type": { "id": "nctforge.njoy.evidence-aware-check", "major": 1 },
+  "adapter_id": "nctforge.njoy/diagnostic-triage-check@1",
+  "capability_type": { "id": "nctforge.njoy.diagnostic-triage-check", "major": 1 },
   "input_slots": [
     "domain-aware-report",
     "law7-residual-report",
     "law7-comparison-report",
     "capture-balance-report",
     "capture-comparison-report",
-    "evidence-aware-report"
+    "evidence-aware-report",
+    "diagnostic-triage-report"
   ],
   "arguments": [
     { "kind": "literal", "value": "njoy" },
-    { "kind": "literal", "value": "check-evidence-aware" },
+    { "kind": "literal", "value": "check-diagnostic-triage" },
     { "kind": "literal", "value": "--domain-aware-report" },
     { "kind": "input_path", "input_slot": "domain-aware-report" },
     { "kind": "literal", "value": "--law7-residual-report" },
@@ -25,37 +26,49 @@
     { "kind": "input_path", "input_slot": "capture-comparison-report" },
     { "kind": "literal", "value": "--evidence-aware-report" },
     { "kind": "input_path", "input_slot": "evidence-aware-report" },
+    { "kind": "literal", "value": "--triage-report" },
+    { "kind": "input_path", "input_slot": "diagnostic-triage-report" },
     { "kind": "literal", "value": "--output" },
     { "kind": "output_path", "output_id": "check-result" }
   ],
   "outputs": [
     {
       "output_id": "check-result",
-      "workspace_path": "outputs/evidence-aware-check.json",
-      "media_type": "application/vnd.nctforge.njoy-evidence-aware-check+json"
+      "workspace_path": "outputs/diagnostic-triage-check.json",
+      "media_type": "application/vnd.nctforge.njoy-diagnostic-triage-check+json"
     }
   ],
   "claims": [
     {
       "model": "exact",
-      "output_slot": "remaining-in-domain-findings",
+      "output_slot": "independent-diagnostic-findings",
       "output_id": "check-result",
-      "pointer": "/remaining_in_domain_kinematic_violation_count",
+      "pointer": "/independent_diagnostic_required_in_domain_kinematic_violation_count",
       "unit": "1"
     },
     {
       "model": "categorical",
-      "output_slot": "qualification",
+      "output_slot": "response-qualification",
       "output_id": "check-result",
-      "pointer": "/qualification",
+      "pointer": "/response_qualification",
       "allowed_values": [
         "transported_photon_kerma_candidate_unreviewed",
         "transported_photon_kerma_rejected"
+      ]
+    },
+    {
+      "model": "categorical",
+      "output_slot": "triage-qualification",
+      "output_id": "check-result",
+      "pointer": "/triage_qualification",
+      "allowed_values": [
+        "independent_reaction_diagnostics_required",
+        "independent_reaction_diagnostic_queue_clear_unreviewed"
       ]
     }
   ],
   "timeout_ms": 30000,
   "limitations": [
-    "The NCTForge binary performs the domain-specific verification; Core validates only this declared process and extraction boundary."
+    "The NCTForge binary performs the domain-specific verification and triage; Core validates only the declared process, evidence, and extraction boundary."
   ]
 }
