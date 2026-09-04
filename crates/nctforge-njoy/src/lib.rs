@@ -33,6 +33,7 @@ mod core_check;
 mod diagnostic_triage;
 mod diagnostic_triage_check;
 mod domain_aware;
+mod energy_balance_attribution;
 mod evidence_aware;
 mod execution;
 mod law7_breakup;
@@ -81,6 +82,14 @@ pub use domain_aware::{
     NJOY_DOMAIN_AWARE_SUITABILITY_SCHEMA, NjoyDomainAwareSuitabilityError,
     NjoyDomainAwareSuitabilityReport, NjoyDomainAwareSuitabilityReportDocument,
     NjoyDomainAwareSuitabilityResult, NjoyDomainAwareSuitabilityRun,
+};
+pub use energy_balance_attribution::{
+    DEFAULT_NJOY_ENERGY_BALANCE_PRINT_RELATIVE_TOLERANCE, NJOY_ENERGY_BALANCE_ATTRIBUTION_SCHEMA,
+    NjoyEnergyBalanceAttribution, NjoyEnergyBalanceAttributionDocument,
+    NjoyEnergyBalanceAttributionError, NjoyEnergyBalanceAttributionQualification,
+    NjoyEnergyBalanceAttributionResult, NjoyEnergyBalanceAttributionSample,
+    NjoyEnergyBalanceAttributionStatus, NjoyEnergyBalanceContribution,
+    NjoyEnergyBalanceEvidenceScope, NjoyEnergyBalanceFindingDisposition,
 };
 pub use evidence_aware::{
     NJOY_EVIDENCE_AWARE_SUITABILITY_SCHEMA, NjoyEvidenceAwareIndependentGate,

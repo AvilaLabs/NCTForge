@@ -1,0 +1,1459 @@
+{
+  "schema_version": "nctforge.njoy-energy-balance-attribution/0.1.0",
+  "id": "nctforge.nf-bnct-001.jeff40-neutron-source-selection.v1.njoy2016-78-inputs.execution.1788195965.8a37cf70cf80.transported-photon-kerma-suitability.source-aware-v2.domain-aware-v3.o17.njoy-energy-balance-attribution-v1",
+  "case_id": "nf-bnct-001",
+  "qualification": "processor_accounting_mechanism_attributed_physical_validation_required",
+  "evidence_scope": "processor_internal_print_accounting_only",
+  "finding_disposition": "retained_for_independent_physical_validation",
+  "domain_aware_suitability_report": {
+    "id": "nctforge.nf-bnct-001.jeff40-neutron-source-selection.v1.njoy2016-78-inputs.execution.1788195965.8a37cf70cf80.transported-photon-kerma-suitability.source-aware-v2.domain-aware-v3",
+    "sha256": "6e46b627d9b766e596ad2219eaafca970bd9f3c5df1d5e400ad644397c44ce55"
+  },
+  "execution_receipt": {
+    "id": "nctforge.nf-bnct-001.jeff40-neutron-source-selection.v1.njoy2016-78-inputs.execution.1788195965.8a37cf70cf80",
+    "sha256": "b53dd718d944af20d80d8c43d0832e4b5edc7edbf695d04642ab1efafe0803d9"
+  },
+  "print_relative_tolerance": 0.002,
+  "nuclide": "O17",
+  "assessment_energy_range_ev": [
+    9.999999999999999e-6,
+    20000000.0
+  ],
+  "response_mt": 301,
+  "processor_report": {
+    "path": "O17/output",
+    "media_type": "text/plain",
+    "size_bytes": 701234,
+    "sha256": "e7ec927a4d7faeb49a2f6c7cc89c0a22c322818252763899b950e41d39f38e61"
+  },
+  "full_evaluation_violation_count": 45,
+  "in_domain_violation_count": 43,
+  "out_of_domain_violation_count": 2,
+  "processor_final_table_violation_count": 45,
+  "printed_remainder_table_count": 22,
+  "contributing_reaction_mts": [
+    16,
+    22,
+    24,
+    28,
+    32,
+    33,
+    34,
+    41,
+    91,
+    103,
+    104,
+    105,
+    106,
+    107,
+    108
+  ],
+  "attributed_in_domain_violation_count": 43,
+  "failed_sample_count": 0,
+  "physical_validation_required_count": 43,
+  "waived_violation_count": 0,
+  "maximum_remainder_excess_relative_difference": 0.0003721276397804447,
+  "maximum_mt443_kinematic_maximum_relative_difference": 0.0,
+  "samples": [
+    {
+      "incident_energy_ev": 0.00001,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 21565000.0,
+      "processor_final_mt443_kerma_ev_barns": 12217000.0,
+      "processor_kinematic_maximum_ev_barns": 12217000.0,
+      "processor_final_mt301_excess_ev_barns": 9348000.0,
+      "printed_energy_balance_remainder_sum_ev_barns": 9347200.0,
+      "remainder_excess_relative_difference": 0.00008557980316645271,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 9347200.0
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 0.0001,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 6819300.0,
+      "processor_final_mt443_kerma_ev_barns": 3863500.0,
+      "processor_kinematic_maximum_ev_barns": 3863500.0,
+      "processor_final_mt301_excess_ev_barns": 2955800.0,
+      "printed_energy_balance_remainder_sum_ev_barns": 2955800.0,
+      "remainder_excess_relative_difference": 0.0,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 2955800.0
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 0.001,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 2156500.0,
+      "processor_final_mt443_kerma_ev_barns": 1221700.0,
+      "processor_kinematic_maximum_ev_barns": 1221700.0,
+      "processor_final_mt301_excess_ev_barns": 934800.0,
+      "printed_energy_balance_remainder_sum_ev_barns": 934720.0,
+      "remainder_excess_relative_difference": 0.00008557980316645271,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 934720.0
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 0.01,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 682310.0,
+      "processor_final_mt443_kerma_ev_barns": 386560.0,
+      "processor_kinematic_maximum_ev_barns": 386560.0,
+      "processor_final_mt301_excess_ev_barns": 295750.0,
+      "printed_energy_balance_remainder_sum_ev_barns": 295750.0,
+      "remainder_excess_relative_difference": 0.0,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 295750.0
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 0.1,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 215640.0,
+      "processor_final_mt443_kerma_ev_barns": 122170.0,
+      "processor_kinematic_maximum_ev_barns": 122170.0,
+      "processor_final_mt301_excess_ev_barns": 93470.0,
+      "printed_energy_balance_remainder_sum_ev_barns": 93471.0,
+      "remainder_excess_relative_difference": 0.000010698505418792994,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 93471.0
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 1.0,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 68133.0,
+      "processor_final_mt443_kerma_ev_barns": 38601.0,
+      "processor_kinematic_maximum_ev_barns": 38601.0,
+      "processor_final_mt301_excess_ev_barns": 29532.0,
+      "printed_energy_balance_remainder_sum_ev_barns": 29532.0,
+      "remainder_excess_relative_difference": 0.0,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 29532.0
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 2.0,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 48274.0,
+      "processor_final_mt443_kerma_ev_barns": 27350.0,
+      "processor_kinematic_maximum_ev_barns": 27350.0,
+      "processor_final_mt301_excess_ev_barns": 20924.0,
+      "printed_energy_balance_remainder_sum_ev_barns": 20924.0,
+      "remainder_excess_relative_difference": 0.0,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 20924.0
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 5.0,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 30538.0,
+      "processor_final_mt443_kerma_ev_barns": 17302.0,
+      "processor_kinematic_maximum_ev_barns": 17302.0,
+      "processor_final_mt301_excess_ev_barns": 13236.0,
+      "printed_energy_balance_remainder_sum_ev_barns": 13236.0,
+      "remainder_excess_relative_difference": 0.0,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 13236.0
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 10.0,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 21516.0,
+      "processor_final_mt443_kerma_ev_barns": 12192.0,
+      "processor_kinematic_maximum_ev_barns": 12192.0,
+      "processor_final_mt301_excess_ev_barns": 9324.0,
+      "printed_energy_balance_remainder_sum_ev_barns": 9324.1,
+      "remainder_excess_relative_difference": 0.00001072489570042833,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 9324.1
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 20.0,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 15238.0,
+      "processor_final_mt443_kerma_ev_barns": 8636.9,
+      "processor_kinematic_maximum_ev_barns": 8636.9,
+      "processor_final_mt301_excess_ev_barns": 6601.1,
+      "printed_energy_balance_remainder_sum_ev_barns": 6601.4,
+      "remainder_excess_relative_difference": 0.0000454449056259691,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 6601.4
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 50.0,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 9641.4,
+      "processor_final_mt443_kerma_ev_barns": 5471.2,
+      "processor_kinematic_maximum_ev_barns": 5471.2,
+      "processor_final_mt301_excess_ev_barns": 4170.2,
+      "printed_energy_balance_remainder_sum_ev_barns": 4170.2,
+      "remainder_excess_relative_difference": 0.0,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 4170.2
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 100.0,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 6836.3,
+      "processor_final_mt443_kerma_ev_barns": 3890.5,
+      "processor_kinematic_maximum_ev_barns": 3890.5,
+      "processor_final_mt301_excess_ev_barns": 2945.8,
+      "printed_energy_balance_remainder_sum_ev_barns": 2945.8,
+      "remainder_excess_relative_difference": 0.0,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 2945.8
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 200.0,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 4884.1,
+      "processor_final_mt443_kerma_ev_barns": 2801.6,
+      "processor_kinematic_maximum_ev_barns": 2801.6,
+      "processor_final_mt301_excess_ev_barns": 2082.5000000000005,
+      "printed_energy_balance_remainder_sum_ev_barns": 2082.5,
+      "remainder_excess_relative_difference": 2.1836607485544492e-16,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 2082.5
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 500.0,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 3258.2,
+      "processor_final_mt443_kerma_ev_barns": 1931.7,
+      "processor_kinematic_maximum_ev_barns": 1931.7,
+      "processor_final_mt301_excess_ev_barns": 1326.4999999999998,
+      "printed_energy_balance_remainder_sum_ev_barns": 1326.4,
+      "remainder_excess_relative_difference": 0.00007538635506949242,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 1326.4
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 1000.0,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 2550.6,
+      "processor_final_mt443_kerma_ev_barns": 1620.5,
+      "processor_kinematic_maximum_ev_barns": 1620.5,
+      "processor_final_mt301_excess_ev_barns": 930.0999999999999,
+      "printed_energy_balance_remainder_sum_ev_barns": 930.12,
+      "remainder_excess_relative_difference": 0.000021502601814922266,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 930.12
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 2000.0,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 2846.8,
+      "processor_final_mt443_kerma_ev_barns": 2190.1,
+      "processor_kinematic_maximum_ev_barns": 2190.1,
+      "processor_final_mt301_excess_ev_barns": 656.7000000000003,
+      "printed_energy_balance_remainder_sum_ev_barns": 656.74,
+      "remainder_excess_relative_difference": 0.00006090690379714384,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 656.74
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 5000.0,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 3821.6,
+      "processor_final_mt443_kerma_ev_barns": 3407.9,
+      "processor_kinematic_maximum_ev_barns": 3407.9,
+      "processor_final_mt301_excess_ev_barns": 413.6999999999998,
+      "printed_energy_balance_remainder_sum_ev_barns": 413.73,
+      "remainder_excess_relative_difference": 0.00007251105793681891,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 413.73
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 200000.0,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 309940.0,
+      "processor_final_mt443_kerma_ev_barns": 244840.0,
+      "processor_kinematic_maximum_ev_barns": 244840.0,
+      "processor_final_mt301_excess_ev_barns": 65100.0,
+      "printed_energy_balance_remainder_sum_ev_barns": 65101.0,
+      "remainder_excess_relative_difference": 0.000015360747146741216,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 65101.0
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 500000.0,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 430200.0,
+      "processor_final_mt443_kerma_ev_barns": 343350.0,
+      "processor_kinematic_maximum_ev_barns": 343350.0,
+      "processor_final_mt301_excess_ev_barns": 86850.0,
+      "printed_energy_balance_remainder_sum_ev_barns": 86856.0,
+      "remainder_excess_relative_difference": 0.00006907985631389887,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 86856.0
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 1000000.0,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 614260.0,
+      "processor_final_mt443_kerma_ev_barns": 465180.0,
+      "processor_kinematic_maximum_ev_barns": 465180.0,
+      "processor_final_mt301_excess_ev_barns": 149080.0,
+      "printed_energy_balance_remainder_sum_ev_barns": 149080.0,
+      "remainder_excess_relative_difference": 0.0,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 149080.0
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 1200000.0,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 679820.0,
+      "processor_final_mt443_kerma_ev_barns": 600480.0,
+      "processor_kinematic_maximum_ev_barns": 600480.0,
+      "processor_final_mt301_excess_ev_barns": 79340.0,
+      "printed_energy_balance_remainder_sum_ev_barns": 79336.0,
+      "remainder_excess_relative_difference": 0.00005041593143433325,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 79336.0
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 2500000.0,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 1032900.0,
+      "processor_final_mt443_kerma_ev_barns": 925410.0,
+      "processor_kinematic_maximum_ev_barns": 925410.0,
+      "processor_final_mt301_excess_ev_barns": 107490.0,
+      "printed_energy_balance_remainder_sum_ev_barns": 107450.0,
+      "remainder_excess_relative_difference": 0.0003721276397804447,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 107450.0
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 3000000.0,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 1139300.0,
+      "processor_final_mt443_kerma_ev_barns": 994850.0,
+      "processor_kinematic_maximum_ev_barns": 994850.0,
+      "processor_final_mt301_excess_ev_barns": 144450.0,
+      "printed_energy_balance_remainder_sum_ev_barns": 144460.0,
+      "remainder_excess_relative_difference": 0.00006922331441229406,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 144460.0
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 3500000.0,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 1224400.0,
+      "processor_final_mt443_kerma_ev_barns": 1052200.0,
+      "processor_kinematic_maximum_ev_barns": 1052200.0,
+      "processor_final_mt301_excess_ev_barns": 172200.0,
+      "printed_energy_balance_remainder_sum_ev_barns": 172240.0,
+      "remainder_excess_relative_difference": 0.00023223409196470042,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 172240.0
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 4000000.0,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 1294700.0,
+      "processor_final_mt443_kerma_ev_barns": 1097400.0,
+      "processor_kinematic_maximum_ev_barns": 1097400.0,
+      "processor_final_mt301_excess_ev_barns": 197300.0,
+      "printed_energy_balance_remainder_sum_ev_barns": 197350.0,
+      "remainder_excess_relative_difference": 0.0002533569799847986,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 197350.0
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 4529800.0,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 1556100.0,
+      "processor_final_mt443_kerma_ev_barns": 1244400.0,
+      "processor_kinematic_maximum_ev_barns": 1244400.0,
+      "processor_final_mt301_excess_ev_barns": 311700.0,
+      "printed_energy_balance_remainder_sum_ev_barns": 311760.7,
+      "remainder_excess_relative_difference": 0.00019470061492680649,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 16,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 1220.7
+        },
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 310540.0
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 5000000.0,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 1573000.0,
+      "processor_final_mt443_kerma_ev_barns": 1241900.0,
+      "processor_kinematic_maximum_ev_barns": 1241900.0,
+      "processor_final_mt301_excess_ev_barns": 331100.0,
+      "printed_energy_balance_remainder_sum_ev_barns": 331027.0,
+      "remainder_excess_relative_difference": 0.00022047719722138328,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 16,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 10277.0
+        },
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 320750.0
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 5502500.0,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 1595200.0,
+      "processor_final_mt443_kerma_ev_barns": 1185500.0,
+      "processor_kinematic_maximum_ev_barns": 1185500.0,
+      "processor_final_mt301_excess_ev_barns": 409700.0,
+      "printed_energy_balance_remainder_sum_ev_barns": 409690.0,
+      "remainder_excess_relative_difference": 0.0000244081034903588,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 16,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 43770.0
+        },
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 365920.0
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 6000000.0,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 1559700.0,
+      "processor_final_mt443_kerma_ev_barns": 952600.0,
+      "processor_kinematic_maximum_ev_barns": 952600.0,
+      "processor_final_mt301_excess_ev_barns": 607100.0,
+      "printed_energy_balance_remainder_sum_ev_barns": 607071.0,
+      "remainder_excess_relative_difference": 0.00004776807774666447,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 16,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 65941.0
+        },
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 541130.0
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 7000000.0,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 1760700.0,
+      "processor_final_mt443_kerma_ev_barns": 1031100.0,
+      "processor_kinematic_maximum_ev_barns": 1031100.0,
+      "processor_final_mt301_excess_ev_barns": 729600.0,
+      "printed_energy_balance_remainder_sum_ev_barns": 729620.00030025,
+      "remainder_excess_relative_difference": 0.000027411940793544196,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 16,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 273200.0
+        },
+        {
+          "reaction_mt": 22,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 0.00030025
+        },
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 456420.0
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 8000000.0,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 2410100.0,
+      "processor_final_mt443_kerma_ev_barns": 1243800.0,
+      "processor_kinematic_maximum_ev_barns": 1243800.0,
+      "processor_final_mt301_excess_ev_barns": 1166300.0,
+      "printed_energy_balance_remainder_sum_ev_barns": 1166377.432,
+      "remainder_excess_relative_difference": 0.00006638674401240455,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 16,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 529110.0
+        },
+        {
+          "reaction_mt": 22,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 27.432
+        },
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 637240.0
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 9000000.0,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 2514200.0,
+      "processor_final_mt443_kerma_ev_barns": 1504200.0,
+      "processor_kinematic_maximum_ev_barns": 1504200.0,
+      "processor_final_mt301_excess_ev_barns": 1010000.0,
+      "printed_energy_balance_remainder_sum_ev_barns": 1009990.716,
+      "remainder_excess_relative_difference": 9.192079207906038e-6,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 16,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 154540.0
+        },
+        {
+          "reaction_mt": 22,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": -6563.1
+        },
+        {
+          "reaction_mt": 91,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 73209.0
+        },
+        {
+          "reaction_mt": 103,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": -17.146
+        },
+        {
+          "reaction_mt": 105,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": -78.038
+        },
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 788900.0
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 10000000.0,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 3402900.0,
+      "processor_final_mt443_kerma_ev_barns": 2177600.0,
+      "processor_kinematic_maximum_ev_barns": 2177600.0,
+      "processor_final_mt301_excess_ev_barns": 1225300.0,
+      "printed_energy_balance_remainder_sum_ev_barns": 1225291.5,
+      "remainder_excess_relative_difference": 6.937076634293642e-6,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 16,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 276420.0
+        },
+        {
+          "reaction_mt": 22,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": -40875.0
+        },
+        {
+          "reaction_mt": 91,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 192290.0
+        },
+        {
+          "reaction_mt": 103,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 829.1
+        },
+        {
+          "reaction_mt": 105,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": -1922.6
+        },
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 798550.0
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 11000000.0,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 3496500.0,
+      "processor_final_mt443_kerma_ev_barns": 2466100.0,
+      "processor_kinematic_maximum_ev_barns": 2466100.0,
+      "processor_final_mt301_excess_ev_barns": 1030400.0,
+      "printed_energy_balance_remainder_sum_ev_barns": 1030429.6,
+      "remainder_excess_relative_difference": 0.000028725882874460047,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 16,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 260560.0
+        },
+        {
+          "reaction_mt": 22,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": -144240.0
+        },
+        {
+          "reaction_mt": 91,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 226120.0
+        },
+        {
+          "reaction_mt": 103,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 4154.1
+        },
+        {
+          "reaction_mt": 105,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": -3934.5
+        },
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 687770.0
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 12000000.0,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 3521700.0,
+      "processor_final_mt443_kerma_ev_barns": 2765800.0,
+      "processor_kinematic_maximum_ev_barns": 2765800.0,
+      "processor_final_mt301_excess_ev_barns": 755900.0,
+      "printed_energy_balance_remainder_sum_ev_barns": 755930.4,
+      "remainder_excess_relative_difference": 0.000040215342576543136,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 16,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 222490.0
+        },
+        {
+          "reaction_mt": 22,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": -212410.0
+        },
+        {
+          "reaction_mt": 91,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 196450.0
+        },
+        {
+          "reaction_mt": 103,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 12217.0
+        },
+        {
+          "reaction_mt": 105,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": -4786.6
+        },
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 541970.0
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 13000000.0,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 3756700.0,
+      "processor_final_mt443_kerma_ev_barns": 2983100.0,
+      "processor_kinematic_maximum_ev_barns": 2983100.0,
+      "processor_final_mt301_excess_ev_barns": 773600.0,
+      "printed_energy_balance_remainder_sum_ev_barns": 773604.7238940999,
+      "remainder_excess_relative_difference": 6.106340814672189e-6,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 16,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 252100.0
+        },
+        {
+          "reaction_mt": 22,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": -45212.0
+        },
+        {
+          "reaction_mt": 91,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 152700.0
+        },
+        {
+          "reaction_mt": 103,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 17735.0
+        },
+        {
+          "reaction_mt": 104,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 34.32
+        },
+        {
+          "reaction_mt": 105,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": -3862.6
+        },
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 400110.0
+        },
+        {
+          "reaction_mt": 108,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 0.0038941
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 14000000.0,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 4041700.0,
+      "processor_final_mt443_kerma_ev_barns": 3143000.0,
+      "processor_kinematic_maximum_ev_barns": 3143000.0,
+      "processor_final_mt301_excess_ev_barns": 898700.0,
+      "printed_energy_balance_remainder_sum_ev_barns": 898671.29979,
+      "remainder_excess_relative_difference": 0.00003193525091803614,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 16,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 273300.0
+        },
+        {
+          "reaction_mt": 22,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 200110.0
+        },
+        {
+          "reaction_mt": 91,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 115560.0
+        },
+        {
+          "reaction_mt": 103,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 21325.0
+        },
+        {
+          "reaction_mt": 104,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": -712.63
+        },
+        {
+          "reaction_mt": 105,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": -2831.3
+        },
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 291920.0
+        },
+        {
+          "reaction_mt": 108,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 0.22979
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 15000000.0,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 4097500.0,
+      "processor_final_mt443_kerma_ev_barns": 3281100.0,
+      "processor_kinematic_maximum_ev_barns": 3281100.0,
+      "processor_final_mt301_excess_ev_barns": 816400.0,
+      "printed_energy_balance_remainder_sum_ev_barns": 816460.317533,
+      "remainder_excess_relative_difference": 0.00007387687032025922,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 16,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 273350.0
+        },
+        {
+          "reaction_mt": 22,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 220340.0
+        },
+        {
+          "reaction_mt": 24,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 0.041373
+        },
+        {
+          "reaction_mt": 28,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 0.16036
+        },
+        {
+          "reaction_mt": 32,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 31.677
+        },
+        {
+          "reaction_mt": 91,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 86614.0
+        },
+        {
+          "reaction_mt": 103,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 24425.0
+        },
+        {
+          "reaction_mt": 104,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": -1898.6
+        },
+        {
+          "reaction_mt": 105,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 525.32
+        },
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 213070.0
+        },
+        {
+          "reaction_mt": 108,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 2.7188
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 16000000.0,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 4155500.0,
+      "processor_final_mt443_kerma_ev_barns": 3412100.0,
+      "processor_kinematic_maximum_ev_barns": 3412100.0,
+      "processor_final_mt301_excess_ev_barns": 743400.0,
+      "printed_energy_balance_remainder_sum_ev_barns": 743415.6560000001,
+      "remainder_excess_relative_difference": 0.000021059551105385163,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 16,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 273910.0
+        },
+        {
+          "reaction_mt": 22,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 238070.0
+        },
+        {
+          "reaction_mt": 24,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 55.136
+        },
+        {
+          "reaction_mt": 28,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": -236.94
+        },
+        {
+          "reaction_mt": 32,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": -1013.4
+        },
+        {
+          "reaction_mt": 91,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 64199.0
+        },
+        {
+          "reaction_mt": 103,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 10932.0
+        },
+        {
+          "reaction_mt": 104,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": -2670.2
+        },
+        {
+          "reaction_mt": 105,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 4196.4
+        },
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 156110.0
+        },
+        {
+          "reaction_mt": 108,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": -136.34
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 17000000.0,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 4239200.0,
+      "processor_final_mt443_kerma_ev_barns": 3547000.0,
+      "processor_kinematic_maximum_ev_barns": 3547000.0,
+      "processor_final_mt301_excess_ev_barns": 692200.0,
+      "printed_energy_balance_remainder_sum_ev_barns": 692152.9800000001,
+      "remainder_excess_relative_difference": 0.00006792834440898903,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 16,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 267860.0
+        },
+        {
+          "reaction_mt": 22,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 252720.0
+        },
+        {
+          "reaction_mt": 24,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": -1002.6
+        },
+        {
+          "reaction_mt": 28,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": -1149.0
+        },
+        {
+          "reaction_mt": 32,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": -2783.3
+        },
+        {
+          "reaction_mt": 91,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 46269.0
+        },
+        {
+          "reaction_mt": 103,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 9715.2
+        },
+        {
+          "reaction_mt": 104,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 2465.9
+        },
+        {
+          "reaction_mt": 105,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 5049.0
+        },
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 113890.0
+        },
+        {
+          "reaction_mt": 108,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": -881.22
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 18000000.0,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 4371800.0,
+      "processor_final_mt443_kerma_ev_barns": 3698200.0,
+      "processor_kinematic_maximum_ev_barns": 3698200.0,
+      "processor_final_mt301_excess_ev_barns": 673600.0,
+      "printed_energy_balance_remainder_sum_ev_barns": 673601.9283,
+      "remainder_excess_relative_difference": 2.862669952408277e-6,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 16,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 260680.0
+        },
+        {
+          "reaction_mt": 22,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 262390.0
+        },
+        {
+          "reaction_mt": 24,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 5278.4
+        },
+        {
+          "reaction_mt": 28,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": -2304.4
+        },
+        {
+          "reaction_mt": 32,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": -4095.6
+        },
+        {
+          "reaction_mt": 41,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 1.0283
+        },
+        {
+          "reaction_mt": 91,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 31601.0
+        },
+        {
+          "reaction_mt": 103,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 8047.1
+        },
+        {
+          "reaction_mt": 104,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 6313.3
+        },
+        {
+          "reaction_mt": 105,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 6442.7
+        },
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 102370.0
+        },
+        {
+          "reaction_mt": 108,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": -3121.6
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 19000000.0,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 4424000.0,
+      "processor_final_mt443_kerma_ev_barns": 3820400.0,
+      "processor_kinematic_maximum_ev_barns": 3820400.0,
+      "processor_final_mt301_excess_ev_barns": 603600.0,
+      "printed_energy_balance_remainder_sum_ev_barns": 603637.0695699999,
+      "remainder_excess_relative_difference": 0.00006141036041133231,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 16,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 251450.0
+        },
+        {
+          "reaction_mt": 22,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 254020.0
+        },
+        {
+          "reaction_mt": 24,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": -5876.6
+        },
+        {
+          "reaction_mt": 28,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": -3735.4
+        },
+        {
+          "reaction_mt": 32,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": -7138.7
+        },
+        {
+          "reaction_mt": 41,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": -0.63043
+        },
+        {
+          "reaction_mt": 91,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 21412.0
+        },
+        {
+          "reaction_mt": 103,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 6481.6
+        },
+        {
+          "reaction_mt": 104,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 5268.9
+        },
+        {
+          "reaction_mt": 105,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 7479.9
+        },
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 76293.0
+        },
+        {
+          "reaction_mt": 108,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": -2017.0
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    },
+    {
+      "incident_energy_ev": 20000000.0,
+      "response_mt": 301,
+      "processor_kinematic_direction": "high",
+      "processor_final_mt301_kerma_ev_barns": 4356000.0,
+      "processor_final_mt443_kerma_ev_barns": 3843500.0,
+      "processor_kinematic_maximum_ev_barns": 3843500.0,
+      "processor_final_mt301_excess_ev_barns": 512500.0,
+      "printed_energy_balance_remainder_sum_ev_barns": 512552.6873846,
+      "remainder_excess_relative_difference": 0.00010279408516779426,
+      "mt443_kinematic_maximum_relative_difference": 0.0,
+      "contributions": [
+        {
+          "reaction_mt": 16,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 261560.0
+        },
+        {
+          "reaction_mt": 22,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 231200.0
+        },
+        {
+          "reaction_mt": 24,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": -43001.0
+        },
+        {
+          "reaction_mt": 28,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": -5407.4
+        },
+        {
+          "reaction_mt": 32,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": -10972.0
+        },
+        {
+          "reaction_mt": 33,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 3.3607
+        },
+        {
+          "reaction_mt": 34,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 0.0007746
+        },
+        {
+          "reaction_mt": 41,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": -165.09
+        },
+        {
+          "reaction_mt": 91,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 15325.0
+        },
+        {
+          "reaction_mt": 103,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 5436.0
+        },
+        {
+          "reaction_mt": 104,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 4921.0
+        },
+        {
+          "reaction_mt": 105,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 8373.5
+        },
+        {
+          "reaction_mt": 106,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 0.11591
+        },
+        {
+          "reaction_mt": 107,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 43960.0
+        },
+        {
+          "reaction_mt": 108,
+          "particle_id": 0,
+          "printed_remainder_ev_barns": 1319.2
+        }
+      ],
+      "status": "attributed_within_print_tolerance"
+    }
+  ]
+}

@@ -14,18 +14,21 @@ use nctforge_dicom::verify_nf_bnct_001;
 use nctforge_njoy::{
     DEFAULT_CAPTURE_ENERGY_BALANCE_RELATIVE_TOLERANCE,
     DEFAULT_LAW7_BREAKUP_NORMALIZATION_TOLERANCE, DEFAULT_LAW7_BREAKUP_RELATIVE_ENERGY_TOLERANCE,
-    DEFAULT_NJOY_CAPTURE_PRINT_RELATIVE_TOLERANCE, DEFAULT_NJOY_LAW7_PRINT_RELATIVE_TOLERANCE,
-    DEFAULT_NJOY_LAW7_SOURCE_RELATIVE_TOLERANCE, DEFAULT_NJOY_PRINT_RELATIVE_TOLERANCE,
-    DEFAULT_NJOY_TIMEOUT_SECONDS, DEFAULT_SPECTRUM_NORMALIZATION_TOLERANCE,
-    EndfContinuumPhotonMomentReport, EndfContinuumPhotonMomentReportDocument,
-    EndfMf6CapturePhotonBalanceQualification, EndfMf6CapturePhotonBalanceReport,
-    EndfMf6CapturePhotonBalanceReportDocument, EndfMf6Law7ImplicitResidualQualification,
-    EndfMf6Law7ImplicitResidualReport, EndfMf6Law7ImplicitResidualReportDocument,
-    EndfPhotonProductionInventory, EndfPhotonProductionInventoryDocument,
-    NjoyCapturePhotonMomentComparison, NjoyCapturePhotonMomentComparisonDocument,
-    NjoyDiagnosticTriageCheckResult, NjoyDiagnosticTriageReport,
-    NjoyDiagnosticTriageReportDocument, NjoyDomainAwareSuitabilityReport,
-    NjoyDomainAwareSuitabilityReportDocument, NjoyEvidenceAwareCheckResult,
+    DEFAULT_NJOY_CAPTURE_PRINT_RELATIVE_TOLERANCE,
+    DEFAULT_NJOY_ENERGY_BALANCE_PRINT_RELATIVE_TOLERANCE,
+    DEFAULT_NJOY_LAW7_PRINT_RELATIVE_TOLERANCE, DEFAULT_NJOY_LAW7_SOURCE_RELATIVE_TOLERANCE,
+    DEFAULT_NJOY_PRINT_RELATIVE_TOLERANCE, DEFAULT_NJOY_TIMEOUT_SECONDS,
+    DEFAULT_SPECTRUM_NORMALIZATION_TOLERANCE, EndfContinuumPhotonMomentReport,
+    EndfContinuumPhotonMomentReportDocument, EndfMf6CapturePhotonBalanceQualification,
+    EndfMf6CapturePhotonBalanceReport, EndfMf6CapturePhotonBalanceReportDocument,
+    EndfMf6Law7ImplicitResidualQualification, EndfMf6Law7ImplicitResidualReport,
+    EndfMf6Law7ImplicitResidualReportDocument, EndfPhotonProductionInventory,
+    EndfPhotonProductionInventoryDocument, NjoyCapturePhotonMomentComparison,
+    NjoyCapturePhotonMomentComparisonDocument, NjoyDiagnosticTriageCheckResult,
+    NjoyDiagnosticTriageReport, NjoyDiagnosticTriageReportDocument,
+    NjoyDomainAwareSuitabilityReport, NjoyDomainAwareSuitabilityReportDocument,
+    NjoyEnergyBalanceAttribution, NjoyEnergyBalanceAttributionDocument,
+    NjoyEnergyBalanceAttributionQualification, NjoyEvidenceAwareCheckResult,
     NjoyEvidenceAwareSuitabilityReport, NjoyEvidenceAwareSuitabilityReportDocument,
     NjoyExecutionOptions, NjoyExecutionReceipt, NjoyExecutionReceiptDocument, NjoyInputArtifacts,
     NjoyInputBundle, NjoyLaw7ImplicitResidualComparison,
@@ -339,6 +342,42 @@ enum NjoyCommand {
         /// Comparison report to validate and regenerate.
         #[arg(long)]
         comparison_report: PathBuf,
+    },
+    /// Attribute in-domain MT=301 flags to NJOY's printed File 6 accounting.
+    AttributeEnergyBalance {
+        /// Verified domain-aware v0.3 transported-photon suitability report.
+        #[arg(long)]
+        domain_aware_report: PathBuf,
+        /// External execution receipt used as the trust anchor.
+        #[arg(long)]
+        receipt: PathBuf,
+        /// Complete execution directory bound by the receipt.
+        #[arg(long)]
+        execution_directory: PathBuf,
+        /// Nuclide whose high MT=301 findings will be attributed.
+        #[arg(long, default_value = "O17")]
+        nuclide: String,
+        /// Relative tolerance for NJOY's five-significant-digit print identities.
+        #[arg(long, default_value_t = DEFAULT_NJOY_ENERGY_BALANCE_PRINT_RELATIVE_TOLERANCE)]
+        print_relative_tolerance: f64,
+        /// New receipt-bound attribution JSON path; it must not already exist.
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Regenerate and verify a processor-only energy-balance attribution.
+    VerifyEnergyBalanceAttribution {
+        /// Verified domain-aware v0.3 transported-photon suitability report.
+        #[arg(long)]
+        domain_aware_report: PathBuf,
+        /// External execution receipt used as the trust anchor.
+        #[arg(long)]
+        receipt: PathBuf,
+        /// Complete execution directory bound by the receipt.
+        #[arg(long)]
+        execution_directory: PathBuf,
+        /// Energy-balance attribution to validate and regenerate.
+        #[arg(long)]
+        attribution_report: PathBuf,
     },
     /// Compare independent capture moments with NJOY's photon and recoil print tables.
     CompareCapturePhotonMoments {
@@ -1479,6 +1518,94 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                     law7_comparison_qualification_name(comparison.comparison.qualification)
                 );
             }
+            NjoyCommand::AttributeEnergyBalance {
+                domain_aware_report,
+                receipt,
+                execution_directory,
+                nuclide,
+                print_relative_tolerance,
+                output,
+            } => {
+                let domain =
+                    NjoyDomainAwareSuitabilityReportDocument::from_path(&domain_aware_report)?;
+                let execution = NjoyExecutionReceiptDocument::from_path(&receipt)?;
+                let attribution = NjoyEnergyBalanceAttribution::attribute(
+                    &domain,
+                    &execution,
+                    &execution_directory,
+                    &nuclide,
+                    print_relative_tolerance,
+                )?;
+                let result = attribution.write_new(&output)?;
+                println!("attributed {nuclide} NJOY processor energy-balance accounting");
+                println!("attribution: {}", result.attribution_path.display());
+                println!("attribution SHA-256: {}", result.attribution_sha256);
+                println!(
+                    "in-domain findings attributed: {}/{}",
+                    result.attribution.attributed_in_domain_violation_count,
+                    result.attribution.in_domain_violation_count
+                );
+                println!(
+                    "physical validations still required: {}",
+                    result.attribution.physical_validation_required_count
+                );
+                println!(
+                    "waived findings: {}",
+                    result.attribution.waived_violation_count
+                );
+                println!(
+                    "maximum printed-remainder/final-excess difference: {:.12e}",
+                    result
+                        .attribution
+                        .maximum_remainder_excess_relative_difference
+                );
+                println!(
+                    "qualification: {}",
+                    energy_balance_attribution_qualification_name(result.attribution.qualification)
+                );
+                if result.attribution.qualification
+                    != NjoyEnergyBalanceAttributionQualification::
+                        ProcessorAccountingMechanismAttributedPhysicalValidationRequired
+                {
+                    return Err(io::Error::other(
+                        "NJOY energy-balance accounting was not fully attributed; report was preserved",
+                    )
+                    .into());
+                }
+            }
+            NjoyCommand::VerifyEnergyBalanceAttribution {
+                domain_aware_report,
+                receipt,
+                execution_directory,
+                attribution_report,
+            } => {
+                let domain =
+                    NjoyDomainAwareSuitabilityReportDocument::from_path(&domain_aware_report)?;
+                let execution = NjoyExecutionReceiptDocument::from_path(&receipt)?;
+                let attribution =
+                    NjoyEnergyBalanceAttributionDocument::from_path(&attribution_report)?;
+                attribution.verify_against_evidence(&domain, &execution, &execution_directory)?;
+                println!(
+                    "verified processor-only energy-balance attribution {}",
+                    attribution_report.display()
+                );
+                println!("attribution SHA-256: {}", attribution.sha256);
+                println!(
+                    "in-domain findings attributed: {}/{}",
+                    attribution.attribution.attributed_in_domain_violation_count,
+                    attribution.attribution.in_domain_violation_count
+                );
+                println!(
+                    "physical validations still required: {}",
+                    attribution.attribution.physical_validation_required_count
+                );
+                println!(
+                    "qualification: {}",
+                    energy_balance_attribution_qualification_name(
+                        attribution.attribution.qualification
+                    )
+                );
+            }
             NjoyCommand::CompareCapturePhotonMoments {
                 balance_report,
                 receipt,
@@ -2331,6 +2458,20 @@ fn law7_comparison_qualification_name(
             }
         NjoyLaw7ImplicitResidualComparisonQualification::ProcessorAttributionRejected => {
             "processor_attribution_rejected"
+        }
+    }
+}
+
+fn energy_balance_attribution_qualification_name(
+    qualification: NjoyEnergyBalanceAttributionQualification,
+) -> &'static str {
+    match qualification {
+        NjoyEnergyBalanceAttributionQualification::
+            ProcessorAccountingMechanismAttributedPhysicalValidationRequired => {
+                "processor_accounting_mechanism_attributed_physical_validation_required"
+            }
+        NjoyEnergyBalanceAttributionQualification::ProcessorAccountingAttributionMismatch => {
+            "processor_accounting_attribution_mismatch"
         }
     }
 }
