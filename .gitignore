@@ -10,6 +10,7 @@ __pycache__/
 /bindings/python/.venv/
 /bindings/python/target/
 /bindings/python/dist/
+/bindings/python/python/nctforge/_nctforge*.so
 *.whl
 
 # Patient, transport, and generated calculation artifacts are never committed
