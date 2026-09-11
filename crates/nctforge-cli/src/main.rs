@@ -23,21 +23,21 @@ use nctforge_njoy::{
     EndfMf6CapturePhotonBalanceReport, EndfMf6CapturePhotonBalanceReportDocument,
     EndfMf6Law7ImplicitResidualQualification, EndfMf6Law7ImplicitResidualReport,
     EndfMf6Law7ImplicitResidualReportDocument, EndfPhotonProductionInventory,
-    EndfPhotonProductionInventoryDocument, NjoyCapturePhotonMomentComparison,
-    NjoyCapturePhotonMomentComparisonDocument, NjoyDiagnosticTriageCheckResult,
-    NjoyDiagnosticTriageReport, NjoyDiagnosticTriageReportDocument,
-    NjoyDomainAwareSuitabilityReport, NjoyDomainAwareSuitabilityReportDocument,
-    NjoyEnergyBalanceAttribution, NjoyEnergyBalanceAttributionDocument,
-    NjoyEnergyBalanceAttributionQualification, NjoyEvidenceAwareCheckResult,
-    NjoyEvidenceAwareSuitabilityReport, NjoyEvidenceAwareSuitabilityReportDocument,
-    NjoyExecutionOptions, NjoyExecutionReceipt, NjoyExecutionReceiptDocument, NjoyInputArtifacts,
-    NjoyInputBundle, NjoyLaw7ImplicitResidualComparison,
-    NjoyLaw7ImplicitResidualComparisonDocument, NjoyLaw7ImplicitResidualComparisonQualification,
-    NjoyPhotonMomentComparison, NjoyPhotonMomentComparisonDocument,
-    NjoySourceAwareSuitabilityReport, NjoySourceAwareSuitabilityReportDocument,
-    NjoySuitabilityComparison, NjoySuitabilityComparisonDocument,
-    NjoySuitabilityComparisonQualification, NjoySuitabilityQualification, NjoySuitabilityReport,
-    NjoySuitabilityReportDocument,
+    EndfPhotonProductionInventoryDocument, NjoyAcquisitionArtifacts,
+    NjoyCapturePhotonMomentComparison, NjoyCapturePhotonMomentComparisonDocument,
+    NjoyDiagnosticTriageCheckResult, NjoyDiagnosticTriageReport,
+    NjoyDiagnosticTriageReportDocument, NjoyDomainAwareSuitabilityReport,
+    NjoyDomainAwareSuitabilityReportDocument, NjoyEnergyBalanceAttribution,
+    NjoyEnergyBalanceAttributionDocument, NjoyEnergyBalanceAttributionQualification,
+    NjoyEvidenceAwareCheckResult, NjoyEvidenceAwareSuitabilityReport,
+    NjoyEvidenceAwareSuitabilityReportDocument, NjoyExecutionOptions, NjoyExecutionReceipt,
+    NjoyExecutionReceiptDocument, NjoyInputArtifacts, NjoyInputBundle,
+    NjoyLaw7ImplicitResidualComparison, NjoyLaw7ImplicitResidualComparisonDocument,
+    NjoyLaw7ImplicitResidualComparisonQualification, NjoyPhotonMomentComparison,
+    NjoyPhotonMomentComparisonDocument, NjoySourceAwareSuitabilityReport,
+    NjoySourceAwareSuitabilityReportDocument, NjoySuitabilityComparison,
+    NjoySuitabilityComparisonDocument, NjoySuitabilityComparisonQualification,
+    NjoySuitabilityQualification, NjoySuitabilityReport, NjoySuitabilityReportDocument,
 };
 use nctforge_openmc::{
     DataAcquisitionClient, DataAcquisitionProfileDocument, DataAcquisitionReceiptDocument,
@@ -126,12 +126,14 @@ enum NjoyCommand {
         /// Frozen response-generation method JSON.
         #[arg(long)]
         generation_method: PathBuf,
-        /// Reviewed acquisition profile bound by the source selection.
+        /// Reviewed acquisition profile bound by the source selection; repeat
+        /// once per bound acquisition, paired positionally with --receipt.
         #[arg(long)]
-        profile: PathBuf,
-        /// Publisher-matched acquisition receipt bound by the source selection.
+        profile: Vec<PathBuf>,
+        /// Acquisition receipt bound by the source selection; repeat once per
+        /// bound acquisition, paired positionally with --profile.
         #[arg(long)]
-        receipt: PathBuf,
+        receipt: Vec<PathBuf>,
         /// Directory containing exactly the selected extracted ENDF files.
         #[arg(long)]
         evaluations_directory: PathBuf,
@@ -423,12 +425,14 @@ enum NjoyCommand {
         /// Frozen response-generation method JSON.
         #[arg(long)]
         generation_method: PathBuf,
-        /// Reviewed acquisition profile bound by the source selection.
+        /// Reviewed acquisition profile bound by the source selection; repeat
+        /// once per bound acquisition, paired positionally with --receipt.
         #[arg(long)]
-        profile: PathBuf,
-        /// Publisher-matched acquisition receipt bound by the source selection.
+        profile: Vec<PathBuf>,
+        /// Acquisition receipt bound by the source selection; repeat once per
+        /// bound acquisition, paired positionally with --profile.
         #[arg(long)]
-        receipt: PathBuf,
+        receipt: Vec<PathBuf>,
         /// Directory containing exactly the selected extracted ENDF files.
         #[arg(long)]
         evaluations_directory: PathBuf,
@@ -754,12 +758,14 @@ enum OpenMcDataCommand {
         /// Exact material JSON bound by the selection.
         #[arg(long)]
         material: PathBuf,
-        /// Reviewed acquisition profile bound by the receipt.
+        /// Reviewed acquisition profile bound by the receipt; repeat once per
+        /// bound acquisition, paired positionally with --receipt.
         #[arg(long)]
-        profile: PathBuf,
-        /// Acquisition receipt checked into the case provenance.
+        profile: Vec<PathBuf>,
+        /// Acquisition receipt checked into the case provenance; repeat once
+        /// per bound acquisition, paired positionally with --profile.
         #[arg(long)]
-        receipt: PathBuf,
+        receipt: Vec<PathBuf>,
         /// Directory containing exactly the selected extracted ENDF files.
         #[arg(long)]
         evaluations_directory: PathBuf,
@@ -810,6 +816,20 @@ fn main() -> ExitCode {
             ExitCode::FAILURE
         }
     }
+}
+
+/// Pair each `--profile` with the `--receipt` at the same position; mixed
+/// selections pass one pair per bound acquisition.
+fn acquisition_pairs<'a>(
+    profiles: &'a [PathBuf],
+    receipts: &'a [PathBuf],
+) -> Result<Vec<(&'a PathBuf, &'a PathBuf)>, Box<dyn Error>> {
+    if profiles.is_empty() || profiles.len() != receipts.len() {
+        return Err(
+            io::Error::other("each --profile requires one --receipt, and vice versa").into(),
+        );
+    }
+    Ok(profiles.iter().zip(receipts).collect())
 }
 
 fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
@@ -921,15 +941,25 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                     let selection = EvaluatedNeutronSourceSelectionDocument::from_path(&selection)?;
                     let material_bytes = fs::read(&material)?;
                     let material: MaterialDefinition = serde_json::from_slice(&material_bytes)?;
-                    let profile = DataAcquisitionProfileDocument::from_path(&profile)?;
-                    let receipt = DataAcquisitionReceiptDocument::from_path(&receipt)?;
+                    let pairs = acquisition_pairs(&profile, &receipt)?;
+                    let pairs = pairs
+                        .iter()
+                        .map(|(profile, receipt)| {
+                            Ok::<_, Box<dyn Error>>((
+                                DataAcquisitionProfileDocument::from_path(profile)?,
+                                DataAcquisitionReceiptDocument::from_path(receipt)?,
+                            ))
+                        })
+                        .collect::<Result<Vec<_>, _>>()?;
+                    let pair_refs = pairs
+                        .iter()
+                        .map(|(profile, receipt)| (profile, receipt))
+                        .collect::<Vec<_>>();
 
                     selection
                         .selection
                         .validate_for_material(&material, &material_bytes)?;
-                    selection
-                        .selection
-                        .validate_acquisition(&profile, &receipt)?;
+                    selection.selection.validate_acquisitions(&pair_refs)?;
                     selection.selection.verify_files(&evaluations_directory)?;
 
                     println!("selection: {}", selection.selection.id);
@@ -938,10 +968,9 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                         "verified evaluations: {}",
                         selection.selection.evaluations.len()
                     );
-                    println!(
-                        "archive SHA-256: {}",
-                        selection.selection.acquisition.archive_sha256
-                    );
+                    for acquisition in selection.selection.declared_acquisitions() {
+                        println!("archive SHA-256: {}", acquisition.archive_sha256);
+                    }
                     println!(
                         "qualification: {}",
                         match selection.selection.qualification {
@@ -1031,16 +1060,26 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                 let selection_json = fs::read(selection)?;
                 let material_json = fs::read(material)?;
                 let generation_method_json = fs::read(generation_method)?;
-                let acquisition_profile_json = fs::read(profile)?;
-                let acquisition_receipt_json = fs::read(receipt)?;
+                let acquisition_bytes = acquisition_pairs(&profile, &receipt)?
+                    .iter()
+                    .map(|(profile, receipt)| {
+                        Ok::<_, io::Error>((fs::read(profile)?, fs::read(receipt)?))
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+                let acquisitions = acquisition_bytes
+                    .iter()
+                    .map(|(profile, receipt)| NjoyAcquisitionArtifacts {
+                        profile_json: profile,
+                        receipt_json: receipt,
+                    })
+                    .collect();
                 let bundle = NjoyInputBundle::generate(
                     &evaluations_directory,
                     NjoyInputArtifacts {
                         evaluated_source_selection_json: &selection_json,
                         material_json: &material_json,
                         generation_method_json: &generation_method_json,
-                        acquisition_profile_json: &acquisition_profile_json,
-                        acquisition_receipt_json: &acquisition_receipt_json,
+                        acquisitions,
                     },
                 )?;
                 bundle.write_new(&output)?;
@@ -1705,16 +1744,26 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                 let selection_json = fs::read(selection)?;
                 let material_json = fs::read(material)?;
                 let generation_method_json = fs::read(generation_method)?;
-                let acquisition_profile_json = fs::read(profile)?;
-                let acquisition_receipt_json = fs::read(receipt)?;
+                let acquisition_bytes = acquisition_pairs(&profile, &receipt)?
+                    .iter()
+                    .map(|(profile, receipt)| {
+                        Ok::<_, io::Error>((fs::read(profile)?, fs::read(receipt)?))
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+                let acquisitions = acquisition_bytes
+                    .iter()
+                    .map(|(profile, receipt)| NjoyAcquisitionArtifacts {
+                        profile_json: profile,
+                        receipt_json: receipt,
+                    })
+                    .collect();
                 let bundle = NjoyInputBundle::generate(
                     &evaluations_directory,
                     NjoyInputArtifacts {
                         evaluated_source_selection_json: &selection_json,
                         material_json: &material_json,
                         generation_method_json: &generation_method_json,
-                        acquisition_profile_json: &acquisition_profile_json,
-                        acquisition_receipt_json: &acquisition_receipt_json,
+                        acquisitions,
                     },
                 )?;
                 let result = NjoyExecutionReceipt::execute(

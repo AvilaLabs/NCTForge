@@ -15,7 +15,8 @@ use std::path::{Component, Path, PathBuf};
 
 use nctforge_core::ContentReference;
 use nctforge_openmc::{
-    DataAcquisitionProfileDocument, DataAcquisitionReceiptDocument, EvaluatedNeutronArtifact,
+    DataAcquisitionProfileDocument, DataAcquisitionReceiptDocument,
+    EVALUATED_SOURCE_SELECTION_MIXED_SCHEMA, EvaluatedNeutronArtifact,
     EvaluatedNeutronSourceSelectionDocument, EvaluatedSourceError,
 };
 use nctforge_transport::{
@@ -158,6 +159,7 @@ pub use suitability::{
 };
 
 pub const NJOY_INPUT_MANIFEST_SCHEMA: &str = "nctforge.njoy-input-manifest/0.1.0";
+pub const NJOY_INPUT_MANIFEST_MIXED_SCHEMA: &str = "nctforge.njoy-input-manifest/0.2.0";
 pub const TARGET_NJOY_NAME: &str = "NJOY2016";
 pub const TARGET_NJOY_VERSION: &str = "2016.78";
 pub const TARGET_NJOY_SOURCE_COMMIT: &str = "71a76bc6345fa15f36bacc816ae7900714345d97";
@@ -174,13 +176,17 @@ const NORMAL_HEATR_PRINT_OPTION: u16 = 0;
 const DIAGNOSTIC_HEATR_TEMPERATURE_COUNT: u16 = 1;
 const DIAGNOSTIC_HEATR_PRINT_OPTION: u16 = 2;
 
-#[derive(Debug, Clone, Copy)]
 pub struct NjoyInputArtifacts<'a> {
     pub evaluated_source_selection_json: &'a [u8],
     pub material_json: &'a [u8],
     pub generation_method_json: &'a [u8],
-    pub acquisition_profile_json: &'a [u8],
-    pub acquisition_receipt_json: &'a [u8],
+    pub acquisitions: Vec<NjoyAcquisitionArtifacts<'a>>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct NjoyAcquisitionArtifacts<'a> {
+    pub profile_json: &'a [u8],
+    pub receipt_json: &'a [u8],
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -208,8 +214,19 @@ pub struct NjoyInputBindings {
     pub evaluated_source_selection: ContentReference,
     pub material: ContentReference,
     pub generation_method: ContentReference,
-    pub acquisition_profile_sha256: String,
-    pub acquisition_receipt_sha256: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub acquisition_profile_sha256: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub acquisition_receipt_sha256: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub acquisitions: Option<Vec<NjoyAcquisitionBinding>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct NjoyAcquisitionBinding {
+    pub profile_sha256: String,
+    pub receipt_sha256: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -303,17 +320,21 @@ impl NjoyInputBundle {
                     source,
                 }
             })?;
-        let profile =
-            DataAcquisitionProfileDocument::from_bytes(artifacts.acquisition_profile_json)?;
-        let receipt =
-            DataAcquisitionReceiptDocument::from_bytes(artifacts.acquisition_receipt_json)?;
+        let mut acquisitions = Vec::with_capacity(artifacts.acquisitions.len());
+        for acquisition in &artifacts.acquisitions {
+            let profile = DataAcquisitionProfileDocument::from_bytes(acquisition.profile_json)?;
+            let receipt = DataAcquisitionReceiptDocument::from_bytes(acquisition.receipt_json)?;
+            acquisitions.push((profile, receipt));
+        }
+        let pairs = acquisitions
+            .iter()
+            .map(|(profile, receipt)| (profile, receipt))
+            .collect::<Vec<_>>();
 
         selection
             .selection
             .validate_for_material(&material, artifacts.material_json)?;
-        selection
-            .selection
-            .validate_acquisition(&profile, &receipt)?;
+        selection.selection.validate_acquisitions(&pairs)?;
         selection.selection.verify_files(evaluations_root)?;
         Self::generate_from_documents(
             &selection,
@@ -321,20 +342,15 @@ impl NjoyInputBundle {
             artifacts.material_json,
             &method,
             artifacts.generation_method_json,
-            &profile.sha256,
-            &receipt.sha256,
         )
     }
 
-    #[allow(clippy::too_many_arguments)]
     fn generate_from_documents(
         selection: &EvaluatedNeutronSourceSelectionDocument,
         material: &MaterialDefinition,
         material_json: &[u8],
         method: &ResponseGenerationMethod,
         method_json: &[u8],
-        acquisition_profile_sha256: &str,
-        acquisition_receipt_sha256: &str,
     ) -> Result<Self, NjoyPreparationError> {
         method.validate()?;
         if method.qualification != MethodQualification::MethodFrozenTablesPending {
@@ -432,8 +448,39 @@ impl NjoyInputBundle {
             });
         }
 
+        let acquisition_bindings = selection
+            .selection
+            .declared_acquisitions()
+            .iter()
+            .map(|acquisition| NjoyAcquisitionBinding {
+                profile_sha256: acquisition.profile_sha256.clone(),
+                receipt_sha256: acquisition.receipt_sha256.clone(),
+            })
+            .collect::<Vec<_>>();
+        let (manifest_schema, single_binding, binding_list) = if selection.selection.schema_version
+            == EVALUATED_SOURCE_SELECTION_MIXED_SCHEMA
+        {
+            (
+                NJOY_INPUT_MANIFEST_MIXED_SCHEMA,
+                (None, None),
+                Some(acquisition_bindings),
+            )
+        } else {
+            let only = acquisition_bindings
+                .first()
+                .cloned()
+                .unwrap_or(NjoyAcquisitionBinding {
+                    profile_sha256: String::new(),
+                    receipt_sha256: String::new(),
+                });
+            (
+                NJOY_INPUT_MANIFEST_SCHEMA,
+                (Some(only.profile_sha256), Some(only.receipt_sha256)),
+                None,
+            )
+        };
         let manifest = NjoyInputManifest {
-            schema_version: NJOY_INPUT_MANIFEST_SCHEMA.into(),
+            schema_version: manifest_schema.into(),
             id: format!("{}.njoy2016-78-inputs", selection.selection.id),
             case_id: selection.selection.case_id.clone(),
             qualification: NjoyInputQualification::InputPreparationOnly,
@@ -442,8 +489,9 @@ impl NjoyInputBundle {
                 evaluated_source_selection: selection_reference,
                 material: material_reference,
                 generation_method: method_reference,
-                acquisition_profile_sha256: acquisition_profile_sha256.into(),
-                acquisition_receipt_sha256: acquisition_receipt_sha256.into(),
+                acquisition_profile_sha256: single_binding.0,
+                acquisition_receipt_sha256: single_binding.1,
+                acquisitions: binding_list,
             },
             settings: NjoyProcessingSettings {
                 temperature_k: method.temperature_k,
@@ -761,8 +809,6 @@ mod tests {
             MATERIAL_JSON,
             &method,
             METHOD_JSON,
-            &selection.selection.acquisition.profile_sha256,
-            &selection.selection.acquisition.receipt_sha256,
         )
         .unwrap()
     }

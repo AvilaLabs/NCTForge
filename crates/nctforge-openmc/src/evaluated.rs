@@ -23,6 +23,8 @@ pub const EVALUATED_SOURCE_SELECTION_SCHEMA: &str =
     "nctforge.evaluated-neutron-source-selection/0.1.0";
 pub const EVALUATED_SOURCE_SELECTION_CANDIDATE_SCHEMA: &str =
     "nctforge.evaluated-neutron-source-selection/0.2.0";
+pub const EVALUATED_SOURCE_SELECTION_MIXED_SCHEMA: &str =
+    "nctforge.evaluated-neutron-source-selection/0.3.0";
 
 const ENDFB_ACQUISITION_ROLE: &str = "endfb_incident_neutron_evaluations";
 const CANDIDATE_ACQUISITION_ROLE: &str = "incident_neutron_evaluations";
@@ -36,7 +38,10 @@ pub struct EvaluatedNeutronSourceSelection {
     pub qualification: EvaluatedSourceQualification,
     pub evaluated_data_release: String,
     pub material: ContentReference,
-    pub acquisition: EvaluatedSourceAcquisition,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub acquisition: Option<EvaluatedSourceAcquisition>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub acquisitions: Option<Vec<EvaluatedSourceAcquisition>>,
     pub evaluations: Vec<EvaluatedNeutronArtifact>,
 }
 
@@ -47,7 +52,7 @@ pub enum EvaluatedSourceQualification {
     ResponseTreatmentCandidateUnreviewed,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct EvaluatedSourceAcquisition {
     pub profile_id: String,
@@ -67,6 +72,8 @@ pub struct EvaluatedNeutronArtifact {
     pub extracted_filename: String,
     pub size_bytes: u64,
     pub sha256: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub acquisition_sha256: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -109,7 +116,8 @@ impl EvaluatedNeutronSourceSelection {
                     ));
                 }
             }
-            EVALUATED_SOURCE_SELECTION_CANDIDATE_SCHEMA => {
+            EVALUATED_SOURCE_SELECTION_CANDIDATE_SCHEMA
+            | EVALUATED_SOURCE_SELECTION_MIXED_SCHEMA => {
                 if self.qualification
                     != EvaluatedSourceQualification::ResponseTreatmentCandidateUnreviewed
                 {
@@ -122,16 +130,27 @@ impl EvaluatedNeutronSourceSelection {
                 ));
             }
         }
+        let mixed = self.schema_version == EVALUATED_SOURCE_SELECTION_MIXED_SCHEMA;
+        match (mixed, &self.acquisition, &self.acquisitions) {
+            (false, Some(_), None) => {}
+            (false, _, _) => {
+                return Err(EvaluatedSourceError::SingleAcquisitionRequired(
+                    self.schema_version.clone(),
+                ));
+            }
+            (true, None, Some(acquisitions)) if !acquisitions.is_empty() => {}
+            (true, _, _) => {
+                return Err(EvaluatedSourceError::AcquisitionListRequired(
+                    self.schema_version.clone(),
+                ));
+            }
+        }
         for (label, value) in [
             ("id", self.id.as_str()),
             ("case_id", self.case_id.as_str()),
             (
                 "evaluated_data_release",
                 self.evaluated_data_release.as_str(),
-            ),
-            (
-                "acquisition.profile_id",
-                self.acquisition.profile_id.as_str(),
             ),
         ] {
             if value.trim().is_empty() {
@@ -141,25 +160,40 @@ impl EvaluatedNeutronSourceSelection {
         self.material
             .validate()
             .map_err(|_| EvaluatedSourceError::InvalidMaterialReference)?;
-        validate_sha256(
-            "acquisition.profile_sha256",
-            &self.acquisition.profile_sha256,
-        )?;
-        validate_sha256(
-            "acquisition.receipt_sha256",
-            &self.acquisition.receipt_sha256,
-        )?;
-        validate_filename(
-            "acquisition.archive_filename",
-            &self.acquisition.archive_filename,
-        )?;
-        if self.acquisition.archive_size_bytes == 0 {
-            return Err(EvaluatedSourceError::EmptyArchive);
+        let declared_acquisitions = self.declared_acquisitions();
+        for acquisition in declared_acquisitions {
+            validate_acquisition_block(acquisition)?;
         }
-        validate_sha256(
-            "acquisition.archive_sha256",
-            &self.acquisition.archive_sha256,
-        )?;
+        if mixed {
+            let mut archive_digests = BTreeSet::new();
+            for (index, acquisition) in declared_acquisitions.iter().enumerate() {
+                if index > 0
+                    && declared_acquisitions[index - 1].archive_sha256 >= acquisition.archive_sha256
+                {
+                    return Err(EvaluatedSourceError::NoncanonicalAcquisitionOrder);
+                }
+                archive_digests.insert(acquisition.archive_sha256.as_str());
+            }
+            let mut referenced = BTreeSet::new();
+            for evaluation in &self.evaluations {
+                let reference = evaluation.acquisition_sha256.as_deref().ok_or_else(|| {
+                    EvaluatedSourceError::UnboundEvaluationAcquisition {
+                        nuclide: evaluation.nuclide.clone(),
+                    }
+                })?;
+                if !archive_digests.contains(reference) {
+                    return Err(EvaluatedSourceError::UnboundEvaluationAcquisition {
+                        nuclide: evaluation.nuclide.clone(),
+                    });
+                }
+                referenced.insert(reference);
+            }
+            if let Some(unreferenced) = archive_digests.difference(&referenced).next() {
+                return Err(EvaluatedSourceError::UnreferencedAcquisition(
+                    (*unreferenced).into(),
+                ));
+            }
+        }
         if self.evaluations.is_empty() {
             return Err(EvaluatedSourceError::EmptySelection);
         }
@@ -208,8 +242,24 @@ impl EvaluatedNeutronSourceSelection {
                 ));
             }
             validate_sha256("evaluations.sha256", &evaluation.sha256)?;
+            if !mixed && evaluation.acquisition_sha256.is_some() {
+                return Err(EvaluatedSourceError::UnexpectedEvaluationAcquisition {
+                    nuclide: evaluation.nuclide.clone(),
+                });
+            }
         }
         Ok(())
+    }
+
+    /// All acquisitions bound by this selection, in declared order.
+    pub fn declared_acquisitions(&self) -> &[EvaluatedSourceAcquisition] {
+        if let Some(acquisitions) = &self.acquisitions {
+            acquisitions
+        } else if let Some(acquisition) = &self.acquisition {
+            std::slice::from_ref(acquisition)
+        } else {
+            &[]
+        }
     }
 
     pub fn validate_for_material(
@@ -255,34 +305,70 @@ impl EvaluatedNeutronSourceSelection {
         profile: &DataAcquisitionProfileDocument,
         receipt: &DataAcquisitionReceiptDocument,
     ) -> Result<(), EvaluatedSourceError> {
+        self.validate_acquisitions(&[(profile, receipt)])
+    }
+
+    /// Validate every bound acquisition against its profile and receipt pair.
+    ///
+    /// For the mixed schema, a publisher that distributes no digest yields an
+    /// `unavailable` receipt status; a declared digest must still be matched.
+    /// Single-acquisition schemas keep the stricter matched-digest rule.
+    pub fn validate_acquisitions(
+        &self,
+        pairs: &[(
+            &DataAcquisitionProfileDocument,
+            &DataAcquisitionReceiptDocument,
+        )],
+    ) -> Result<(), EvaluatedSourceError> {
         self.validate()?;
-        receipt
-            .validate_for_profile(profile)
-            .map_err(|error| EvaluatedSourceError::InvalidAcquisition(error.to_string()))?;
-        let expected_artifact_role = match self.schema_version.as_str() {
-            EVALUATED_SOURCE_SELECTION_SCHEMA => ENDFB_ACQUISITION_ROLE,
-            EVALUATED_SOURCE_SELECTION_CANDIDATE_SCHEMA => CANDIDATE_ACQUISITION_ROLE,
-            _ => {
-                return Err(EvaluatedSourceError::UnsupportedSchema(
-                    self.schema_version.clone(),
-                ));
+        let mixed = self.schema_version == EVALUATED_SOURCE_SELECTION_MIXED_SCHEMA;
+        let mut observed = Vec::with_capacity(pairs.len());
+        for (profile, receipt) in pairs {
+            receipt
+                .validate_for_profile(profile)
+                .map_err(|error| EvaluatedSourceError::InvalidAcquisition(error.to_string()))?;
+            let role_allowed = match self.schema_version.as_str() {
+                EVALUATED_SOURCE_SELECTION_SCHEMA => {
+                    profile.profile.artifact_role == ENDFB_ACQUISITION_ROLE
+                }
+                EVALUATED_SOURCE_SELECTION_CANDIDATE_SCHEMA => {
+                    profile.profile.artifact_role == CANDIDATE_ACQUISITION_ROLE
+                }
+                EVALUATED_SOURCE_SELECTION_MIXED_SCHEMA => matches!(
+                    profile.profile.artifact_role.as_str(),
+                    ENDFB_ACQUISITION_ROLE | CANDIDATE_ACQUISITION_ROLE
+                ),
+                _ => {
+                    return Err(EvaluatedSourceError::UnsupportedSchema(
+                        self.schema_version.clone(),
+                    ));
+                }
+            };
+            let digest_acceptable = match receipt.receipt.publisher_digest_status {
+                PublisherDigestStatus::Matched => true,
+                PublisherDigestStatus::Unavailable => {
+                    mixed && profile.profile.artifact.publisher_digest.is_none()
+                }
+            };
+            if !role_allowed
+                || !digest_acceptable
+                || receipt.receipt.evidence_state != AcquisitionEvidenceState::AcquisitionOnly
+            {
+                return Err(EvaluatedSourceError::InvalidAcquisitionState);
             }
-        };
-        if profile.profile.artifact_role != expected_artifact_role
-            || receipt.receipt.publisher_digest_status != PublisherDigestStatus::Matched
-            || receipt.receipt.evidence_state != AcquisitionEvidenceState::AcquisitionOnly
-        {
-            return Err(EvaluatedSourceError::InvalidAcquisitionState);
+            observed.push(EvaluatedSourceAcquisition {
+                profile_id: profile.profile.id.clone(),
+                profile_sha256: profile.sha256.clone(),
+                receipt_sha256: receipt.sha256.clone(),
+                archive_filename: receipt.receipt.artifact.path.clone(),
+                archive_size_bytes: receipt.receipt.artifact.size_bytes,
+                archive_sha256: receipt.receipt.artifact.sha256.clone(),
+            });
         }
-        let observed = EvaluatedSourceAcquisition {
-            profile_id: profile.profile.id.clone(),
-            profile_sha256: profile.sha256.clone(),
-            receipt_sha256: receipt.sha256.clone(),
-            archive_filename: receipt.receipt.artifact.path.clone(),
-            archive_size_bytes: receipt.receipt.artifact.size_bytes,
-            archive_sha256: receipt.receipt.artifact.sha256.clone(),
-        };
-        if self.acquisition != observed {
+        let declared = self.declared_acquisitions();
+        if declared.len() != observed.len()
+            || declared.iter().collect::<BTreeSet<_>>() != observed.iter().collect::<BTreeSet<_>>()
+        {
             return Err(EvaluatedSourceError::AcquisitionBindingMismatch);
         }
         Ok(())
@@ -428,6 +514,26 @@ fn fixed_width_u16(value: &[u8]) -> Option<u16> {
     std::str::from_utf8(value).ok()?.trim().parse().ok()
 }
 
+fn validate_acquisition_block(
+    acquisition: &EvaluatedSourceAcquisition,
+) -> Result<(), EvaluatedSourceError> {
+    if acquisition.profile_id.trim().is_empty() {
+        return Err(EvaluatedSourceError::EmptyIdentifier(
+            "acquisition.profile_id",
+        ));
+    }
+    validate_sha256("acquisition.profile_sha256", &acquisition.profile_sha256)?;
+    validate_sha256("acquisition.receipt_sha256", &acquisition.receipt_sha256)?;
+    validate_filename(
+        "acquisition.archive_filename",
+        &acquisition.archive_filename,
+    )?;
+    if acquisition.archive_size_bytes == 0 {
+        return Err(EvaluatedSourceError::EmptyArchive);
+    }
+    validate_sha256("acquisition.archive_sha256", &acquisition.archive_sha256)
+}
+
 fn validate_sha256(label: &'static str, value: &str) -> Result<(), EvaluatedSourceError> {
     if value.len() != 64
         || !value
@@ -528,6 +634,18 @@ pub enum EvaluatedSourceError {
     UnexpectedNuclide(String),
     #[error("acquisition evidence is invalid: {0}")]
     InvalidAcquisition(String),
+    #[error("evaluated-source schema {0} requires a single acquisition object")]
+    SingleAcquisitionRequired(String),
+    #[error("evaluated-source schema {0} requires a non-empty acquisitions list")]
+    AcquisitionListRequired(String),
+    #[error("evaluated-source acquisitions must be ordered by archive SHA-256 without duplicates")]
+    NoncanonicalAcquisitionOrder,
+    #[error("evaluation for {nuclide} does not reference a bound acquisition")]
+    UnboundEvaluationAcquisition { nuclide: String },
+    #[error("per-evaluation acquisition_sha256 is not permitted for {nuclide} under this schema")]
+    UnexpectedEvaluationAcquisition { nuclide: String },
+    #[error("bound acquisition {0} is not referenced by any evaluation")]
+    UnreferencedAcquisition(String),
     #[error("evaluated-source acquisition is not matched publisher evidence")]
     InvalidAcquisitionState,
     #[error("evaluated-source selection does not match the acquisition profile and receipt")]
@@ -659,10 +777,265 @@ mod tests {
         let mut selection = frozen_selection();
         let profile = DataAcquisitionProfileDocument::from_bytes(PROFILE_BYTES).unwrap();
         let receipt = DataAcquisitionReceiptDocument::from_bytes(RECEIPT_BYTES).unwrap();
-        selection.acquisition.archive_sha256 = "0".repeat(64);
+        selection.acquisition.as_mut().unwrap().archive_sha256 = "0".repeat(64);
         assert!(matches!(
             selection.validate_acquisition(&profile, &receipt),
             Err(EvaluatedSourceError::AcquisitionBindingMismatch)
+        ));
+    }
+
+    fn observed_acquisition(
+        profile: &DataAcquisitionProfileDocument,
+        receipt: &DataAcquisitionReceiptDocument,
+    ) -> EvaluatedSourceAcquisition {
+        EvaluatedSourceAcquisition {
+            profile_id: profile.profile.id.clone(),
+            profile_sha256: profile.sha256.clone(),
+            receipt_sha256: receipt.sha256.clone(),
+            archive_filename: receipt.receipt.artifact.path.clone(),
+            archive_size_bytes: receipt.receipt.artifact.size_bytes,
+            archive_sha256: receipt.receipt.artifact.sha256.clone(),
+        }
+    }
+
+    fn endfb_acquisition_pair() -> (
+        DataAcquisitionProfileDocument,
+        DataAcquisitionReceiptDocument,
+    ) {
+        (
+            DataAcquisitionProfileDocument::from_bytes(PROFILE_BYTES).unwrap(),
+            DataAcquisitionReceiptDocument::from_bytes(RECEIPT_BYTES).unwrap(),
+        )
+    }
+
+    fn synthetic_candidate_pair(
+        archive_sha256: &str,
+        with_digest: bool,
+    ) -> (
+        DataAcquisitionProfileDocument,
+        DataAcquisitionReceiptDocument,
+    ) {
+        let publisher_digest = if with_digest {
+            serde_json::json!({
+                "algorithm": "sha256",
+                "value": archive_sha256,
+                "evidence": "test digest listing"
+            })
+        } else {
+            serde_json::Value::Null
+        };
+        let profile_json = serde_json::json!({
+            "schema_version": "nctforge.data-acquisition-profile/0.2.0",
+            "id": "test-candidate-profile",
+            "artifact_role": "incident_neutron_evaluations",
+            "publication": {
+                "publisher": "test publisher",
+                "release_page_uri": "https://example.com/release",
+                "source_uri": "https://example.com/artifacts/candidate.tgz",
+                "allowed_https_host_suffixes": ["example.com"]
+            },
+            "artifact": {
+                "filename": "candidate.tgz",
+                "media_type": "application/gzip",
+                "expected_size_bytes": 4096,
+                "expected_content_disposition_filename": null,
+                "publisher_digest": publisher_digest,
+                "known_prior_digests": []
+            },
+            "size_evidence": {
+                "method": "https_head_content_length",
+                "observed_on": "2026-09-11"
+            },
+            "upstream_recipe": null
+        });
+        let profile =
+            DataAcquisitionProfileDocument::from_bytes(&serde_json::to_vec(&profile_json).unwrap())
+                .unwrap();
+        let receipt_json = serde_json::json!({
+            "schema_version": "nctforge.data-acquisition-receipt/0.1.0",
+            "profile_id": profile.profile.id,
+            "profile_sha256": profile.sha256,
+            "artifact_role": "incident_neutron_evaluations",
+            "artifact": {
+                "path": "candidate.tgz",
+                "media_type": "application/gzip",
+                "size_bytes": 4096,
+                "sha256": archive_sha256,
+                "publisher_digest": publisher_digest
+            },
+            "transfer": {
+                "requested_uri": "https://example.com/artifacts/candidate.tgz",
+                "final_origin": "https://example.com",
+                "resumed_from_bytes": 4096,
+                "content_disposition_filename": null,
+                "etag": null,
+                "last_modified": null
+            },
+            "publisher_digest_status": if with_digest { "matched" } else { "unavailable" },
+            "evidence_state": "acquisition_only",
+            "completed_at_unix_seconds": 1
+        });
+        let receipt =
+            DataAcquisitionReceiptDocument::from_bytes(&serde_json::to_vec(&receipt_json).unwrap())
+                .unwrap();
+        (profile, receipt)
+    }
+
+    fn mixed_selection() -> EvaluatedNeutronSourceSelection {
+        let base = frozen_selection();
+        let (endfb_profile, endfb_receipt) = endfb_acquisition_pair();
+        let (candidate_profile, candidate_receipt) =
+            synthetic_candidate_pair(&"f".repeat(64), false);
+        let endfb_acquisition = observed_acquisition(&endfb_profile, &endfb_receipt);
+        let candidate_acquisition = observed_acquisition(&candidate_profile, &candidate_receipt);
+        let mut evaluations = base.evaluations.clone();
+        for (index, evaluation) in evaluations.iter_mut().enumerate() {
+            evaluation.acquisition_sha256 = Some(if index < 6 {
+                endfb_acquisition.archive_sha256.clone()
+            } else {
+                candidate_acquisition.archive_sha256.clone()
+            });
+        }
+        EvaluatedNeutronSourceSelection {
+            schema_version: EVALUATED_SOURCE_SELECTION_MIXED_SCHEMA.into(),
+            id: "test.mixed-selection".into(),
+            case_id: base.case_id.clone(),
+            qualification: EvaluatedSourceQualification::ResponseTreatmentCandidateUnreviewed,
+            evaluated_data_release: "ENDF/B-VIII.1+TEST".into(),
+            material: base.material.clone(),
+            acquisition: None,
+            acquisitions: Some(vec![endfb_acquisition, candidate_acquisition]),
+            evaluations,
+        }
+    }
+
+    #[test]
+    fn mixed_selection_validates_structure() {
+        let selection = mixed_selection();
+        selection.validate().unwrap();
+        assert_eq!(selection.declared_acquisitions().len(), 2);
+    }
+
+    #[test]
+    fn mixed_selection_binds_all_acquisition_pairs() {
+        let selection = mixed_selection();
+        let (endfb_profile, endfb_receipt) = endfb_acquisition_pair();
+        let (candidate_profile, candidate_receipt) =
+            synthetic_candidate_pair(&"f".repeat(64), false);
+        selection
+            .validate_acquisitions(&[
+                (&endfb_profile, &endfb_receipt),
+                (&candidate_profile, &candidate_receipt),
+            ])
+            .unwrap();
+
+        let (other_profile, other_receipt) = synthetic_candidate_pair(&"e".repeat(64), false);
+        assert!(matches!(
+            selection.validate_acquisitions(&[
+                (&endfb_profile, &endfb_receipt),
+                (&other_profile, &other_receipt),
+            ]),
+            Err(EvaluatedSourceError::AcquisitionBindingMismatch)
+        ));
+        assert!(matches!(
+            selection.validate_acquisitions(&[(&endfb_profile, &endfb_receipt)]),
+            Err(EvaluatedSourceError::AcquisitionBindingMismatch)
+        ));
+    }
+
+    #[test]
+    fn mixed_schema_accepts_undeclared_digest_but_candidate_schema_does_not() {
+        let selection = mixed_selection();
+        let (endfb_profile, endfb_receipt) = endfb_acquisition_pair();
+        let (undigested_profile, undigested_receipt) =
+            synthetic_candidate_pair(&"f".repeat(64), false);
+        selection
+            .validate_acquisitions(&[
+                (&endfb_profile, &endfb_receipt),
+                (&undigested_profile, &undigested_receipt),
+            ])
+            .unwrap();
+
+        let (digested_profile, digested_receipt) = synthetic_candidate_pair(&"f".repeat(64), true);
+        let mut digested_selection = mixed_selection();
+        digested_selection.acquisitions.as_mut().unwrap()[1] =
+            observed_acquisition(&digested_profile, &digested_receipt);
+        digested_selection
+            .validate_acquisitions(&[
+                (&endfb_profile, &endfb_receipt),
+                (&digested_profile, &digested_receipt),
+            ])
+            .unwrap();
+
+        let candidate = EvaluatedNeutronSourceSelectionDocument::from_bytes(JEFF40_SELECTION_BYTES)
+            .unwrap()
+            .selection;
+        assert!(matches!(
+            candidate.validate_acquisitions(&[(&undigested_profile, &undigested_receipt)]),
+            Err(EvaluatedSourceError::InvalidAcquisitionState)
+        ));
+    }
+
+    #[test]
+    fn mixed_selection_rejects_single_acquisition_shape() {
+        let mut selection = mixed_selection();
+        selection.acquisition = selection.acquisitions.take().map(|mut list| list.remove(0));
+        assert!(matches!(
+            selection.validate(),
+            Err(EvaluatedSourceError::AcquisitionListRequired(_))
+        ));
+    }
+
+    #[test]
+    fn mixed_selection_rejects_unsorted_acquisitions() {
+        let mut selection = mixed_selection();
+        selection.acquisitions.as_mut().unwrap().reverse();
+        assert!(matches!(
+            selection.validate(),
+            Err(EvaluatedSourceError::NoncanonicalAcquisitionOrder)
+        ));
+    }
+
+    #[test]
+    fn mixed_selection_rejects_unbound_or_unreferenced_acquisitions() {
+        let mut selection = mixed_selection();
+        selection.evaluations[0].acquisition_sha256 = Some("9".repeat(64));
+        assert!(matches!(
+            selection.validate(),
+            Err(EvaluatedSourceError::UnboundEvaluationAcquisition { .. })
+        ));
+
+        let mut selection = mixed_selection();
+        selection.evaluations[9].acquisition_sha256 = None;
+        assert!(matches!(
+            selection.validate(),
+            Err(EvaluatedSourceError::UnboundEvaluationAcquisition { .. })
+        ));
+
+        let mut selection = mixed_selection();
+        for evaluation in &mut selection.evaluations {
+            evaluation.acquisition_sha256 = Some("f".repeat(64));
+        }
+        assert!(matches!(
+            selection.validate(),
+            Err(EvaluatedSourceError::UnreferencedAcquisition(_))
+        ));
+    }
+
+    #[test]
+    fn single_schemas_reject_acquisition_list_and_eval_references() {
+        let mut selection = frozen_selection();
+        selection.acquisitions = Some(vec![selection.acquisition.clone().unwrap()]);
+        assert!(matches!(
+            selection.validate(),
+            Err(EvaluatedSourceError::SingleAcquisitionRequired(_))
+        ));
+
+        let mut selection = frozen_selection();
+        selection.evaluations[0].acquisition_sha256 = Some("f".repeat(64));
+        assert!(matches!(
+            selection.validate(),
+            Err(EvaluatedSourceError::UnexpectedEvaluationAcquisition { .. })
         ));
     }
 
@@ -677,6 +1050,7 @@ mod tests {
             extracted_filename: "n-001_H_001.endf".into(),
             size_bytes: 81,
             sha256: String::new(),
+            acquisition_sha256: None,
         }];
         let body = format!("{:<66}{:>4}{:>2}{:>3}{:>5}\n", "", 125, 1, 451, 1);
         selection.evaluations[0].size_bytes = body.len() as u64;
@@ -703,6 +1077,7 @@ mod tests {
             extracted_filename: "n-001_H_001.endf".into(),
             size_bytes: body.len() as u64,
             sha256: sha256_bytes(body.as_bytes()),
+            acquisition_sha256: None,
         }];
         fs::write(root.path().join("n-001_H_001.endf"), body.as_bytes()).unwrap();
 

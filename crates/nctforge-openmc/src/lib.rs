@@ -39,8 +39,8 @@ pub use domain::{
     OpenMcTransportDomainError, OpenMcTransportDomainQualification,
 };
 pub use evaluated::{
-    EVALUATED_SOURCE_SELECTION_CANDIDATE_SCHEMA, EVALUATED_SOURCE_SELECTION_SCHEMA,
-    EvaluatedNeutronArtifact, EvaluatedNeutronSourceSelection,
+    EVALUATED_SOURCE_SELECTION_CANDIDATE_SCHEMA, EVALUATED_SOURCE_SELECTION_MIXED_SCHEMA,
+    EVALUATED_SOURCE_SELECTION_SCHEMA, EvaluatedNeutronArtifact, EvaluatedNeutronSourceSelection,
     EvaluatedNeutronSourceSelectionDocument, EvaluatedSourceAcquisition, EvaluatedSourceError,
     EvaluatedSourceQualification,
 };
