@@ -1,28 +1,45 @@
 # Python bindings
 
 `pip install nctforge` is the planned primary entry point for scientific users.
-The package will use PyO3 and maturin to wrap the authoritative Rust crates; it
-will not become a second production dose, geometry, evidence, or QA engine.
+The package uses PyO3 and maturin to wrap the authoritative Rust crates; it
+does not implement a second dose, geometry, evidence, or QA engine (ADR 0015).
 
-The intended mixed-package shape is:
+The mixed-package shape is:
 
 ```text
 bindings/python/
-  Cargo.toml                 PyO3 extension crate
+  Cargo.toml                 PyO3 extension crate (outside the workspace)
   pyproject.toml             maturin build and package metadata
   src/lib.rs                 narrow Rust-to-Python boundary
   python/nctforge/
     __init__.py              ergonomic public API
     _nctforge.pyi            checked extension types
     py.typed                 typing marker
+  tests/                     cross-language parity suite
 ```
 
-The first bounded API will target case verification, geometry inspection,
-normalized contracts, and evidence reading. Prebuilt wheels and clean install
-tests are required before a PyPI release so normal users do not need Rust merely
-to install a supported wheel. Transport actions remain unavailable until the
-same Rust capability and evidence gates used by the CLI and GUI pass.
+The first bounded API covers case generation, verification, and gated loading
+for `NF-BNCT-001`; geometry, ROI, and CT inspection; `case.json` manifest
+reading and artifact re-verification; validated material, source, component
+profile, response-generation method, and response-set contract readers with
+canonical `to_json` serialization; the response-set `folding_ready` review
+gate; backend capability flags; and `file_sha256`. Every load runs the same
+Rust `validate()` as the CLI, and every rejection raises `NctForgeError`.
+Transport actions stay unavailable until the Rust capability and evidence
+gates pass; `backends()` reports those flags honestly.
 
-Packaging is not implemented and no PyPI release is claimed yet. See [ADR
-0015](../../docs/adr/0015-python-and-native-distribution.md) for the accepted
-distribution boundary and release gates.
+Local development:
+
+```text
+python3 -m venv .venv
+.venv/bin/pip install 'maturin>=1.7,<2'
+.venv/bin/maturin develop
+.venv/bin/python -m unittest discover -s tests -p 'test_*.py'
+```
+
+`maturin develop` builds the extension in place; `maturin build` produces a
+wheel under `target/wheels`. CI builds the wheel, installs it into a clean
+virtual environment, and runs the parity suite there. Prebuilt wheels for the
+supported interpreter/OS matrix and a TestPyPI run remain pending release
+gates — see [ADR 0015](../../docs/adr/0015-python-and-native-distribution.md)
+and [ADR 0027](../../docs/adr/0027-first-bounded-python-api.md).

@@ -1,0 +1,23 @@
+[package]
+name = "nctforge-python"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+authors = ["Avila Labs"]
+repository = "https://github.com/AvilaLabs/NCTForge"
+license = "Apache-2.0"
+publish = false
+
+[lib]
+name = "_nctforge"
+crate-type = ["cdylib"]
+
+[dependencies]
+nctforge-core = { path = "../../crates/nctforge-core" }
+nctforge-dicom = { path = "../../crates/nctforge-dicom" }
+nctforge-evidence = { path = "../../crates/nctforge-evidence" }
+nctforge-transport = { path = "../../crates/nctforge-transport" }
+nctforge-openmc = { path = "../../crates/nctforge-openmc" }
+pyo3 = { version = "0.29.2", features = ["extension-module"] }
+serde = "1"
+serde_json = { version = "1", features = ["float_roundtrip"] }

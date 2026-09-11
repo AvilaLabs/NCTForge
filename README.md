@@ -67,6 +67,11 @@ contains:
 - a CLI and a native, evidence-aware egui workbench shell with overview,
   geometry, transport, component-dose, and evidence workspaces, official Avila
   Labs branding, contextual help, and guided spotlight tours;
+- a bounded Python package (`bindings/python`, PyO3/maturin) whose compiled
+  extension calls the same Rust contracts for case generation, verification,
+  geometry and structure inspection, manifest and contract reading, and the
+  honest capability and response-set review gates — checked by a
+  cross-language parity suite against a clean-environment wheel install;
 - an evidence-gated development roadmap;
 - an explicit research and intellectual-property boundary;
 - a researched technical baseline and frozen first synthetic conformance-case
@@ -132,7 +137,7 @@ crates/nctforge-openmc/     OpenMC preflight and deterministic input generator
 crates/nctforge-njoy/       deterministic NJOY preparation, execution, and evidence
 crates/nctforge-cli/        headless entry point
 crates/nctforge-gui/        native egui application shell
-bindings/python/            planned PyO3/maturin scientific package
+bindings/python/            bounded PyO3/maturin scientific package
 benchmarks/synthetic/       public, non-patient validation corpus
 profiles/                   reviewed external-data acquisition profiles
 schemas/                    versioned interchange schemas
@@ -173,10 +178,13 @@ interface does not show placeholder dose values. See [ADR
 0014](docs/adr/0014-evidence-aware-workbench-shell.md).
 
 `pip install nctforge` is the planned primary distribution path for scientific
-users, backed by the same Rust implementation through PyO3 and maturin. It is not
-published yet. Cargo remains the native source/developer path, while desktop
-releases will ship as native artifacts. See [ADR
-0015](docs/adr/0015-python-and-native-distribution.md).
+users, backed by the same Rust implementation through PyO3 and maturin. The
+first bounded API is implemented under `bindings/python` and exercised by a
+cross-language parity suite, but no PyPI release is published yet. Cargo
+remains the native source/developer path, while desktop releases will ship as
+native artifacts. See [ADR
+0015](docs/adr/0015-python-and-native-distribution.md) and [ADR
+0027](docs/adr/0027-first-bounded-python-api.md).
 
 ### Independent DICOM validation
 

@@ -42,3 +42,30 @@ jobs:
           cargo run --bin nctforge -- benchmark generate \
             "$validation_root/nf-bnct-001"
           scripts/validate-dicom-iod.sh "$validation_root/nf-bnct-001"
+
+  python:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14.4"
+      - name: Install pinned Rust toolchain
+        run: rustup show
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - name: Lint the PyO3 boundary
+        run: |
+          cargo clippy --manifest-path bindings/python/Cargo.toml \
+            --all-targets -- -D warnings
+      - name: Build the wheel
+        run: |
+          python3 -m pip install maturin==1.15.0
+          maturin build --manifest-path bindings/python/Cargo.toml \
+            --out bindings/python/dist
+      - name: Install the wheel into a clean environment and test parity
+        run: |
+          python3 -m venv /tmp/nctforge-wheel-test
+          /tmp/nctforge-wheel-test/bin/pip install \
+            bindings/python/dist/nctforge-*.whl
+          /tmp/nctforge-wheel-test/bin/python -m unittest discover \
+            -s bindings/python/tests -p 'test_*.py'

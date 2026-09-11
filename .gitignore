@@ -6,6 +6,12 @@
 __pycache__/
 *.py[cod]
 
+# Python binding build artifacts
+/bindings/python/.venv/
+/bindings/python/target/
+/bindings/python/dist/
+*.whl
+
 # Patient, transport, and generated calculation artifacts are never committed
 # by default. Public synthetic cases must be deliberately added under
 # benchmarks/synthetic/ with a provenance record.

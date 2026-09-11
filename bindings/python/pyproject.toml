@@ -1,0 +1,30 @@
+[build-system]
+requires = ["maturin>=1.7,<2"]
+build-backend = "maturin"
+
+[project]
+name = "nctforge"
+version = "0.1.0"
+description = "Transport-neutral BNCT research verification workbench (research software, not a dose calculator)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Avila Labs" }]
+keywords = ["bnct", "verification", "dicom", "research"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+
+[project.urls]
+Repository = "https://github.com/AvilaLabs/NCTForge"
+Disclaimer = "https://github.com/AvilaLabs/NCTForge/blob/main/DISCLAIMER.md"
+
+[tool.maturin]
+module-name = "nctforge._nctforge"
+python-source = "python"
+features = ["pyo3/extension-module"]

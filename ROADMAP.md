@@ -206,8 +206,12 @@ Implementation status:
 
 - complete: choose the PyO3/maturin mixed-package architecture and prohibit a
   parallel Python dose, geometry, evidence, or qualification engine;
-- pending: implement the first bounded Python API after its Rust contracts are
-  selected and versioned;
+- complete: implement the first bounded Python API over the selected,
+  versioned Rust contracts — case generation, verification, and gated loading;
+  geometry and ROI inspection; schema-validated manifest and transport-contract
+  readers with canonical `to_json` serialization; the honest response-set
+  folding gate and backend capability flags — with a 12-test cross-language
+  parity suite run against a wheel installed into a clean environment in CI;
 - pending: build and smoke-test the supported wheel matrix through TestPyPI;
 - pending: review public crate surfaces before enabling crates.io publication;
 - pending: produce signed native desktop release artifacts.
