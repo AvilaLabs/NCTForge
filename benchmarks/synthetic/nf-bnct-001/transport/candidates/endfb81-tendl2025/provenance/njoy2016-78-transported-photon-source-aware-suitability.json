@@ -1,0 +1,187 @@
+{
+  "schema_version": "nctforge.njoy-transported-photon-suitability/0.2.0",
+  "id": "nctforge.nf-bnct-001.endfb81-tendl2025-source-selection.v1.njoy2016-78-inputs.execution.1789157633.8a37cf70cf80.transported-photon-kerma-suitability.source-aware-v2",
+  "case_id": "nf-bnct-001",
+  "requirement": "transported_photon_kerma_with_coupled_photon_transport",
+  "qualification": "transported_photon_kerma_rejected",
+  "legacy_suitability_report": {
+    "id": "nctforge.nf-bnct-001.endfb81-tendl2025-source-selection.v1.njoy2016-78-inputs.execution.1789157633.8a37cf70cf80.transported-photon-kerma-suitability",
+    "sha256": "bd8abab08dc9ee09f58ebe8e440648d25812a56a13311886cbf68dbd0b27fc1a"
+  },
+  "photon_production_inventory": {
+    "id": "nctforge.nf-bnct-001.endfb81-tendl2025-source-selection.v1.endf-photon-production-inventory",
+    "sha256": "f058382818a889b054acb390da92b10333d2cdbd02ad54f1b1822eda534b7307"
+  },
+  "input_manifest": {
+    "id": "nctforge.nf-bnct-001.endfb81-tendl2025-source-selection.v1.njoy2016-78-inputs",
+    "sha256": "75e12e728f9546ba7ad90ee358ca946953dd3042f94583047a295386e7b0aa19"
+  },
+  "runs": [
+    {
+      "nuclide": "B10",
+      "processor_report": {
+        "path": "B10/output",
+        "media_type": "text/plain",
+        "size_bytes": 182147,
+        "sha256": "cc86644e471760778ece5e875cbadfdab2185d5a9b912c8989fdbec7caf68fe5"
+      },
+      "diagnostic_status": "within_kinematic_limits",
+      "diagnostic_violation_count": 0,
+      "heatr_photon_source": "mixed_file6_and_file12_or13",
+      "file13_without_file12_reaction_count": 2,
+      "source_format_findings": [],
+      "processor_findings": [],
+      "suitability": "candidate_unreviewed"
+    },
+    {
+      "nuclide": "C12",
+      "processor_report": {
+        "path": "C12/output",
+        "media_type": "text/plain",
+        "size_bytes": 94718,
+        "sha256": "7feb950ca890790ab42c84878c8791cb1d336dbae79f25f7e8322db4608ab5f9"
+      },
+      "diagnostic_status": "within_kinematic_limits",
+      "diagnostic_violation_count": 0,
+      "heatr_photon_source": "mixed_file6_and_file12_or13",
+      "file13_without_file12_reaction_count": 0,
+      "source_format_findings": [],
+      "processor_findings": [],
+      "suitability": "candidate_unreviewed"
+    },
+    {
+      "nuclide": "C13",
+      "processor_report": {
+        "path": "C13/output",
+        "media_type": "text/plain",
+        "size_bytes": 73749,
+        "sha256": "2207f1ad38c858a852d97191f0e15a64389b8a1e6223c914951e12df79dff75d"
+      },
+      "diagnostic_status": "within_kinematic_limits",
+      "diagnostic_violation_count": 0,
+      "heatr_photon_source": "file12_or13_only",
+      "file13_without_file12_reaction_count": 0,
+      "source_format_findings": [],
+      "processor_findings": [],
+      "suitability": "candidate_unreviewed"
+    },
+    {
+      "nuclide": "H1",
+      "processor_report": {
+        "path": "H1/output",
+        "media_type": "text/plain",
+        "size_bytes": 24319,
+        "sha256": "9d26c7407a0bd10bc1e915f903c151262bfd3afb73dd1da4041492045b1aa2e0"
+      },
+      "diagnostic_status": "within_kinematic_limits",
+      "diagnostic_violation_count": 0,
+      "heatr_photon_source": "file6_only",
+      "file13_without_file12_reaction_count": 0,
+      "source_format_findings": [],
+      "processor_findings": [],
+      "suitability": "candidate_unreviewed"
+    },
+    {
+      "nuclide": "H2",
+      "processor_report": {
+        "path": "H2/output",
+        "media_type": "text/plain",
+        "size_bytes": 46434,
+        "sha256": "2fc60d36179906d7041317a550fe6ddf14de54c0a498e2c16f15ba9318b434f5"
+      },
+      "diagnostic_status": "within_kinematic_limits",
+      "diagnostic_violation_count": 0,
+      "heatr_photon_source": "file12_or13_only",
+      "file13_without_file12_reaction_count": 0,
+      "source_format_findings": [],
+      "processor_findings": [],
+      "suitability": "candidate_unreviewed"
+    },
+    {
+      "nuclide": "N14",
+      "processor_report": {
+        "path": "N14/output",
+        "media_type": "text/plain",
+        "size_bytes": 331763,
+        "sha256": "f8821146c3ad39e1ef526de9379c5c38f25c4d1fa6b623c0932a8346606b9620"
+      },
+      "diagnostic_status": "within_kinematic_limits",
+      "diagnostic_violation_count": 0,
+      "heatr_photon_source": "mixed_file6_and_file12_or13",
+      "file13_without_file12_reaction_count": 7,
+      "source_format_findings": [],
+      "processor_findings": [],
+      "suitability": "candidate_unreviewed"
+    },
+    {
+      "nuclide": "N15",
+      "processor_report": {
+        "path": "N15/output",
+        "media_type": "text/plain",
+        "size_bytes": 743345,
+        "sha256": "803dba075df69c35433cd754656218510ab224d964fdf323fd5fc4167db26cca"
+      },
+      "diagnostic_status": "kinematic_limits_exceeded",
+      "diagnostic_violation_count": 6,
+      "heatr_photon_source": "mixed_file6_and_file12_or13",
+      "file13_without_file12_reaction_count": 0,
+      "source_format_findings": [],
+      "processor_findings": [],
+      "suitability": "rejected"
+    },
+    {
+      "nuclide": "O16",
+      "processor_report": {
+        "path": "O16/output",
+        "media_type": "text/plain",
+        "size_bytes": 327365,
+        "sha256": "dd47beb1f16ef5e77cb4a53d93da510a1fa7ae8efc956650af1e58ed06483391"
+      },
+      "diagnostic_status": "kinematic_limits_exceeded",
+      "diagnostic_violation_count": 16,
+      "heatr_photon_source": "mixed_file6_and_file12_or13",
+      "file13_without_file12_reaction_count": 0,
+      "source_format_findings": [],
+      "processor_findings": [],
+      "suitability": "rejected"
+    },
+    {
+      "nuclide": "O17",
+      "processor_report": {
+        "path": "O17/output",
+        "media_type": "text/plain",
+        "size_bytes": 701234,
+        "sha256": "ec01ad39250b13025522e2494930fe1416fa73b8002d15d23f215b60ae0239e3"
+      },
+      "diagnostic_status": "kinematic_limits_exceeded",
+      "diagnostic_violation_count": 45,
+      "heatr_photon_source": "mixed_file6_and_file12_or13",
+      "file13_without_file12_reaction_count": 0,
+      "source_format_findings": [],
+      "processor_findings": [],
+      "suitability": "rejected"
+    },
+    {
+      "nuclide": "O18",
+      "processor_report": {
+        "path": "O18/output",
+        "media_type": "text/plain",
+        "size_bytes": 669815,
+        "sha256": "8423f2e2591473891ae6fa2bcf7e6d547dab9b52f15a1c7e3437d6d59c679dac"
+      },
+      "diagnostic_status": "kinematic_limits_exceeded",
+      "diagnostic_violation_count": 10,
+      "heatr_photon_source": "mixed_file6_and_file12_or13",
+      "file13_without_file12_reaction_count": 0,
+      "source_format_findings": [],
+      "processor_findings": [],
+      "suitability": "rejected"
+    }
+  ],
+  "rejected_run_count": 4,
+  "kinematic_violation_count": 77,
+  "processor_finding_count": 0,
+  "rejecting_processor_finding_count": 0,
+  "informational_processor_finding_count": 0,
+  "source_format_finding_count": 0
+}

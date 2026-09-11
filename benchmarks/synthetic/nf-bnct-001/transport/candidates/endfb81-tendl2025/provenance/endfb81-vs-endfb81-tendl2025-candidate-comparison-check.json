@@ -1,0 +1,28 @@
+{
+  "schema_version": "nctforge.njoy-candidate-comparison-check/0.1.0",
+  "source_report": {
+    "id": "nctforge.nf-bnct-001.endfb81-tendl2025-source-selection.v1.njoy2016-78-inputs.execution.1789157633.8a37cf70cf80.transported-photon-kerma-suitability.response-treatment-comparison.39f32c071e71",
+    "sha256": "0c5a3b8f14231e93f32dc9fb74bb0b201f5475191c80b4b39f422c5e0ca2ea11"
+  },
+  "baseline_report": {
+    "id": "nctforge.nf-bnct-001.endfb81-neutron-source-selection.v1.njoy2016-78-inputs.execution.1788177479.8a37cf70cf80.transported-photon-kerma-suitability",
+    "sha256": "39f32c071e715d4b712a92a25faf1424ba99f548aeabe88c934e84b5d2e48e22"
+  },
+  "candidate_report": {
+    "id": "nctforge.nf-bnct-001.endfb81-tendl2025-source-selection.v1.njoy2016-78-inputs.execution.1789157633.8a37cf70cf80.transported-photon-kerma-suitability",
+    "sha256": "bd8abab08dc9ee09f58ebe8e440648d25812a56a13311886cbf68dbd0b27fc1a"
+  },
+  "requirement": "transported_photon_kerma_with_coupled_photon_transport",
+  "candidate_qualification": "candidate_rejected",
+  "baseline_rejected_run_count": 4,
+  "candidate_rejected_run_count": 4,
+  "resolved_baseline_rejection_count": 0,
+  "introduced_rejection_count": 0,
+  "baseline_kinematic_violation_count": 72,
+  "candidate_kinematic_violation_count": 77,
+  "verification": "regenerated_and_matched",
+  "limitations": [
+    "A mechanically clear comparison would remain unreviewed; this check does not approve response tables, qualify transport, or establish clinical validity.",
+    "The result summarizes one exact comparison report and does not replace its per-nuclide outcomes or bound source evidence."
+  ]
+}

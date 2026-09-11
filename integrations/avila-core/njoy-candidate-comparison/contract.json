@@ -1,0 +1,73 @@
+{
+  "schema_version": "avila.core/evidence-contract/v0.2-draft",
+  "semantic_profile": "avila.core/semantic/0.2-draft",
+  "contract_id": "nctforge.nf-bnct-001.endfb81-tendl2025-candidate-comparison",
+  "revision": 1,
+  "status": "draft",
+  "question": "Does the verified ENDF/B-VIII.1 + TENDL-2025 mixed-source candidate resolve the rejected baseline nuclide runs and retain a mechanically clear comparison before response-table review begins?",
+  "assumptions": [
+    "This gate addresses only the frozen NF-BNCT-001 transported-photon KERMA comparison evidence.",
+    "A comparison that retains rejected runs is a valid checked result, not a process failure; it leaves the candidate rejected.",
+    "A passing mechanical gate would remain unreviewed and would not qualify response tables, transport, or clinical use."
+  ],
+  "inputs": [
+    {
+      "input_id": "baseline-report",
+      "role": { "id": "nctforge.njoy.suitability-report", "major": 1 },
+      "media_type": "application/json",
+      "claim_model": { "model": "unquantified" }
+    },
+    {
+      "input_id": "candidate-report",
+      "role": { "id": "nctforge.njoy.suitability-report", "major": 1 },
+      "media_type": "application/json",
+      "claim_model": { "model": "unquantified" }
+    },
+    {
+      "input_id": "comparison-report",
+      "role": { "id": "nctforge.njoy.candidate-comparison", "major": 1 },
+      "media_type": "application/json",
+      "claim_model": { "model": "unquantified" }
+    }
+  ],
+  "workflow": [
+    {
+      "step_id": "verify-candidate-comparison",
+      "capability_type": { "id": "nctforge.njoy.candidate-comparison-check", "major": 1 },
+      "bindings": [
+        { "input_slot": "baseline-report", "source": { "source": "contract_input", "input_id": "baseline-report" } },
+        { "input_slot": "candidate-report", "source": { "source": "contract_input", "input_id": "candidate-report" } },
+        { "input_slot": "comparison-report", "source": { "source": "contract_input", "input_id": "comparison-report" } }
+      ]
+    }
+  ],
+  "requirements": [
+    {
+      "requirement_id": "NCT-R4-CANDIDATE-REJECTED-RUNS",
+      "statement": "The mixed-source candidate retains no rejected nuclide runs against the rejected ENDF/B-VIII.1 baseline.",
+      "purpose": { "id": "nctforge.response-table-research-gate", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "verify-candidate-comparison", "output_slot": "candidate-rejected-runs" },
+      "comparison": "less_than_or_equal",
+      "limit": { "kind": "core.count", "value": "0", "unit": "1" },
+      "basis": { "kind": "bounded" }
+    },
+    {
+      "requirement_id": "NCT-R5-BASELINE-REJECTIONS-RESOLVED",
+      "statement": "Every rejected baseline nuclide run is resolved by the candidate under the same evidence chain.",
+      "purpose": { "id": "nctforge.response-table-research-gate", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "verify-candidate-comparison", "output_slot": "resolved-baseline-rejections" },
+      "comparison": "greater_than_or_equal",
+      "limit": { "kind": "core.count", "value": "4", "unit": "1" },
+      "basis": { "kind": "bounded" }
+    }
+  ],
+  "categorical_requirements": [
+    {
+      "requirement_id": "NCT-R6-CANDIDATE-QUALIFICATION",
+      "statement": "The verified comparison must report a mechanically clear candidate before response-table review begins.",
+      "purpose": { "id": "nctforge.response-table-research-gate", "major": 1 },
+      "metric": { "source": "step_output", "step_id": "verify-candidate-comparison", "output_slot": "candidate-qualification" },
+      "predicate": { "operator": "equals", "value": "candidate_mechanical_gate_clear_unreviewed" }
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "schema_version": "avila.core/external-checker-adapter/v0.1-draft",
+  "adapter_id": "nctforge.njoy/candidate-comparison-check@1",
+  "capability_type": { "id": "nctforge.njoy.candidate-comparison-check", "major": 1 },
+  "input_slots": [
+    "baseline-report",
+    "candidate-report",
+    "comparison-report"
+  ],
+  "arguments": [
+    { "kind": "literal", "value": "njoy" },
+    { "kind": "literal", "value": "check-candidate-comparison" },
+    { "kind": "literal", "value": "--baseline-report" },
+    { "kind": "input_path", "input_slot": "baseline-report" },
+    { "kind": "literal", "value": "--candidate-report" },
+    { "kind": "input_path", "input_slot": "candidate-report" },
+    { "kind": "literal", "value": "--comparison-report" },
+    { "kind": "input_path", "input_slot": "comparison-report" },
+    { "kind": "literal", "value": "--output" },
+    { "kind": "output_path", "output_id": "check-result" }
+  ],
+  "outputs": [
+    {
+      "output_id": "check-result",
+      "workspace_path": "outputs/candidate-comparison-check.json",
+      "media_type": "application/vnd.nctforge.njoy-candidate-comparison-check+json"
+    }
+  ],
+  "claims": [
+    {
+      "model": "exact",
+      "output_slot": "candidate-rejected-runs",
+      "output_id": "check-result",
+      "pointer": "/candidate_rejected_run_count",
+      "unit": "1"
+    },
+    {
+      "model": "exact",
+      "output_slot": "resolved-baseline-rejections",
+      "output_id": "check-result",
+      "pointer": "/resolved_baseline_rejection_count",
+      "unit": "1"
+    },
+    {
+      "model": "categorical",
+      "output_slot": "candidate-qualification",
+      "output_id": "check-result",
+      "pointer": "/candidate_qualification",
+      "allowed_values": [
+        "candidate_rejected",
+        "candidate_mechanical_gate_clear_unreviewed"
+      ]
+    }
+  ],
+  "timeout_ms": 30000,
+  "limitations": [
+    "The NCTForge binary performs the domain-specific verification and comparison; Core validates only the declared process, evidence, and extraction boundary."
+  ]
+}

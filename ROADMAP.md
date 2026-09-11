@@ -157,10 +157,22 @@ Implementation status:
 - complete: reproduce all 43 O-17 MT 301 excesses from NJOY's printed
   per-reaction File 6 energy-balance remainders, while retaining all 43 for
   independent physical validation and waiving none;
-- paused: continue response qualification only with a controlled alternative
-  source profile or a reviewed independent O-17 reaction calculation; C-13 and
-  O-18 still lack transported-photon sources, and N-15 remains independently
-  rejected by its capture-balance gate;
+- complete: add mixed-source selection schema `0.3.0`, NJOY input-manifest
+  `0.2.0`, and repeatable profile/receipt CLI binding, then execute the
+  ENDF/B-VIII.1 + TENDL-2025 candidate under the frozen method; the six shared
+  nuclides reproduce the baseline exactly while all four TENDL substitutions
+  remain rejected with 77 kinematic violations (70 in domain), no baseline
+  rejection resolved, and none introduced;
+- complete: attribute all 43 in-domain TENDL O-17 findings to NJOY's printed
+  energy-balance remainders and expose the verified candidate comparison to
+  Avila Core through `check-candidate-comparison`; TENDL's duplicated File 3
+  grid points make the deeper independent gates uncomputable, which is
+  preserved as a source-format finding;
+- paused: continue response qualification only with a reviewed independent
+  O-17 reaction calculation; all three published evaluated libraries
+  (ENDF/B-VIII.1, JEFF-4.0, TENDL-2025) are rejected under the controlled
+  chain, C-13 and O-18 still lack transported-photon sources under JEFF-4.0,
+  and N-15 remains independently rejected by its capture-balance gate;
 - pending: generate the first reviewable response tables only after the
   diagnostic blocker is resolved through a versioned, reviewed data profile;
 - pending: smoke execution, statepoint import, and independent estimator

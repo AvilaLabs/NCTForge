@@ -16,8 +16,8 @@ use sha2::{Digest, Sha256};
 use thiserror::Error;
 
 use crate::{
-    HeatrPhotonSource, NJOY_INPUT_MANIFEST_SCHEMA, NjoyExecutionArtifact,
-    NjoyExecutionReceiptDocument, NjoyInputManifest, NjoyKinematicViolation,
+    HeatrPhotonSource, NJOY_INPUT_MANIFEST_MIXED_SCHEMA, NJOY_INPUT_MANIFEST_SCHEMA,
+    NjoyExecutionArtifact, NjoyExecutionReceiptDocument, NjoyInputManifest, NjoyKinematicViolation,
     NjoyProcessorFindingDisposition, NjoyRunDiagnosticStatus, NjoySourceAwareProcessorFinding,
     NjoySourceAwareSuitabilityReportDocument, NjoySuitabilityQualification,
     NjoySuitabilityReportDocument, NjoySuitabilityStatus, NjoyTransportRequirement,
@@ -122,7 +122,10 @@ impl NjoyDomainAwareSuitabilityReport {
         }
 
         let input_manifest: NjoyInputManifest = serde_json::from_slice(input_manifest_bytes)?;
-        if input_manifest.schema_version != NJOY_INPUT_MANIFEST_SCHEMA {
+        if !matches!(
+            input_manifest.schema_version.as_str(),
+            NJOY_INPUT_MANIFEST_SCHEMA | NJOY_INPUT_MANIFEST_MIXED_SCHEMA
+        ) {
             return Err(NjoyDomainAwareSuitabilityError::InputManifestBindingMismatch);
         }
         let input_manifest_reference = ContentReference {

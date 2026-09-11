@@ -67,8 +67,9 @@ pub use comparison::{
     NjoySuitabilityComparisonResult, NjoySuitabilityComparisonRun,
 };
 pub use core_check::{
-    NJOY_EVIDENCE_AWARE_CHECK_SCHEMA, NjoyEvidenceAwareCheckResult,
-    NjoyEvidenceAwareCheckVerification,
+    NJOY_CANDIDATE_COMPARISON_CHECK_SCHEMA, NJOY_EVIDENCE_AWARE_CHECK_SCHEMA,
+    NjoyCandidateComparisonCheckResult, NjoyCandidateComparisonCheckVerification,
+    NjoyEvidenceAwareCheckResult, NjoyEvidenceAwareCheckVerification,
 };
 pub use diagnostic_triage::{
     NJOY_DIAGNOSTIC_TRIAGE_SCHEMA, NjoyDiagnosticTriageDisposition, NjoyDiagnosticTriageError,

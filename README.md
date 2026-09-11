@@ -312,13 +312,26 @@ work queue by [ADR
 O-17 attribution and response-path pause by [ADR
 0026](docs/adr/0026-o17-processor-energy-balance-attribution.md).
 
+A controlled ENDF/B-VIII.1 + TENDL-2025 mixed-source candidate was then
+executed under selection schema `0.3.0`. The six shared nuclides reproduce the
+baseline exactly, but all four TENDL-2025 substitutions remain rejected with
+77 kinematic violations, and TENDL's duplicated File 3 grid points leave the
+deeper independent gates uncomputable — a preserved source-format finding. All
+three published evaluated libraries are now rejected under the controlled
+chain, so the response path resumes only with a reviewed independent O-17
+calculation. See
+[ADR 0028](docs/adr/0028-mixed-evaluated-neutron-source-selections.md) and
+[ADR 0029](docs/adr/0029-tendl2025-mixed-source-candidate.md).
+
 The derived diagnostic-triage gate is also a live dogfood case for Avila Core.
 NCTForge keeps the domain verification and emits a deterministic machine
 result; Core binds the exact executable and inputs, records the run, evaluates
 the 43-finding queue, and independently enforces the closed response category.
-See the
-[integration case](integrations/avila-core/njoy-evidence-aware/README.md) and
-[ADR 0024](docs/adr/0024-avila-core-evidence-loop.md).
+A second integration binds the candidate-comparison check so a rejected
+candidate is a verified result rather than a process failure. See the
+[integration case](integrations/avila-core/njoy-evidence-aware/README.md), the
+[candidate-comparison case](integrations/avila-core/njoy-candidate-comparison/README.md),
+and [ADR 0024](docs/adr/0024-avila-core-evidence-loop.md).
 
 ## License and use boundary
 

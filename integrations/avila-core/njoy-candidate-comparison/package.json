@@ -1,0 +1,103 @@
+{
+  "schema_version": "avila.core/case-package/v0.1-draft",
+  "case_id": "NCTFORGE-NF-BNCT-001-ENDFB81-TENDL2025-CANDIDATE-COMPARISON",
+  "title": "NCTForge mixed-source candidate comparison gate",
+  "documents": [
+    {
+      "document_id": "contract",
+      "role": "contract",
+      "path": "contract.json",
+      "sha256": "sha256:d03784841ccb59968c76033990d292fa11342f512efdfb0d4236eaad0de5497a"
+    },
+    {
+      "document_id": "registry",
+      "role": "registry",
+      "path": "registry.json",
+      "sha256": "sha256:a087349c3a07d87c8113b62c38638f43d87a848b949a1ffea2e7d0cf6ed09eb5"
+    },
+    {
+      "document_id": "nctforge.njoy/candidate-comparison-check@1",
+      "role": "external_checker_adapter",
+      "path": "adapter.json",
+      "sha256": "sha256:c4641eb7a33cc7262b0604a720c64a16bcd007a85342a4d9c8b7b6ccefb3e408"
+    }
+  ],
+  "artifacts": [
+    {
+      "artifact_id": "baseline-report",
+      "evidence_ids": ["input:baseline-report"],
+      "source_root": "nctforge",
+      "path": "benchmarks/synthetic/nf-bnct-001/transport/provenance/njoy2016-78-transported-photon-suitability.json",
+      "sha256": "sha256:39f32c071e715d4b712a92a25faf1424ba99f548aeabe88c934e84b5d2e48e22"
+    },
+    {
+      "artifact_id": "candidate-report",
+      "evidence_ids": ["input:candidate-report"],
+      "source_root": "nctforge",
+      "path": "benchmarks/synthetic/nf-bnct-001/transport/candidates/endfb81-tendl2025/provenance/njoy2016-78-transported-photon-suitability.json",
+      "sha256": "sha256:bd8abab08dc9ee09f58ebe8e440648d25812a56a13311886cbf68dbd0b27fc1a"
+    },
+    {
+      "artifact_id": "comparison-report",
+      "evidence_ids": ["input:comparison-report"],
+      "source_root": "nctforge",
+      "path": "benchmarks/synthetic/nf-bnct-001/transport/candidates/endfb81-tendl2025/provenance/endfb81-vs-endfb81-tendl2025-response-treatment-comparison.json",
+      "sha256": "sha256:0c5a3b8f14231e93f32dc9fb74bb0b201f5475191c80b4b39f422c5e0ca2ea11"
+    },
+    {
+      "artifact_id": "reference-check-result",
+      "evidence_ids": [
+        "nctforge-candidate-rejected-runs",
+        "nctforge-resolved-baseline-rejections",
+        "nctforge-candidate-qualification"
+      ],
+      "source_root": "case",
+      "path": "expected/candidate-comparison-check.json",
+      "sha256": "sha256:e81db68bca2ce0128a9a8dfd7ff4f9af25fec4a755a7913b790e2bdc25c512cb"
+    }
+  ],
+  "capabilities": [
+    {
+      "capability_id": "nctforge-cli",
+      "package_id": "com.avilalabs/nctforge-cli@0.1.0",
+      "source_repository": "https://github.com/AvilaLabs/NCTForge",
+      "executable_sha256": "sha256:77d8654e27c3bc17e8cede86fe0714b90614e71769d25d584db6ffbe189e36ee"
+    }
+  ],
+  "executions": [
+    {
+      "step_id": "verify-candidate-comparison",
+      "adapter": "nctforge.njoy/candidate-comparison-check@1",
+      "capability_id": "nctforge-cli",
+      "inputs": [
+        { "input_slot": "baseline-report", "workspace_path": "inputs/baseline-report.json" },
+        { "input_slot": "candidate-report", "workspace_path": "inputs/candidate-report.json" },
+        { "input_slot": "comparison-report", "workspace_path": "inputs/comparison-report.json" }
+      ],
+      "outputs": [
+        {
+          "output_slot": "candidate-rejected-runs",
+          "claim_id": "nctforge-candidate-rejected-runs"
+        },
+        {
+          "output_slot": "resolved-baseline-rejections",
+          "claim_id": "nctforge-resolved-baseline-rejections"
+        },
+        {
+          "output_slot": "candidate-qualification",
+          "claim_id": "nctforge-candidate-qualification"
+        }
+      ]
+    }
+  ],
+  "free_inputs": [
+    "baseline-report",
+    "candidate-report",
+    "comparison-report"
+  ],
+  "limitations": [
+    "This is a research workflow integration, not a response-table approval or clinical qualification.",
+    "A candidate comparison preserves every per-nuclide outcome; it does not waive rejecting evidence.",
+    "The committed executable digest identifies the local Rust build used for this specimen and is not a cross-platform release identity."
+  ]
+}

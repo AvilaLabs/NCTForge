@@ -1,6 +1,6 @@
 # ADR 0028: Mixed evaluated-neutron source selections
 
-**Status:** Accepted and implemented; first mixed candidate pending execution
+**Status:** Accepted and implemented; first mixed candidate executed and rejected (ADR 0029)
 
 **Date:** 2026-09-11
 

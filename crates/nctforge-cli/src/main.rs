@@ -24,20 +24,21 @@ use nctforge_njoy::{
     EndfMf6Law7ImplicitResidualQualification, EndfMf6Law7ImplicitResidualReport,
     EndfMf6Law7ImplicitResidualReportDocument, EndfPhotonProductionInventory,
     EndfPhotonProductionInventoryDocument, NjoyAcquisitionArtifacts,
-    NjoyCapturePhotonMomentComparison, NjoyCapturePhotonMomentComparisonDocument,
-    NjoyDiagnosticTriageCheckResult, NjoyDiagnosticTriageReport,
-    NjoyDiagnosticTriageReportDocument, NjoyDomainAwareSuitabilityReport,
-    NjoyDomainAwareSuitabilityReportDocument, NjoyEnergyBalanceAttribution,
-    NjoyEnergyBalanceAttributionDocument, NjoyEnergyBalanceAttributionQualification,
-    NjoyEvidenceAwareCheckResult, NjoyEvidenceAwareSuitabilityReport,
-    NjoyEvidenceAwareSuitabilityReportDocument, NjoyExecutionOptions, NjoyExecutionReceipt,
-    NjoyExecutionReceiptDocument, NjoyInputArtifacts, NjoyInputBundle,
-    NjoyLaw7ImplicitResidualComparison, NjoyLaw7ImplicitResidualComparisonDocument,
-    NjoyLaw7ImplicitResidualComparisonQualification, NjoyPhotonMomentComparison,
-    NjoyPhotonMomentComparisonDocument, NjoySourceAwareSuitabilityReport,
-    NjoySourceAwareSuitabilityReportDocument, NjoySuitabilityComparison,
-    NjoySuitabilityComparisonDocument, NjoySuitabilityComparisonQualification,
-    NjoySuitabilityQualification, NjoySuitabilityReport, NjoySuitabilityReportDocument,
+    NjoyCandidateComparisonCheckResult, NjoyCapturePhotonMomentComparison,
+    NjoyCapturePhotonMomentComparisonDocument, NjoyDiagnosticTriageCheckResult,
+    NjoyDiagnosticTriageReport, NjoyDiagnosticTriageReportDocument,
+    NjoyDomainAwareSuitabilityReport, NjoyDomainAwareSuitabilityReportDocument,
+    NjoyEnergyBalanceAttribution, NjoyEnergyBalanceAttributionDocument,
+    NjoyEnergyBalanceAttributionQualification, NjoyEvidenceAwareCheckResult,
+    NjoyEvidenceAwareSuitabilityReport, NjoyEvidenceAwareSuitabilityReportDocument,
+    NjoyExecutionOptions, NjoyExecutionReceipt, NjoyExecutionReceiptDocument, NjoyInputArtifacts,
+    NjoyInputBundle, NjoyLaw7ImplicitResidualComparison,
+    NjoyLaw7ImplicitResidualComparisonDocument, NjoyLaw7ImplicitResidualComparisonQualification,
+    NjoyPhotonMomentComparison, NjoyPhotonMomentComparisonDocument,
+    NjoySourceAwareSuitabilityReport, NjoySourceAwareSuitabilityReportDocument,
+    NjoySuitabilityComparison, NjoySuitabilityComparisonDocument,
+    NjoySuitabilityComparisonQualification, NjoySuitabilityQualification, NjoySuitabilityReport,
+    NjoySuitabilityReportDocument,
 };
 use nctforge_openmc::{
     DataAcquisitionClient, DataAcquisitionProfileDocument, DataAcquisitionReceiptDocument,
@@ -727,6 +728,21 @@ enum NjoyCommand {
         /// Comparison report to validate and regenerate.
         #[arg(long)]
         comparison_report: PathBuf,
+    },
+    /// Verify a candidate comparison and write a compact machine result.
+    CheckCandidateComparison {
+        /// Rejected baseline transported-photon suitability report.
+        #[arg(long)]
+        baseline_report: PathBuf,
+        /// Candidate transported-photon suitability report.
+        #[arg(long)]
+        candidate_report: PathBuf,
+        /// Comparison report to validate and regenerate.
+        #[arg(long)]
+        comparison_report: PathBuf,
+        /// New deterministic JSON result; it must not already exist.
+        #[arg(long)]
+        output: PathBuf,
     },
 }
 
@@ -2446,6 +2462,40 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                         NjoySuitabilityComparisonQualification::CandidateMechanicalGateClearUnreviewed =>
                             "candidate_mechanical_gate_clear_unreviewed",
                     }
+                );
+            }
+            NjoyCommand::CheckCandidateComparison {
+                baseline_report,
+                candidate_report,
+                comparison_report,
+                output,
+            } => {
+                let baseline = NjoySuitabilityReportDocument::from_path(&baseline_report)?;
+                let candidate = NjoySuitabilityReportDocument::from_path(&candidate_report)?;
+                let comparison = NjoySuitabilityComparisonDocument::from_path(&comparison_report)?;
+                let result = NjoyCandidateComparisonCheckResult::verify_and_build(
+                    &comparison,
+                    &baseline,
+                    &candidate,
+                )?;
+                result.write_new(&output)?;
+                println!("verified candidate comparison and wrote machine check");
+                println!("result: {}", output.display());
+                println!(
+                    "candidate qualification: {}",
+                    match result.candidate_qualification {
+                        NjoySuitabilityComparisonQualification::CandidateRejected =>
+                            "candidate_rejected",
+                        NjoySuitabilityComparisonQualification::CandidateMechanicalGateClearUnreviewed =>
+                            "candidate_mechanical_gate_clear_unreviewed",
+                    }
+                );
+                println!(
+                    "rejected nuclide runs: baseline={} candidate={} resolved={} introduced={}",
+                    result.baseline_rejected_run_count,
+                    result.candidate_rejected_run_count,
+                    result.resolved_baseline_rejection_count,
+                    result.introduced_rejection_count
                 );
             }
         },

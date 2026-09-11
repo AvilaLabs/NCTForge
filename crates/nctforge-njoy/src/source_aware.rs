@@ -13,11 +13,11 @@ use thiserror::Error;
 
 use crate::{
     EndfPhotonFormatFinding, EndfPhotonInventoryError, EndfPhotonProductionInventoryDocument,
-    HeatrPhotonSource, NJOY_INPUT_MANIFEST_SCHEMA, NjoyExecutionArtifact,
-    NjoyExecutionReceiptDocument, NjoyInputManifest, NjoyProcessorDataFinding,
-    NjoyRunDiagnosticStatus, NjoySuitabilityError, NjoySuitabilityFindingKind,
-    NjoySuitabilityQualification, NjoySuitabilityReportDocument, NjoySuitabilityStatus,
-    NjoyTransportRequirement,
+    HeatrPhotonSource, NJOY_INPUT_MANIFEST_MIXED_SCHEMA, NJOY_INPUT_MANIFEST_SCHEMA,
+    NjoyExecutionArtifact, NjoyExecutionReceiptDocument, NjoyInputManifest,
+    NjoyProcessorDataFinding, NjoyRunDiagnosticStatus, NjoySuitabilityError,
+    NjoySuitabilityFindingKind, NjoySuitabilityQualification, NjoySuitabilityReportDocument,
+    NjoySuitabilityStatus, NjoyTransportRequirement,
 };
 
 pub const NJOY_SOURCE_AWARE_SUITABILITY_SCHEMA: &str =
@@ -109,7 +109,10 @@ impl NjoySourceAwareSuitabilityReport {
         }
 
         let input_manifest: NjoyInputManifest = serde_json::from_slice(input_manifest_bytes)?;
-        if input_manifest.schema_version != NJOY_INPUT_MANIFEST_SCHEMA {
+        if !matches!(
+            input_manifest.schema_version.as_str(),
+            NJOY_INPUT_MANIFEST_SCHEMA | NJOY_INPUT_MANIFEST_MIXED_SCHEMA
+        ) {
             return Err(NjoySourceAwareSuitabilityError::InputManifestBindingMismatch);
         }
         let input_manifest_reference = ContentReference {
