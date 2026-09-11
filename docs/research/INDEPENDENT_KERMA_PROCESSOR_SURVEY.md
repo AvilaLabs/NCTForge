@@ -43,3 +43,8 @@ reaction-level energy-balance integrator, specified below.
   in-domain finding energies, compared with NJOY's printed `ebal`
   contributions — emitted as an unreviewed evidence artifact. Review remains
   a human gate per ADR 0026.
+
+## Update (2026-09-12)
+
+The integrator is implemented and executed; see
+`O17_REACTION_ENERGY_BALANCE_INTEGRATOR.md` and ADR 0030.

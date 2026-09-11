@@ -42,6 +42,7 @@ mod law7_breakup_comparison;
 mod photon_inventory;
 mod photon_moment;
 mod photon_moment_comparison;
+mod reaction_energy_balance;
 mod source_aware;
 mod suitability;
 
@@ -145,6 +146,15 @@ pub use photon_moment_comparison::{
     NjoyPhotonMomentComparisonError, NjoyPhotonMomentComparisonQualification,
     NjoyPhotonMomentComparisonReaction, NjoyPhotonMomentComparisonResult,
     NjoyPhotonMomentComparisonSample, NjoyPhotonMomentComparisonStatus,
+};
+pub use reaction_energy_balance::{
+    DEFAULT_REACTION_BALANCE_RELATIVE_TOLERANCE, ENDF_REACTION_ENERGY_BALANCE_SCHEMA,
+    EndfProductAngularRepresentation, EndfProductDisposition, EndfReactionBalanceError,
+    EndfReactionBalanceEvidenceScope, EndfReactionBalanceFindingDisposition,
+    EndfReactionBalanceProduct, EndfReactionBalanceQualification, EndfReactionBalanceReaction,
+    EndfReactionBalanceReactionStatus, EndfReactionBalanceSample, EndfReactionBalanceSampleStatus,
+    EndfReactionEnergyBalanceDocument, EndfReactionEnergyBalanceReport,
+    EndfReactionEnergyBalanceResult,
 };
 pub use source_aware::{
     NJOY_SOURCE_AWARE_SUITABILITY_SCHEMA, NjoyProcessorFindingDisposition,

@@ -18,27 +18,28 @@ use nctforge_njoy::{
     DEFAULT_NJOY_ENERGY_BALANCE_PRINT_RELATIVE_TOLERANCE,
     DEFAULT_NJOY_LAW7_PRINT_RELATIVE_TOLERANCE, DEFAULT_NJOY_LAW7_SOURCE_RELATIVE_TOLERANCE,
     DEFAULT_NJOY_PRINT_RELATIVE_TOLERANCE, DEFAULT_NJOY_TIMEOUT_SECONDS,
-    DEFAULT_SPECTRUM_NORMALIZATION_TOLERANCE, EndfContinuumPhotonMomentReport,
-    EndfContinuumPhotonMomentReportDocument, EndfMf6CapturePhotonBalanceQualification,
-    EndfMf6CapturePhotonBalanceReport, EndfMf6CapturePhotonBalanceReportDocument,
-    EndfMf6Law7ImplicitResidualQualification, EndfMf6Law7ImplicitResidualReport,
-    EndfMf6Law7ImplicitResidualReportDocument, EndfPhotonProductionInventory,
-    EndfPhotonProductionInventoryDocument, NjoyAcquisitionArtifacts,
-    NjoyCandidateComparisonCheckResult, NjoyCapturePhotonMomentComparison,
-    NjoyCapturePhotonMomentComparisonDocument, NjoyDiagnosticTriageCheckResult,
-    NjoyDiagnosticTriageReport, NjoyDiagnosticTriageReportDocument,
-    NjoyDomainAwareSuitabilityReport, NjoyDomainAwareSuitabilityReportDocument,
-    NjoyEnergyBalanceAttribution, NjoyEnergyBalanceAttributionDocument,
-    NjoyEnergyBalanceAttributionQualification, NjoyEvidenceAwareCheckResult,
-    NjoyEvidenceAwareSuitabilityReport, NjoyEvidenceAwareSuitabilityReportDocument,
-    NjoyExecutionOptions, NjoyExecutionReceipt, NjoyExecutionReceiptDocument, NjoyInputArtifacts,
-    NjoyInputBundle, NjoyLaw7ImplicitResidualComparison,
-    NjoyLaw7ImplicitResidualComparisonDocument, NjoyLaw7ImplicitResidualComparisonQualification,
-    NjoyPhotonMomentComparison, NjoyPhotonMomentComparisonDocument,
-    NjoySourceAwareSuitabilityReport, NjoySourceAwareSuitabilityReportDocument,
-    NjoySuitabilityComparison, NjoySuitabilityComparisonDocument,
-    NjoySuitabilityComparisonQualification, NjoySuitabilityQualification, NjoySuitabilityReport,
-    NjoySuitabilityReportDocument,
+    DEFAULT_REACTION_BALANCE_RELATIVE_TOLERANCE, DEFAULT_SPECTRUM_NORMALIZATION_TOLERANCE,
+    EndfContinuumPhotonMomentReport, EndfContinuumPhotonMomentReportDocument,
+    EndfMf6CapturePhotonBalanceQualification, EndfMf6CapturePhotonBalanceReport,
+    EndfMf6CapturePhotonBalanceReportDocument, EndfMf6Law7ImplicitResidualQualification,
+    EndfMf6Law7ImplicitResidualReport, EndfMf6Law7ImplicitResidualReportDocument,
+    EndfPhotonProductionInventory, EndfPhotonProductionInventoryDocument,
+    EndfReactionBalanceQualification, EndfReactionEnergyBalanceDocument,
+    EndfReactionEnergyBalanceReport, NjoyAcquisitionArtifacts, NjoyCandidateComparisonCheckResult,
+    NjoyCapturePhotonMomentComparison, NjoyCapturePhotonMomentComparisonDocument,
+    NjoyDiagnosticTriageCheckResult, NjoyDiagnosticTriageReport,
+    NjoyDiagnosticTriageReportDocument, NjoyDomainAwareSuitabilityReport,
+    NjoyDomainAwareSuitabilityReportDocument, NjoyEnergyBalanceAttribution,
+    NjoyEnergyBalanceAttributionDocument, NjoyEnergyBalanceAttributionQualification,
+    NjoyEvidenceAwareCheckResult, NjoyEvidenceAwareSuitabilityReport,
+    NjoyEvidenceAwareSuitabilityReportDocument, NjoyExecutionOptions, NjoyExecutionReceipt,
+    NjoyExecutionReceiptDocument, NjoyInputArtifacts, NjoyInputBundle,
+    NjoyLaw7ImplicitResidualComparison, NjoyLaw7ImplicitResidualComparisonDocument,
+    NjoyLaw7ImplicitResidualComparisonQualification, NjoyPhotonMomentComparison,
+    NjoyPhotonMomentComparisonDocument, NjoySourceAwareSuitabilityReport,
+    NjoySourceAwareSuitabilityReportDocument, NjoySuitabilityComparison,
+    NjoySuitabilityComparisonDocument, NjoySuitabilityComparisonQualification,
+    NjoySuitabilityQualification, NjoySuitabilityReport, NjoySuitabilityReportDocument,
 };
 use nctforge_openmc::{
     DataAcquisitionClient, DataAcquisitionProfileDocument, DataAcquisitionReceiptDocument,
@@ -381,6 +382,63 @@ enum NjoyCommand {
         /// Energy-balance attribution to validate and regenerate.
         #[arg(long)]
         attribution_report: PathBuf,
+    },
+    /// Integrate File 3/File 6 reaction-level energy balances independent of NJOY.
+    CalculateReactionEnergyBalance {
+        /// Case-scoped evaluated-neutron source-selection manifest.
+        #[arg(long)]
+        selection: PathBuf,
+        /// Directory containing the selected extracted evaluations.
+        #[arg(long)]
+        evaluations_directory: PathBuf,
+        /// Receipt-bound processor energy-balance attribution for the nuclide.
+        #[arg(long)]
+        attribution_report: PathBuf,
+        /// Verified domain-aware v0.3 transported-photon suitability report.
+        #[arg(long)]
+        domain_aware_report: PathBuf,
+        /// External execution receipt used as the trust anchor.
+        #[arg(long)]
+        receipt: PathBuf,
+        /// Complete execution directory bound by the receipt.
+        #[arg(long)]
+        execution_directory: PathBuf,
+        /// Nuclide whose reaction remainders will be integrated.
+        #[arg(long, default_value = "O17")]
+        nuclide: String,
+        /// Relative tolerance for the printed ebal/ebar comparisons.
+        #[arg(long, default_value_t = DEFAULT_REACTION_BALANCE_RELATIVE_TOLERANCE)]
+        relative_tolerance: f64,
+        /// New unreviewed balance JSON path; it must not already exist.
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Regenerate and verify an independent reaction energy-balance report.
+    VerifyReactionEnergyBalance {
+        /// Case-scoped evaluated-neutron source-selection manifest.
+        #[arg(long)]
+        selection: PathBuf,
+        /// Directory containing the selected extracted evaluations.
+        #[arg(long)]
+        evaluations_directory: PathBuf,
+        /// Receipt-bound processor energy-balance attribution for the nuclide.
+        #[arg(long)]
+        attribution_report: PathBuf,
+        /// Verified domain-aware v0.3 transported-photon suitability report.
+        #[arg(long)]
+        domain_aware_report: PathBuf,
+        /// External execution receipt used as the trust anchor.
+        #[arg(long)]
+        receipt: PathBuf,
+        /// Complete execution directory bound by the receipt.
+        #[arg(long)]
+        execution_directory: PathBuf,
+        /// Nuclide whose reaction remainders were integrated.
+        #[arg(long, default_value = "O17")]
+        nuclide: String,
+        /// Energy-balance report to validate and regenerate.
+        #[arg(long)]
+        balance_report: PathBuf,
     },
     /// Compare independent capture moments with NJOY's photon and recoil print tables.
     CompareCapturePhotonMoments {
@@ -1661,6 +1719,107 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                     )
                 );
             }
+            NjoyCommand::CalculateReactionEnergyBalance {
+                selection,
+                evaluations_directory,
+                attribution_report,
+                domain_aware_report,
+                receipt,
+                execution_directory,
+                nuclide,
+                relative_tolerance,
+                output,
+            } => {
+                let selection = EvaluatedNeutronSourceSelectionDocument::from_path(&selection)?;
+                let attribution =
+                    NjoyEnergyBalanceAttributionDocument::from_path(&attribution_report)?;
+                let domain =
+                    NjoyDomainAwareSuitabilityReportDocument::from_path(&domain_aware_report)?;
+                let execution = NjoyExecutionReceiptDocument::from_path(&receipt)?;
+                let report = EndfReactionEnergyBalanceReport::calculate(
+                    &selection,
+                    &evaluations_directory,
+                    &attribution,
+                    &domain,
+                    &execution,
+                    &execution_directory,
+                    &nuclide,
+                    relative_tolerance,
+                )?;
+                let result = report.write_new(&output)?;
+                println!("integrated {nuclide} File 6 reaction energy balances from source");
+                println!("report: {}", result.report_path.display());
+                println!("report SHA-256: {}", result.report_sha256);
+                println!(
+                    "samples computed: {}/{} ({} partially computable)",
+                    result.report.computed_sample_count,
+                    result.report.sample_count,
+                    result.report.partially_computed_sample_count
+                );
+                println!(
+                    "independent/printed remainders matched: {}/{}",
+                    result.report.remainder_matched_sample_count,
+                    result.report.computed_sample_count
+                );
+                println!(
+                    "maximum remainder relative difference: {:.12e}",
+                    result.report.maximum_remainder_relative_difference
+                );
+                println!(
+                    "maximum product ebar relative difference: {:.12e} over {} comparisons",
+                    result.report.maximum_ebar_relative_difference,
+                    result.report.ebar_comparison_count
+                );
+                println!(
+                    "qualification: {}",
+                    reaction_balance_qualification_name(result.report.qualification)
+                );
+            }
+            NjoyCommand::VerifyReactionEnergyBalance {
+                selection,
+                evaluations_directory,
+                attribution_report,
+                domain_aware_report,
+                receipt,
+                execution_directory,
+                nuclide,
+                balance_report,
+            } => {
+                let selection = EvaluatedNeutronSourceSelectionDocument::from_path(&selection)?;
+                let attribution =
+                    NjoyEnergyBalanceAttributionDocument::from_path(&attribution_report)?;
+                let domain =
+                    NjoyDomainAwareSuitabilityReportDocument::from_path(&domain_aware_report)?;
+                let execution = NjoyExecutionReceiptDocument::from_path(&receipt)?;
+                let balance = EndfReactionEnergyBalanceDocument::from_path(&balance_report)?;
+                balance.verify_against_sources(
+                    &selection,
+                    &evaluations_directory,
+                    &attribution,
+                    &domain,
+                    &execution,
+                    &execution_directory,
+                    &nuclide,
+                )?;
+                println!(
+                    "verified independent reaction energy-balance report {}",
+                    balance_report.display()
+                );
+                println!("report SHA-256: {}", balance.sha256);
+                println!(
+                    "samples computed: {}/{}",
+                    balance.report.computed_sample_count, balance.report.sample_count
+                );
+                println!(
+                    "independent/printed remainders matched: {}/{}",
+                    balance.report.remainder_matched_sample_count,
+                    balance.report.computed_sample_count
+                );
+                println!(
+                    "qualification: {}",
+                    reaction_balance_qualification_name(balance.report.qualification)
+                );
+            }
             NjoyCommand::CompareCapturePhotonMoments {
                 balance_report,
                 receipt,
@@ -2571,6 +2730,19 @@ fn energy_balance_attribution_qualification_name(
             }
         NjoyEnergyBalanceAttributionQualification::ProcessorAccountingAttributionMismatch => {
             "processor_accounting_attribution_mismatch"
+        }
+    }
+}
+
+fn reaction_balance_qualification_name(
+    qualification: EndfReactionBalanceQualification,
+) -> &'static str {
+    match qualification {
+        EndfReactionBalanceQualification::SourceRemaindersComputedUnreviewed => {
+            "source_remainders_computed_unreviewed"
+        }
+        EndfReactionBalanceQualification::SourceRemaindersPartiallyComputable => {
+            "source_remainders_partially_computable"
         }
     }
 }

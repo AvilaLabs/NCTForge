@@ -168,8 +168,14 @@ Implementation status:
   Avila Core through `check-candidate-comparison`; TENDL's duplicated File 3
   grid points make the deeper independent gates uncomputable, which is
   preserved as a source-format finding;
-- paused: continue response qualification only with a reviewed independent
-  O-17 reaction calculation; all three published evaluated libraries
+- complete: compute independent File 3/File 6 reaction-level energy-balance
+  remainders for JEFF-4.0 O-17 without NJOY; all 43 in-domain samples compute,
+  and the independent remainder sum reproduces NJOY's printed `ebal` sums and
+  the MT=301 excess within 1.7% at every finding energy, with the MT=91
+  processor-internal convention and residual per-product `ebar` differences
+  preserved as unreviewed evidence (ADR 0030);
+- paused: continue response qualification only after that independent
+  calculation is reviewed; all three published evaluated libraries
   (ENDF/B-VIII.1, JEFF-4.0, TENDL-2025) are rejected under the controlled
   chain, C-13 and O-18 still lack transported-photon sources under JEFF-4.0,
   and N-15 remains independently rejected by its capture-balance gate;

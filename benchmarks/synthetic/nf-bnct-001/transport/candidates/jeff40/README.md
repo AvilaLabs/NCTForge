@@ -149,6 +149,20 @@ cargo run -p nctforge-cli -- njoy verify-comparison \
   --comparison-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/endfb81-vs-jeff40-response-treatment-comparison.json
 ```
 
+The unreviewed independent O-17 reaction energy-balance report regenerates
+from the bound evaluation, execution receipt, and attribution:
+
+```sh
+cargo run -p nctforge-cli -- njoy verify-reaction-energy-balance \
+  --selection benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/evaluated-neutron-source-selection.json \
+  --evaluations-directory PATH_TO_EXACT_JEFF40_SELECTION \
+  --attribution-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-o17-njoy-energy-balance-attribution.json \
+  --domain-aware-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/njoy2016-78-transported-photon-domain-aware-suitability.json \
+  --receipt benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/njoy2016-78-execution-receipt.json \
+  --execution-directory PATH_TO_JEFF40_EXECUTION \
+  --balance-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-o17-endf-reaction-energy-balance.json
+```
+
 See [the detailed finding](../../../../../../docs/research/JEFF40_RESPONSE_TREATMENT_FINDINGS.md)
 and [ADR 0016](../../../../../../docs/adr/0016-versioned-response-treatment-candidates.md)
 plus [ADR 0017](../../../../../../docs/adr/0017-source-aware-photon-production-suitability.md)
@@ -162,3 +176,7 @@ the integrated v0.4 decision by
 [ADR 0023](../../../../../../docs/adr/0023-reaction-evidence-aware-suitability.md),
 and the follow-on work queue by
 [ADR 0025](../../../../../../docs/adr/0025-diagnostic-triage-of-remaining-njoy-findings.md).
+The O-17 attribution pause is recorded by
+[ADR 0026](../../../../../../docs/adr/0026-o17-processor-energy-balance-attribution.md),
+and the independent reaction-level integrator by
+[ADR 0030](../../../../../../docs/adr/0030-o17-independent-reaction-energy-balance.md).
