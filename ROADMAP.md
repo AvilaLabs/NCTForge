@@ -423,8 +423,11 @@ Implementation status:
   output including an oblique sform. The GUI dose workspace surfaces the
   same four operations — volume inspection with transform provenance,
   mask writing, dose export, and nearest/trilinear resampling onto a
-  bundle grid. Remaining parity work: broader convergence evidence and
-  CT-aligned mesh conversion;
+  bundle grid. Grid-resolution convergence evidence is pinned by an
+  analytic test: a smooth field sampled at 2.0/1.0/0.5 mm and resampled
+  onto a fixed incommensurate target must show interior L∞ error ratios
+  below the predeclared 0.35 second-order bound per halving. Remaining
+  parity work: CT-aligned mesh conversion;
 - complete (OP-06): weighted exposure/fraction aggregation — the
   `nctforge.exposure-plan/0.1.0` contract binds each exposure's dose bundle
   by SHA-256 with an explicit weight, weight basis, duration, and boron

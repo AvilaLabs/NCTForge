@@ -679,4 +679,62 @@ mod tests {
         let decoded = read_nifti(&compressed).unwrap();
         assert_eq!(decoded.values, values);
     }
+
+    /// OP-01 grid-resolution convergence evidence: resampling a smooth
+    /// analytic field onto a fixed target grid must show the declared
+    /// second-order (quadratic) trilinear convergence — each spacing
+    /// halving cuts the interior L-infinity error below the predeclared
+    /// tolerance ratio of 0.35 (theory predicts ~0.25 for a C² field).
+    #[test]
+    fn trilinear_resample_converges_quadratically_on_a_smooth_field() {
+        let analytic =
+            |w: [f64; 3]| (-(w[0] * w[0] + w[1] * w[1] + w[2] * w[2]) / 200.0).exp() + 0.05 * w[0];
+        // Fixed fine target: 21^3 voxels, 0.94 mm, covering [-9.63, 9.17]
+        // mm — deliberately incommensurate with every source spacing so
+        // target centers never coincide with source voxel centers.
+        let target = grid([21, 21, 21], [0.94; 3], [-9.63; 3]);
+        // Source grids halve spacing: 2.0 mm, 1.0 mm, 0.5 mm over the same
+        // domain (voxel centers span [-10, 10] in each case).
+        let mut errors = Vec::new();
+        for n in [11u32, 21, 41] {
+            let spacing = 20.0 / (n - 1) as f64;
+            let source_geometry = grid([n, n, n], [spacing; 3], [-10.0; 3]);
+            let values = (0..n * n * n)
+                .map(|flat| {
+                    let flat = flat as usize;
+                    let n = n as usize;
+                    let (i, j, k) = (flat % n, (flat / n) % n, flat / (n * n));
+                    analytic(voxel_center(&source_geometry, i, j, k))
+                })
+                .collect();
+            let source = image(source_geometry, values);
+            let resampled = resample_to_grid(&source, &target, Interpolation::Trilinear);
+            // Interior target voxels only — away from the domain edge where
+            // corner clamping, not interpolation order, dominates.
+            let mut max_err = 0.0_f64;
+            for k in 4..17 {
+                for j in 4..17 {
+                    for i in 4..17 {
+                        let index = i + 21 * j + 21 * 21 * k;
+                        let err =
+                            (resampled[index] - analytic(voxel_center(&target, i, j, k))).abs();
+                        max_err = max_err.max(err);
+                    }
+                }
+            }
+            errors.push(max_err);
+        }
+        assert!(
+            errors[0] > errors[1] && errors[1] > errors[2],
+            "error must decrease with refinement: {errors:?}"
+        );
+        for pair in errors.windows(2) {
+            let ratio = pair[1] / pair[0];
+            assert!(
+                ratio < 0.35,
+                "trilinear error ratio {ratio} exceeds the declared 0.35 \
+                 second-order bound (errors: {errors:?})"
+            );
+        }
+    }
 }
