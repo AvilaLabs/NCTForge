@@ -12,7 +12,9 @@ use eframe::egui;
 use nctforge_bio::{BiologicalDoseBundle, RegionMask};
 use nctforge_core::PhysicalDoseBundle;
 use nctforge_dicom::{VerifiedBenchmarkCase, load_nf_bnct_001};
-use nctforge_evidence::{DoseVolumeHistogram, EvidenceBundleManifest, sha256_hex};
+use nctforge_evidence::{
+    DoseVolumeHistogram, EvidenceBundleManifest, RegionDoseMetrics, sha256_hex,
+};
 use nctforge_openmc::{OpenMcBackend, TARGET_OPENMC_VERSION};
 use nctforge_transport::TransportBackend;
 use nctforge_view::{AnatomicalPlane, Crosshair, PatientAlignedGrid, SliceView};
@@ -330,7 +332,6 @@ impl DoseArtifact {
 
 /// UI state for the dose workspace: the loaded bundle plus the region mask
 /// and quantity chosen for the DVH panel.
-#[derive(Default)]
 struct DosePanel {
     bundle_path: String,
     bundle: Option<LoadedDose>,
@@ -339,6 +340,34 @@ struct DosePanel {
     quantity: String,
     histogram: Option<DoseVolumeHistogram>,
     histogram_error: Option<String>,
+    metrics_dx: String,
+    metrics_vx: String,
+    metrics_eud: String,
+    metrics: Option<RegionDoseMetrics>,
+    metrics_error: Option<String>,
+    metrics_save_path: String,
+    metrics_status: Option<String>,
+}
+
+impl Default for DosePanel {
+    fn default() -> Self {
+        Self {
+            bundle_path: String::new(),
+            bundle: None,
+            bundle_error: None,
+            mask_path: String::new(),
+            quantity: String::new(),
+            histogram: None,
+            histogram_error: None,
+            metrics_dx: "98,50,2".into(),
+            metrics_vx: String::new(),
+            metrics_eud: String::new(),
+            metrics: None,
+            metrics_error: None,
+            metrics_save_path: String::new(),
+            metrics_status: None,
+        }
+    }
 }
 
 impl DosePanel {
@@ -360,6 +389,102 @@ impl DosePanel {
         }
     }
 
+    /// Resolve the mask + quantity row selection shared by the DVH and
+    /// metrics overlays. Returns the mask, quantity label, and the selected
+    /// values (cloned so callers can mutate other panel fields freely).
+    fn resolve_selection(&self) -> Result<(RegionMask, String, Vec<f64>), String> {
+        let bundle = self.bundle.as_ref().ok_or("Load a dose bundle first.")?;
+        let mask: RegionMask = std::fs::read(self.mask_path.trim())
+            .map_err(|e| e.to_string())
+            .and_then(|bytes| serde_json::from_slice(&bytes).map_err(|e| e.to_string()))
+            .map_err(|e| format!("mask: {e}"))?;
+        let quantity = self.quantity.trim().to_owned();
+        let values = bundle
+            .artifact
+            .rows()
+            .into_iter()
+            .find(|(name, ..)| *name == quantity || format!("component:{name}") == quantity)
+            .map(|(_, values, _)| values.to_vec())
+            .ok_or_else(|| format!("unknown quantity {quantity:?}"))?;
+        Ok((mask, quantity, values))
+    }
+
+    fn parse_list(text: &str, field: &str) -> Result<Vec<f64>, String> {
+        let trimmed = text.trim();
+        if trimmed.is_empty() {
+            return Ok(Vec::new());
+        }
+        trimmed
+            .split(',')
+            .map(|part| {
+                part.trim()
+                    .parse::<f64>()
+                    .map_err(|e| format!("{field}: {e}"))
+            })
+            .collect()
+    }
+
+    fn compute_metrics(&mut self) {
+        self.metrics = None;
+        self.metrics_error = None;
+        self.metrics_status = None;
+        let Some(bundle) = &self.bundle else {
+            self.metrics_error = Some("Load a dose bundle first.".into());
+            return;
+        };
+        let voxel_volume = match &bundle.artifact {
+            DoseArtifact::Physical(b) => b.geometry.spacing_mm.iter().product(),
+            DoseArtifact::Biological(b) => b.geometry.spacing_mm.iter().product(),
+        };
+        let unit = bundle.artifact.unit().to_owned();
+        let case_id = bundle.artifact.case_id().to_owned();
+        let source = nctforge_core::ContentReference {
+            id: case_id.clone(),
+            sha256: bundle.sha256.clone(),
+        };
+        let outcome = self
+            .resolve_selection()
+            .and_then(|(mask, quantity, values)| {
+                let dx = Self::parse_list(&self.metrics_dx, "dx")?;
+                let vx = Self::parse_list(&self.metrics_vx, "vx")?;
+                let eud = Self::parse_list(&self.metrics_eud, "eud-a")?;
+                RegionDoseMetrics::compute(
+                    &case_id,
+                    &mask.name,
+                    &quantity,
+                    source,
+                    &unit,
+                    &values,
+                    &mask.voxels,
+                    voxel_volume,
+                    &dx,
+                    &vx,
+                    &eud,
+                )
+                .map_err(|e| e.to_string())
+            });
+        match outcome {
+            Ok(metrics) => self.metrics = Some(metrics),
+            Err(error) => self.metrics_error = Some(error),
+        }
+    }
+
+    fn save_metrics(&mut self) {
+        let path = self.metrics_save_path.trim().to_owned();
+        let Some(metrics) = &self.metrics else {
+            self.metrics_error = Some("Compute metrics first.".into());
+            return;
+        };
+        if path.is_empty() {
+            self.metrics_error = Some("choose an output path first".into());
+            return;
+        }
+        match std::fs::write(&path, serde_json::to_string_pretty(metrics).unwrap() + "\n") {
+            Ok(()) => self.metrics_status = Some(format!("wrote {path}")),
+            Err(e) => self.metrics_error = Some(e.to_string()),
+        }
+    }
+
     fn compute_histogram(&mut self) {
         self.histogram = None;
         self.histogram_error = None;
@@ -367,26 +492,12 @@ impl DosePanel {
             self.histogram_error = Some("Load a dose bundle first.".into());
             return;
         };
-        let mask: RegionMask = match std::fs::read(self.mask_path.trim())
-            .map_err(|e| e.to_string())
-            .and_then(|bytes| serde_json::from_slice(&bytes).map_err(|e| e.to_string()))
-        {
-            Ok(mask) => mask,
+        let (mask, quantity, values) = match self.resolve_selection() {
+            Ok(selection) => selection,
             Err(error) => {
-                self.histogram_error = Some(format!("mask: {error}"));
+                self.histogram_error = Some(error);
                 return;
             }
-        };
-        let quantity = self.quantity.trim().to_owned();
-        let resolved = bundle
-            .artifact
-            .rows()
-            .into_iter()
-            .find(|(name, ..)| *name == quantity || format!("component:{name}") == quantity)
-            .map(|(_, values, _)| values);
-        let Some(values) = resolved else {
-            self.histogram_error = Some(format!("unknown quantity {quantity:?}"));
-            return;
         };
         match DoseVolumeHistogram::compute(
             bundle.artifact.case_id(),
@@ -397,7 +508,7 @@ impl DosePanel {
                 sha256: bundle.sha256.clone(),
             },
             bundle.artifact.unit(),
-            values,
+            &values,
             &mask.voxels,
             match &bundle.artifact {
                 DoseArtifact::Physical(b) => b.geometry.spacing_mm.iter().product(),
@@ -1731,6 +1842,85 @@ fn show_dose_workspace(ui: &mut egui::Ui, panel: &mut DosePanel) {
             show_dvh_curve(ui, histogram);
         }
     });
+
+    ui.add_space(14.0);
+    ui.heading("Region dose-volume metrics");
+    ui.label("Same `RegionDoseMetrics::compute` path as `nctforge metrics` and `compute_metrics` in Python.");
+    egui::Frame::group(ui.style()).show(ui, |ui| {
+        ui.horizontal(|ui| {
+            ui.label("D_x %:");
+            ui.add(
+                egui::TextEdit::singleline(&mut panel.metrics_dx)
+                    .desired_width(90.0)
+                    .hint_text("98,50,2"),
+            );
+            ui.label("V_x levels:");
+            ui.add(
+                egui::TextEdit::singleline(&mut panel.metrics_vx)
+                    .desired_width(110.0)
+                    .hint_text("dose units, optional"),
+            );
+            ui.label("EUD a:");
+            ui.add(
+                egui::TextEdit::singleline(&mut panel.metrics_eud)
+                    .desired_width(80.0)
+                    .hint_text("optional"),
+            );
+            if ui.button("Compute metrics").clicked() {
+                panel.compute_metrics();
+            }
+        });
+        if let Some(error) = &panel.metrics_error {
+            ui.colored_label(
+                egui::Color32::LIGHT_RED,
+                format!("Metrics rejected: {error}"),
+            );
+        }
+        if let Some(metrics) = &panel.metrics {
+            ui.monospace(format!(
+                "region {} · {} voxels · min {:.3e} · mean {:.3e} · max {:.3e} {}",
+                metrics.region,
+                metrics.region_voxel_count,
+                metrics.minimum_dose,
+                metrics.mean_dose,
+                metrics.maximum_dose,
+                metrics.unit,
+            ));
+            for metric in &metrics.dx {
+                ui.monospace(format!(
+                    "D{}  {:.3e} {}",
+                    metric.percent, metric.dose, metrics.unit
+                ));
+            }
+            for metric in &metrics.vx {
+                ui.monospace(format!(
+                    "V({:.3e} {})  {:.1}%",
+                    metric.level,
+                    metrics.unit,
+                    metric.volume_fraction * 100.0,
+                ));
+            }
+            for metric in &metrics.eud {
+                ui.monospace(format!(
+                    "EUD(a={})  {:.3e} {}",
+                    metric.a, metric.dose, metrics.unit
+                ));
+            }
+            ui.horizontal(|ui| {
+                ui.add(
+                    egui::TextEdit::singleline(&mut panel.metrics_save_path)
+                        .desired_width(300.0)
+                        .hint_text("dose-metrics.json"),
+                );
+                if ui.button("Write metrics").clicked() {
+                    panel.save_metrics();
+                }
+            });
+            if let Some(status) = &panel.metrics_status {
+                ui.colored_label(egui::Color32::LIGHT_GREEN, status);
+            }
+        }
+    });
 }
 
 /// Draw the cumulative V(d) curve directly — no plotting dependency.
@@ -2404,6 +2594,81 @@ mod tests {
         let invalid_path = scratch.path().join("invalid.json");
         std::fs::write(&invalid_path, serde_json::to_vec(&invalid).unwrap()).unwrap();
         assert!(DoseArtifact::load(&invalid_path).is_err());
+    }
+
+    #[test]
+    fn dose_panel_computes_region_metrics_and_reports_rejections() {
+        let scratch = tempfile::tempdir().unwrap();
+        let bundle_path = scratch.path().join("bundle.json");
+        std::fs::write(
+            &bundle_path,
+            serde_json::to_vec_pretty(&physical_bundle_json()).unwrap(),
+        )
+        .unwrap();
+        let mask_path = scratch.path().join("mask.json");
+        std::fs::write(
+            &mask_path,
+            serde_json::to_vec(&serde_json::json!({
+                "name": "all", "voxels": [true, true]
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+
+        let mut panel = DosePanel {
+            bundle_path: bundle_path.to_string_lossy().into(),
+            mask_path: mask_path.to_string_lossy().into(),
+            quantity: "physical_total".into(),
+            metrics_dx: "50".into(),
+            metrics_vx: "1e-12".into(),
+            metrics_eud: "1".into(),
+            ..Default::default()
+        };
+        panel.load_bundle();
+        assert!(
+            panel.bundle.is_some(),
+            "load rejected: {:?}",
+            panel.bundle_error
+        );
+        panel.compute_metrics();
+        assert!(
+            panel.metrics_error.is_none(),
+            "metrics rejected: {:?}",
+            panel.metrics_error
+        );
+        let metrics = panel.metrics.as_ref().unwrap();
+        assert_eq!(metrics.region, "all");
+        assert_eq!(metrics.region_voxel_count, 2);
+        assert_eq!(metrics.mean_dose, 1.75e-12);
+        assert_eq!(metrics.dx[0].percent, 50.0);
+        assert_eq!(metrics.dx[0].dose, 1.75e-12);
+        assert_eq!(metrics.vx[0].volume_fraction, 1.0);
+        assert_eq!(metrics.eud[0].dose, 1.75e-12);
+
+        let out = scratch.path().join("metrics.json");
+        panel.metrics_save_path = out.to_string_lossy().into();
+        panel.save_metrics();
+        assert!(panel.metrics_status.is_some());
+        let saved: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&out).unwrap()).unwrap();
+        assert_eq!(saved["schema_version"], "nctforge.dose-metrics/0.1.0");
+
+        panel.quantity = "nonsense".into();
+        panel.compute_metrics();
+        assert!(panel.metrics.is_none());
+        assert!(
+            panel
+                .metrics_error
+                .as_deref()
+                .unwrap()
+                .contains("unknown quantity")
+        );
+
+        panel.quantity = "physical_total".into();
+        panel.metrics_dx = "0".into();
+        panel.compute_metrics();
+        assert!(panel.metrics.is_none());
+        assert!(panel.metrics_error.is_some());
     }
 
     #[test]

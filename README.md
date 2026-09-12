@@ -180,8 +180,10 @@ as `nctforge position` — aim a source at an ROI centroid across an approach
 axis, inspect the position report, and rotate by quarter-turns — sharing the
 authoritative `nctforge_transport` path with the CLI and Python. The dose
 workspace loads any validated physical or biological bundle
-file — component statistics, totals, and a region-mask DVH plot — while keeping
-the two layers visually distinct. The evidence workspace can verify an exported
+file — component statistics, totals, a region-mask DVH plot, and region
+dose-volume metrics (`D_x`, `V_x`, EUD via the same `RegionDoseMetrics` path
+as the CLI and Python, exportable as `nctforge.dose-metrics/0.1.0`) — while
+keeping the two layers visually distinct. The evidence workspace can verify an exported
 `artifact-manifest.json` in place. Select the `?` button or press `F1` for
 contextual guidance, bundled offline answers, and guided tours that dim the
 application and spotlight live workflow controls. Interactive transport actions

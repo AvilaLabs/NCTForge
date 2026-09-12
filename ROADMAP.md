@@ -433,8 +433,10 @@ Implementation status:
   `logistic`, and `probit` (Lyman) functions over mean/min/max/EUD
   statistics — emitting `nctforge.endpoint-evaluation/0.1.0`, with `endpoint
   utcp` combining TCP+NTCP under `p_plus`/`difference` after matching
-  case/region/quantity/source checks. Python exposes the same functions;
-  GUI overlays and published reference fixtures remain open;
+  case/region/quantity/source checks. Python exposes the same functions,
+  and the GUI dose workspace overlays region metrics through the shared
+  `RegionDoseMetrics` path with metrics-artifact export; published
+  reference fixtures remain open;
 - complete (OP-11, first slice): plan tables and diagnostics — the
   `nctforge-plan` crate round-trips `nctforge.exposure-plan/0.1.0` through
   CSV (`# key:` metadata) and XLSX (`plan`+`exposures` sheets), reporting
