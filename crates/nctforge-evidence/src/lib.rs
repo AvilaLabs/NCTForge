@@ -15,6 +15,7 @@ use thiserror::Error;
 mod bundle;
 mod dvh;
 mod limits;
+mod metrics;
 
 pub use bundle::{
     BundleInput, EVIDENCE_BUNDLE_MANIFEST_NAME, EVIDENCE_BUNDLE_MANIFEST_SCHEMA,
@@ -24,6 +25,9 @@ pub use dvh::{DVH_SCHEMA, DoseVolumeHistogram};
 pub use limits::{
     IRRADIATION_TIME_SCHEMA, IrradiationTimeReport, LimitMetric, LimitingStructure, OrganLimit,
     RegionLimitResult,
+};
+pub use metrics::{
+    CoverageMetric, DOSE_METRICS_SCHEMA, EudMetric, RegionDoseMetrics, VolumeMetric,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

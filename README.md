@@ -550,6 +550,50 @@ nctforge accumulate \
 
 `examples/exposure/` ships a two-field demonstration plan.
 
+### Dose-volume metrics and endpoint response models
+
+`nctforge metrics` computes exact dose-volume readings over a region mask
+— `D_x` coverages, `V_x` levels, min/mean/max, and Niemierko generalized
+EUD at requested organ parameters (`a = 1` mean, `a > 0` serial-leaning,
+`a < 0` parallel-leaning, `a = 0` geometric mean; any zero-dose voxel
+collapses a parallel EUD to zero) — emitting
+`nctforge.dose-metrics/0.1.0`:
+
+```text
+nctforge metrics \
+  --dose DOSE-BUNDLE.json \
+  --quantity biological_total \
+  --mask examples/biological/core-region-mask.json \
+  --dx 98,50,2 --vx 50,60 --eud-a -10,1,10 \
+  --output NEW-METRICS.json
+```
+
+`nctforge endpoint` scores separately versioned
+`nctforge.endpoint-model/0.1.0` response models over a dose selection,
+emitting `nctforge.endpoint-evaluation/0.1.0`. Three functions exist:
+`voxel_poisson_tcp` (voxel-level LQ Poisson TCP — per-particle dose to
+per-fraction `d`, BED, surviving clonogens; requires a
+`*_per_source_particle` unit), `logistic` (`1/(1+(D50/D)^(4γ50))`), and
+`probit` (Lyman `Φ((D−TD50)/(m·TD50))`) — the last two over a declared
+scalar statistic (mean/min/max/EUD). `endpoint utcp` combines a TCP and an
+NTCP evaluation over the same case/region/quantity/dose source under
+`p_plus` (`TCP·(1−NTCP)`) or `difference`, rejecting mismatched
+ingredients. Demonstration models live in `examples/endpoint/`; all
+probabilities are synthetic research values:
+
+```text
+nctforge endpoint evaluate \
+  --model examples/endpoint/logistic-tcp-model-v1.json \
+  --dose DOSE-BUNDLE.json \
+  --quantity biological_total \
+  --mask examples/biological/core-region-mask.json \
+  --output TCP-EVAL.json
+
+nctforge endpoint utcp \
+  --tcp TCP-EVAL.json --ntcp NTCP-EVAL.json \
+  --combination p_plus --output UTCP-EVAL.json
+```
+
 ### NIfTI imaging I/O
 
 `nctforge nifti` provides a strict NIfTI-1 boundary alongside DICOM for

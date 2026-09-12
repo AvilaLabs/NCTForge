@@ -1,0 +1,14 @@
+{
+  "schema_version": "nctforge.endpoint-model/0.1.0",
+  "id": "nctforge.examples.voxel-poisson-tcp.v1",
+  "endpoint": "tcp",
+  "function": {
+    "kind": "voxel_poisson_tcp",
+    "clonogen_density_per_mm3": 1000.0,
+    "alpha": 0.3,
+    "alpha_beta": 10.0,
+    "fraction_count": 30,
+    "source_particles_per_fraction": 1.0e9
+  },
+  "validity_domain": "illustrative voxel-level Poisson LQ TCP; synthetic parameters, no clinical claim"
+}

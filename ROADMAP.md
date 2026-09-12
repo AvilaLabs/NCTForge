@@ -418,6 +418,16 @@ Implementation status:
   1-sigma propagation under declared inter-exposure independence, emitting
   an ordinary physical dose bundle that flows through DVH, biological
   models, and the GUI;
+- complete (OP-09, first slice): dose-volume metrics and endpoint models —
+  `nctforge metrics` computes exact `D_x`/`V_x`/min/mean/max/EUD readings
+  over a region mask (`nctforge.dose-metrics/0.1.0`), and `nctforge
+  endpoint` scores `nctforge.endpoint-model/0.1.0` artifacts —
+  `voxel_poisson_tcp` (voxel-level LQ Poisson TCP over per-particle dose),
+  `logistic`, and `probit` (Lyman) functions over mean/min/max/EUD
+  statistics — emitting `nctforge.endpoint-evaluation/0.1.0`, with `endpoint
+  utcp` combining TCP+NTCP under `p_plus`/`difference` after matching
+  case/region/quantity/source checks. Python exposes the same functions;
+  GUI overlays and published reference fixtures remain open;
 - pending: optional GUI slice-overlay of loaded dose on the patient grid.
 
 ## R4 — Transport-neutral reference platform

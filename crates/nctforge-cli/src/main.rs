@@ -120,6 +120,36 @@ enum Command {
     /// Aim a fixed source at a region centroid or rotate a source about a
     /// patient axis (research positioning helpers).
     Position(PositionArgs),
+    /// Compute exact dose-volume metrics (D_x, V_x, min/mean/max, EUD)
+    /// over a named voxel mask.
+    Metrics {
+        /// Physical or biological dose bundle JSON.
+        #[arg(long)]
+        dose: PathBuf,
+        /// `component:NAME`, `physical_total`, or `biological_total`.
+        #[arg(long)]
+        quantity: String,
+        /// RegionMask JSON (`name` + per-voxel `voxels` booleans).
+        #[arg(long)]
+        mask: PathBuf,
+        /// Coverage percent(s) in (0, 100] for `D_x` readings;
+        /// repeatable or comma-separated.
+        #[arg(long = "dx", value_delimiter = ',')]
+        dx: Vec<f64>,
+        /// Dose level(s) in the dose unit for `V_x` readings.
+        #[arg(long = "vx", value_delimiter = ',')]
+        vx: Vec<f64>,
+        /// Niemierko organ parameter(s) for EUD readings (a=1 mean,
+        /// a>0 serial, a<0 parallel, a=0 geometric mean).
+        #[arg(long = "eud-a", value_delimiter = ',', allow_hyphen_values = true)]
+        eud: Vec<f64>,
+        /// New output path for the dose-metrics JSON.
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Score a TCP/NTCP endpoint model over a dose volume, or combine a
+    /// TCP and NTCP evaluation into a UTCP report.
+    Endpoint(EndpointArgs),
     /// Evaluate organ-limited irradiation time over a per-source-particle
     /// dose endpoint, reporting the limiting structure and assumptions.
     IrradiationTime {
@@ -140,6 +170,51 @@ enum Command {
         #[arg(long = "mask", required = true)]
         masks: Vec<String>,
         /// New output path for the irradiation-time report JSON.
+        #[arg(long)]
+        output: PathBuf,
+    },
+}
+
+#[derive(Debug, Args)]
+struct EndpointArgs {
+    #[command(subcommand)]
+    command: EndpointCommand,
+}
+
+#[derive(Debug, Subcommand)]
+enum EndpointCommand {
+    /// Apply an `nctforge.endpoint-model/0.1.0` artifact to a dose volume
+    /// over a region mask, emitting an endpoint-evaluation report.
+    Evaluate {
+        /// Endpoint model JSON.
+        #[arg(long)]
+        model: PathBuf,
+        /// Physical or biological dose bundle JSON.
+        #[arg(long)]
+        dose: PathBuf,
+        /// `component:NAME`, `physical_total`, or `biological_total`.
+        #[arg(long)]
+        quantity: String,
+        /// RegionMask JSON (`name` + per-voxel `voxels` booleans).
+        #[arg(long)]
+        mask: PathBuf,
+        /// New output path for the evaluation JSON.
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Combine a TCP and an NTCP evaluation over the same dose
+    /// distribution into a UTCP report.
+    Utcp {
+        /// TCP endpoint-evaluation JSON.
+        #[arg(long)]
+        tcp: PathBuf,
+        /// NTCP endpoint-evaluation JSON.
+        #[arg(long)]
+        ntcp: PathBuf,
+        /// `p_plus` (TCP·(1−NTCP)) or `difference` (TCP−NTCP).
+        #[arg(long)]
+        combination: String,
+        /// New output path for the UTCP evaluation JSON.
         #[arg(long)]
         output: PathBuf,
     },
@@ -4246,6 +4321,136 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                 None => println!("no region bounds the irradiation (all endpoint rates zero)"),
             }
         }
+        Some(Command::Metrics {
+            dose,
+            quantity,
+            mask,
+            dx,
+            vx,
+            eud,
+            output,
+        }) => {
+            let dose_bytes = fs::read(&dose)?;
+            let bundle = load_dose_bundle(&dose_bytes)?;
+            let mask: RegionMask = serde_json::from_slice(&fs::read(&mask)?)?;
+            let source = nctforge_core::ContentReference {
+                id: dose.display().to_string(),
+                sha256: nctforge_evidence::sha256_file(&dose)?,
+            };
+            let selection = bundle.select(&quantity)?;
+            let metrics = nctforge_evidence::RegionDoseMetrics::compute(
+                selection.case_id,
+                &mask.name,
+                &quantity,
+                source,
+                selection.unit,
+                selection.values,
+                &mask.voxels,
+                selection.voxel_volume_mm3,
+                &dx,
+                &vx,
+                &eud,
+            )?;
+            write_new_json(&output, &metrics)?;
+            println!("dose metrics at {}", output.display());
+            println!(
+                "region: {} ({} voxels, {} [{}])",
+                metrics.region, metrics.region_voxel_count, metrics.quantity, metrics.unit
+            );
+            println!(
+                "min/mean/max: {:.6e} / {:.6e} / {:.6e}",
+                metrics.minimum_dose, metrics.mean_dose, metrics.maximum_dose
+            );
+            for metric in &metrics.dx {
+                println!("D{}: {:.6e}", metric.percent, metric.dose);
+            }
+            for metric in &metrics.vx {
+                println!("V({:.6e}): {:.4}", metric.level, metric.volume_fraction);
+            }
+            for metric in &metrics.eud {
+                println!("EUD(a={}): {:.6e}", metric.a, metric.dose);
+            }
+        }
+        Some(Command::Endpoint(args)) => match args.command {
+            EndpointCommand::Evaluate {
+                model,
+                dose,
+                quantity,
+                mask,
+                output,
+            } => {
+                let model_bytes = fs::read(&model)?;
+                let endpoint_model: nctforge_bio::EndpointModel =
+                    serde_json::from_slice(&model_bytes)?;
+                let dose_bytes = fs::read(&dose)?;
+                let bundle = load_dose_bundle(&dose_bytes)?;
+                let mask = read_region_mask(&mask)?;
+                let source = nctforge_core::ContentReference {
+                    id: dose.display().to_string(),
+                    sha256: nctforge_evidence::sha256_file(&dose)?,
+                };
+                let selection = bundle.select(&quantity)?;
+                let evaluation = nctforge_bio::evaluate_endpoint(
+                    &endpoint_model,
+                    &model_bytes,
+                    selection.case_id,
+                    &mask,
+                    &quantity,
+                    selection.unit,
+                    selection.values,
+                    selection.voxel_volume_mm3,
+                    source,
+                )?;
+                write_new_json(&output, &evaluation)?;
+                println!("endpoint evaluation at {}", output.display());
+                println!(
+                    "endpoint: {:?} region: {} quantity: {}",
+                    evaluation.endpoint, evaluation.region, evaluation.quantity
+                );
+                if let Some(statistic) = &evaluation.dose_statistic {
+                    println!(
+                        "dose statistic: {} = {:.6e} [{}]",
+                        statistic.kind, statistic.value, statistic.unit
+                    );
+                }
+                println!("probability: {:.6}", evaluation.probability);
+                println!("qualification: {}", evaluation.qualification);
+            }
+            EndpointCommand::Utcp {
+                tcp,
+                ntcp,
+                combination,
+                output,
+            } => {
+                let tcp_bytes = fs::read(&tcp)?;
+                let ntcp_bytes = fs::read(&ntcp)?;
+                let tcp_eval: nctforge_bio::EndpointEvaluation =
+                    serde_json::from_slice(&tcp_bytes)?;
+                let ntcp_eval: nctforge_bio::EndpointEvaluation =
+                    serde_json::from_slice(&ntcp_bytes)?;
+                let combination = match combination.as_str() {
+                    "p_plus" => nctforge_bio::UtcpCombination::PPlus,
+                    "difference" => nctforge_bio::UtcpCombination::Difference,
+                    other => {
+                        return Err(io::Error::other(format!(
+                            "unknown UTCP combination {other:?}; use p_plus or difference"
+                        ))
+                        .into());
+                    }
+                };
+                let evaluation = nctforge_bio::combine_utcp(
+                    &tcp_eval,
+                    &tcp_bytes,
+                    &ntcp_eval,
+                    &ntcp_bytes,
+                    combination,
+                )?;
+                write_new_json(&output, &evaluation)?;
+                println!("UTCP evaluation at {}", output.display());
+                println!("probability: {:.6}", evaluation.probability);
+                println!("qualification: {}", evaluation.qualification);
+            }
+        },
         Some(Command::Position(args)) => match args.command {
             PositionCommand::Aim {
                 case,
@@ -4398,6 +4603,64 @@ fn fold_region_masks(
             .map_err(|error| io::Error::other(error.to_string()))?;
     }
     Ok(mask)
+}
+
+/// A loaded physical or biological dose bundle, resolved by schema.
+enum DoseBundle {
+    Physical(PhysicalDoseBundle),
+    Biological(nctforge_bio::BiologicalDoseBundle),
+}
+
+/// Load a dose bundle whose `schema_version` is a known dose contract.
+fn load_dose_bundle(bytes: &[u8]) -> Result<DoseBundle, Box<dyn Error>> {
+    let schema: serde_json::Value = serde_json::from_slice(bytes)?;
+    match schema
+        .get("schema_version")
+        .and_then(|v| v.as_str())
+        .unwrap_or_default()
+    {
+        nctforge_core::PHYSICAL_DOSE_BUNDLE_SCHEMA => {
+            Ok(DoseBundle::Physical(serde_json::from_slice(bytes)?))
+        }
+        nctforge_bio::BIOLOGICAL_DOSE_BUNDLE_SCHEMA => {
+            Ok(DoseBundle::Biological(serde_json::from_slice(bytes)?))
+        }
+        other => Err(io::Error::other(format!("unsupported dose bundle schema {other:?}")).into()),
+    }
+}
+
+/// A dose quantity resolved out of a loaded bundle.
+struct DoseSelection<'a> {
+    case_id: &'a str,
+    values: &'a [f64],
+    unit: &'a str,
+    voxel_volume_mm3: f64,
+}
+
+impl DoseBundle {
+    /// Resolve the requested quantity's values and metadata.
+    fn select(&self, quantity: &str) -> Result<DoseSelection<'_>, Box<dyn Error>> {
+        match self {
+            Self::Physical(bundle) => {
+                let (values, unit) = dose_values(bundle, quantity)?;
+                Ok(DoseSelection {
+                    case_id: &bundle.case_id,
+                    values,
+                    unit,
+                    voxel_volume_mm3: bundle.geometry.spacing_mm.iter().product(),
+                })
+            }
+            Self::Biological(bundle) => {
+                let (values, unit) = biological_dose_values(bundle, quantity)?;
+                Ok(DoseSelection {
+                    case_id: &bundle.case_id,
+                    values,
+                    unit,
+                    voxel_volume_mm3: bundle.geometry.spacing_mm.iter().product(),
+                })
+            }
+        }
+    }
 }
 
 fn dose_values<'a>(

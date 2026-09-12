@@ -17,12 +17,20 @@
 
 #![forbid(unsafe_code)]
 
+mod endpoint;
+
 use std::collections::{BTreeMap, BTreeSet};
 
 use nctforge_core::{ContentReference, DoseComponent, DoseUnit, GridGeometry, PhysicalDoseBundle};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use thiserror::Error;
+
+pub use endpoint::{
+    AppliedDoseStatistic, DoseStatistic, ENDPOINT_EVALUATION_SCHEMA, ENDPOINT_MODEL_SCHEMA,
+    EndpointEvaluation, EndpointFunction, EndpointKind, EndpointModel, EvaluatedEndpoint,
+    UtcpCombination, UtcpComponents, combine_utcp, evaluate_endpoint,
+};
 
 pub const BIOLOGICAL_MODEL_SCHEMA: &str = "nctforge.biological-model/0.2.0";
 pub const BIOLOGICAL_DOSE_BUNDLE_SCHEMA: &str = "nctforge.biological-dose-bundle/0.2.0";

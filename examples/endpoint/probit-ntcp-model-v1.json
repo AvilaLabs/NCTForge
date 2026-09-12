@@ -1,0 +1,14 @@
+{
+  "schema_version": "nctforge.endpoint-model/0.1.0",
+  "id": "nctforge.examples.probit-ntcp.v1",
+  "endpoint": "ntcp",
+  "function": {
+    "kind": "probit",
+    "td50": 40.0,
+    "m": 0.3
+  },
+  "dose_statistic": {
+    "statistic": "mean"
+  },
+  "validity_domain": "illustrative Lyman NTCP over mean dose; synthetic parameters, no clinical claim"
+}

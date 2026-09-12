@@ -3,6 +3,7 @@
 #![forbid(unsafe_code)]
 
 mod exposure;
+mod stats;
 
 use std::collections::BTreeSet;
 
@@ -12,6 +13,9 @@ use thiserror::Error;
 pub use exposure::{
     BoundFileReference, EXPOSURE_PLAN_SCHEMA, Exposure, ExposureCovariance, ExposurePlan,
     ExposurePlanError, WeightBasis, accumulate_exposures,
+};
+pub use stats::{
+    dose_covering_percent, equivalent_uniform_dose, masked_values, mean, volume_at_least,
 };
 
 /// A regular patient-coordinate voxel grid.
@@ -649,6 +653,10 @@ pub enum ValidationError {
     },
     #[error("mask {mask:?} contains a non-finite value")]
     NonFiniteMaskValue { mask: String },
+    #[error("dose selection {mask:?} contains a negative or non-finite value at voxel {index}")]
+    InvalidMaskedDose { mask: String, index: usize },
+    #[error("dose statistic {name} is invalid: {reason}")]
+    InvalidStatistic { name: &'static str, reason: String },
 }
 
 #[derive(Debug, Error, PartialEq, Eq)]

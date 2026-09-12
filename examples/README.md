@@ -22,3 +22,17 @@ the reviewed synthetic benchmark corpus.
 
 Usage is documented under "Biological interpretation and dose-volume
 histograms" in the repository README.
+
+## `endpoint/`
+
+- `logistic-tcp-model-v1.json` — a logistic TCP model (`d50`, `gamma50`)
+  reading serial-leaning `eud` (a=8) as its dose statistic.
+- `probit-ntcp-model-v1.json` — a Lyman probit NTCP model (`td50`, `m`)
+  reading the mean dose.
+- `voxel-poisson-tcp-model-v1.json` — a voxel-level LQ Poisson TCP model
+  (clonogen density, α, α/β, fraction count, source particles per
+  fraction) reading a `*_per_source_particle` dose volume directly.
+
+All are `nctforge.endpoint-model/0.1.0` artifacts with illustrative
+synthetic parameters; they carry no clinical claim and are not part of the
+frozen NF-BNCT-001 benchmark outputs.

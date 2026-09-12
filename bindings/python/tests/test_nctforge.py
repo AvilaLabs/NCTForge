@@ -434,6 +434,97 @@ class BiologicalLayerTest(unittest.TestCase):
                 )
 
 
+class MetricsAndEndpointTest(unittest.TestCase):
+    def _endpoint_model_json(self) -> str:
+        return json.dumps(
+            {
+                "schema_version": "nctforge.endpoint-model/0.1.0",
+                "id": "nctforge.tests.logistic-tcp.v1",
+                "endpoint": "tcp",
+                "function": {
+                    "kind": "logistic",
+                    "d50": 2.0e-12,
+                    "gamma50": 2.0,
+                },
+                "dose_statistic": {"statistic": "mean"},
+            }
+        )
+
+    def test_metrics_match_rust_semantics(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            bundle = nctforge.load_physical_dose_bundle(
+                _write(tmp, "dose.json", _physical_bundle_json())
+            )
+            metrics = nctforge.compute_metrics(
+                bundle,
+                "physical_total",
+                "all",
+                [True, True],
+                [50.0, 100.0],
+                [1.75e-12, 2.0e-12],
+                [1.0, 10.0],
+            )
+            self.assertEqual(metrics.unit, "gray_per_source_particle")
+            self.assertEqual(metrics.minimum_dose, metrics.maximum_dose)
+            self.assertEqual(metrics.mean_dose, 1.75e-12)
+            # Uniform two-voxel volume: D100 = D50 = the single dose level.
+            self.assertEqual(metrics.dx, [(50.0, 1.75e-12), (100.0, 1.75e-12)])
+            self.assertEqual(metrics.vx, [(1.75e-12, 1.0), (2.0e-12, 0.0)])
+            self.assertEqual(metrics.eud[0][1], 1.75e-12)  # a=1 is the mean
+            self.assertEqual(metrics.schema_version,
+                             "nctforge.dose-metrics/0.1.0")
+
+    def test_endpoint_evaluate_and_utcp(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            bundle = nctforge.load_physical_dose_bundle(
+                _write(tmp, "dose.json", _physical_bundle_json())
+            )
+            model = nctforge.load_endpoint_model(
+                _write(tmp, "model.json", self._endpoint_model_json())
+            )
+            tcp = nctforge.evaluate_endpoint(
+                model, bundle, "physical_total", "all", [True, True]
+            )
+            self.assertEqual(tcp.endpoint, "tcp")
+            # Mean dose 1.75e-12 with d50 = 2e-12, gamma50 = 2:
+            # P = 1/(1 + (2/1.75)^8).
+            expected = 1.0 / (1.0 + (2.0 / 1.75) ** 8)
+            self.assertAlmostEqual(tcp.probability, expected, delta=1e-9)
+            self.assertEqual(tcp.dose_statistic.kind, "mean")
+
+            ntcp_document = json.loads(self._endpoint_model_json())
+            ntcp_document["endpoint"] = "ntcp"
+            ntcp_document["function"] = {
+                "kind": "probit",
+                "td50": 1.75e-12,
+                "m": 0.3,
+            }
+            ntcp_model = nctforge.load_endpoint_model(
+                _write(tmp, "ntcp.json", json.dumps(ntcp_document))
+            )
+            ntcp = nctforge.evaluate_endpoint(
+                ntcp_model, bundle, "physical_total", "all", [True, True]
+            )
+            # Mean dose = td50 -> probit is ~0.5 within approximation bound.
+            self.assertAlmostEqual(ntcp.probability, 0.5, delta=1e-6)
+
+            utcp = nctforge.combine_utcp(tcp, ntcp, "p_plus")
+            self.assertEqual(utcp.endpoint, "utcp")
+            self.assertAlmostEqual(
+                utcp.probability,
+                tcp.probability * (1.0 - ntcp.probability),
+                delta=1e-12,
+            )
+            self.assertIsNone(utcp.dose_statistic)
+            self.assertEqual(
+                utcp.qualification, "synthetic_research_only_not_clinical"
+            )
+
+            # Two TCP evaluations cannot be combined.
+            with self.assertRaises(NctForgeError):
+                nctforge.combine_utcp(tcp, tcp, "p_plus")
+
+
 class EvidenceBundleTest(unittest.TestCase):
     def test_verify_detects_tampering(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -1247,6 +1247,516 @@ fn sha256_hex_of_json<T: serde::Serialize>(value: &T) -> PyResult<String> {
     Ok(nctforge_evidence::sha256_hex(&bytes))
 }
 
+/// Resolve `(values, unit)` for a quantity over a physical bundle.
+fn physical_selection<'a>(
+    bundle: &'a nctforge_core::PhysicalDoseBundle,
+    quantity: &str,
+) -> PyResult<(&'a [f64], String)> {
+    if let Some(name) = quantity.strip_prefix("component:") {
+        let component = bundle
+            .components
+            .iter()
+            .find(|volume| {
+                serde_json::to_value(volume.component)
+                    .map(|v| v == serde_json::Value::String(name.into()))
+                    .unwrap_or(false)
+            })
+            .ok_or_else(|| reject(format!("bundle lacks component {name}")))?;
+        return Ok((
+            component.values.as_slice(),
+            dose_unit_name(component.unit),
+        ));
+    }
+    if quantity == "physical_total" {
+        return Ok((
+            bundle.physical_total.values.as_slice(),
+            dose_unit_name(bundle.physical_total.unit),
+        ));
+    }
+    Err(reject(format!("unknown physical quantity {quantity:?}")))
+}
+
+/// Resolve `(values, unit)` for a quantity over a biological bundle.
+fn biological_selection<'a>(
+    bundle: &'a BiologicalDoseBundle,
+    quantity: &str,
+) -> PyResult<(&'a [f64], String)> {
+    if let Some(name) = quantity.strip_prefix("component:") {
+        let component = bundle
+            .components
+            .iter()
+            .find(|volume| {
+                serde_json::to_value(volume.component)
+                    .map(|v| v == serde_json::Value::String(name.into()))
+                    .unwrap_or(false)
+            })
+            .ok_or_else(|| reject(format!("bundle lacks component {name}")))?;
+        return Ok((component.values.as_slice(), component.unit.clone()));
+    }
+    if quantity == "biological_total" {
+        return Ok((
+            bundle.total.values.as_slice(),
+            bundle.total.unit.clone(),
+        ));
+    }
+    Err(reject(format!(
+        "unknown biological quantity {quantity:?}"
+    )))
+}
+
+/// Exact dose-volume metrics over a named voxel mask.
+#[pyclass(frozen, name = "RegionDoseMetrics")]
+struct PyRegionDoseMetrics {
+    inner: nctforge_evidence::RegionDoseMetrics,
+}
+
+#[pymethods]
+impl PyRegionDoseMetrics {
+    #[getter]
+    fn schema_version(&self) -> &str {
+        &self.inner.schema_version
+    }
+
+    #[getter]
+    fn region(&self) -> &str {
+        &self.inner.region
+    }
+
+    #[getter]
+    fn quantity(&self) -> &str {
+        &self.inner.quantity
+    }
+
+    #[getter]
+    fn unit(&self) -> &str {
+        &self.inner.unit
+    }
+
+    #[getter]
+    fn minimum_dose(&self) -> f64 {
+        self.inner.minimum_dose
+    }
+
+    #[getter]
+    fn mean_dose(&self) -> f64 {
+        self.inner.mean_dose
+    }
+
+    #[getter]
+    fn maximum_dose(&self) -> f64 {
+        self.inner.maximum_dose
+    }
+
+    /// Requested `D_x` readings as `(percent, dose)` pairs.
+    #[getter]
+    fn dx(&self) -> Vec<(f64, f64)> {
+        self.inner
+            .dx
+            .iter()
+            .map(|metric| (metric.percent, metric.dose))
+            .collect()
+    }
+
+    /// Requested `V_x` readings as `(level, volume_fraction)` pairs.
+    #[getter]
+    fn vx(&self) -> Vec<(f64, f64)> {
+        self.inner
+            .vx
+            .iter()
+            .map(|metric| (metric.level, metric.volume_fraction))
+            .collect()
+    }
+
+    /// Requested EUD readings as `(a, dose)` pairs.
+    #[getter]
+    fn eud(&self) -> Vec<(f64, f64)> {
+        self.inner
+            .eud
+            .iter()
+            .map(|metric| (metric.a, metric.dose))
+            .collect()
+    }
+
+    fn to_json(&self) -> PyResult<String> {
+        serde_json::to_string_pretty(&self.inner).map_err(reject)
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn region_dose_metrics(
+    case_id: &str,
+    quantity: &str,
+    mask_name: &str,
+    mask_voxels: &[bool],
+    source_sha256: String,
+    unit: &str,
+    values: &[f64],
+    voxel_volume: f64,
+    dx: Vec<f64>,
+    vx: Vec<f64>,
+    eud: Vec<f64>,
+) -> PyResult<PyRegionDoseMetrics> {
+    let source = nctforge_core::ContentReference {
+        id: case_id.to_string(),
+        sha256: source_sha256,
+    };
+    let metrics = nctforge_evidence::RegionDoseMetrics::compute(
+        case_id,
+        mask_name,
+        quantity,
+        source,
+        unit,
+        values,
+        mask_voxels,
+        voxel_volume,
+        &dx,
+        &vx,
+        &eud,
+    )
+    .map_err(reject)?;
+    Ok(PyRegionDoseMetrics { inner: metrics })
+}
+
+/// Compute exact dose-volume metrics (D_x, V_x, min/mean/max, EUD) for
+/// `quantity` over `mask_voxels` in `bundle`'s grid order.
+#[pyfunction]
+#[allow(clippy::too_many_arguments)]
+fn compute_metrics(
+    physical: &PyPhysicalDoseBundle,
+    quantity: &str,
+    mask_name: &str,
+    mask_voxels: Vec<bool>,
+    dx: Vec<f64>,
+    vx: Vec<f64>,
+    eud: Vec<f64>,
+) -> PyResult<PyRegionDoseMetrics> {
+    let bundle = &physical.inner;
+    let (values, unit) = physical_selection(bundle, quantity)?;
+    region_dose_metrics(
+        &bundle.case_id,
+        quantity,
+        mask_name,
+        &mask_voxels,
+        sha256_hex_of_json(bundle)?,
+        &unit,
+        values,
+        bundle.geometry.spacing_mm.iter().product(),
+        dx,
+        vx,
+        eud,
+    )
+}
+
+/// Same as `compute_metrics` for a biological bundle.
+#[pyfunction]
+#[allow(clippy::too_many_arguments)]
+fn compute_metrics_biological(
+    bundle: &PyBiologicalDoseBundle,
+    quantity: &str,
+    mask_name: &str,
+    mask_voxels: Vec<bool>,
+    dx: Vec<f64>,
+    vx: Vec<f64>,
+    eud: Vec<f64>,
+) -> PyResult<PyRegionDoseMetrics> {
+    let inner = &bundle.inner;
+    let (values, unit) = biological_selection(inner, quantity)?;
+    region_dose_metrics(
+        &inner.case_id,
+        quantity,
+        mask_name,
+        &mask_voxels,
+        sha256_hex_of_json(inner)?,
+        &unit,
+        values,
+        inner.geometry.spacing_mm.iter().product(),
+        dx,
+        vx,
+        eud,
+    )
+}
+
+/// A validated `nctforge.endpoint-model/0.1.0` artifact with its source bytes.
+#[pyclass(frozen, name = "EndpointModel")]
+struct PyEndpointModel {
+    inner: nctforge_bio::EndpointModel,
+    bytes: Vec<u8>,
+}
+
+#[pymethods]
+impl PyEndpointModel {
+    #[getter]
+    fn schema_version(&self) -> &str {
+        &self.inner.schema_version
+    }
+
+    #[getter]
+    fn id(&self) -> &str {
+        &self.inner.id
+    }
+
+    /// `tcp` or `ntcp`.
+    #[getter]
+    fn endpoint(&self) -> PyResult<String> {
+        serde_json::to_value(self.inner.endpoint)
+            .and_then(serde_json::from_value::<String>)
+            .map_err(reject)
+    }
+
+    fn to_json(&self) -> PyResult<String> {
+        serde_json::to_string_pretty(&self.inner).map_err(reject)
+    }
+}
+
+/// Load and validate an `nctforge.endpoint-model/0.1.0` artifact.
+#[pyfunction]
+fn load_endpoint_model(path: PathBuf) -> PyResult<PyEndpointModel> {
+    let bytes = fs::read(&path).map_err(reject)?;
+    let model: nctforge_bio::EndpointModel =
+        serde_json::from_slice(&bytes).map_err(reject)?;
+    model.validate().map_err(reject)?;
+    Ok(PyEndpointModel { inner: model, bytes })
+}
+
+/// The scalar dose statistic a volume-collapsed endpoint consumed.
+#[pyclass(frozen, name = "AppliedDoseStatistic")]
+struct PyAppliedDoseStatistic {
+    inner: nctforge_bio::AppliedDoseStatistic,
+}
+
+#[pymethods]
+impl PyAppliedDoseStatistic {
+    #[getter]
+    fn kind(&self) -> &str {
+        &self.inner.kind
+    }
+
+    /// EUD organ parameter when `kind` is `eud`.
+    #[getter]
+    fn parameter(&self) -> Option<f64> {
+        self.inner.parameter
+    }
+
+    #[getter]
+    fn value(&self) -> f64 {
+        self.inner.value
+    }
+
+    #[getter]
+    fn unit(&self) -> &str {
+        &self.inner.unit
+    }
+}
+
+/// A scored `nctforge.endpoint-evaluation/0.1.0` report.
+#[pyclass(frozen, name = "EndpointEvaluation")]
+struct PyEndpointEvaluation {
+    inner: nctforge_bio::EndpointEvaluation,
+    bytes: Vec<u8>,
+}
+
+#[pymethods]
+impl PyEndpointEvaluation {
+    #[getter]
+    fn schema_version(&self) -> &str {
+        &self.inner.schema_version
+    }
+
+    #[getter]
+    fn case_id(&self) -> &str {
+        &self.inner.case_id
+    }
+
+    /// `tcp`, `ntcp`, or `utcp`.
+    #[getter]
+    fn endpoint(&self) -> PyResult<String> {
+        serde_json::to_value(self.inner.endpoint)
+            .and_then(serde_json::from_value::<String>)
+            .map_err(reject)
+    }
+
+    #[getter]
+    fn region(&self) -> &str {
+        &self.inner.region
+    }
+
+    #[getter]
+    fn quantity(&self) -> &str {
+        &self.inner.quantity
+    }
+
+    #[getter]
+    fn probability(&self) -> f64 {
+        self.inner.probability
+    }
+
+    /// The consumed scalar statistic; absent for `voxel_poisson_tcp` and
+    /// UTCP combinations.
+    #[getter]
+    fn dose_statistic(&self) -> Option<PyAppliedDoseStatistic> {
+        self.inner
+            .dose_statistic
+            .clone()
+            .map(|inner| PyAppliedDoseStatistic { inner })
+    }
+
+    #[getter]
+    fn qualification(&self) -> &str {
+        &self.inner.qualification
+    }
+
+    fn to_json(&self) -> PyResult<String> {
+        serde_json::to_string_pretty(&self.inner).map_err(reject)
+    }
+
+    /// Write the evaluation JSON; refuses to overwrite an existing file.
+    fn write(&self, output: PathBuf) -> PyResult<()> {
+        use std::io::Write as _;
+        let mut file = fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&output)
+            .map_err(reject)?;
+        file.write_all(&self.bytes).map_err(reject)?;
+        file.write_all(b"\n").map_err(reject)?;
+        file.sync_all().map_err(reject)
+    }
+}
+
+/// Load and validate an endpoint-evaluation report (e.g. produced by the
+/// CLI), keeping its file bytes as the content identity.
+#[pyfunction]
+fn load_endpoint_evaluation(path: PathBuf) -> PyResult<PyEndpointEvaluation> {
+    let bytes = fs::read(&path).map_err(reject)?;
+    let evaluation: nctforge_bio::EndpointEvaluation =
+        serde_json::from_slice(&bytes).map_err(reject)?;
+    evaluation.validate().map_err(reject)?;
+    Ok(PyEndpointEvaluation {
+        inner: evaluation,
+        bytes,
+    })
+}
+
+fn run_endpoint_evaluation(
+    model: &PyEndpointModel,
+    case_id: &str,
+    mask_name: &str,
+    mask_voxels: &[bool],
+    quantity: &str,
+    unit: &str,
+    values: &[f64],
+    voxel_volume: f64,
+    source_sha256: String,
+) -> PyResult<PyEndpointEvaluation> {
+    let mask = RegionMask {
+        name: mask_name.to_string(),
+        voxels: mask_voxels.to_vec(),
+    };
+    let source = nctforge_core::ContentReference {
+        id: case_id.to_string(),
+        sha256: source_sha256,
+    };
+    let evaluation = nctforge_bio::evaluate_endpoint(
+        &model.inner,
+        &model.bytes,
+        case_id,
+        &mask,
+        quantity,
+        unit,
+        values,
+        voxel_volume,
+        source,
+    )
+    .map_err(reject)?;
+    let bytes = serde_json::to_vec_pretty(&evaluation).map_err(reject)?;
+    Ok(PyEndpointEvaluation {
+        inner: evaluation,
+        bytes,
+    })
+}
+
+/// Score an endpoint model over a physical bundle's `quantity` restricted
+/// to `mask_voxels` in grid order.
+#[pyfunction]
+#[allow(clippy::too_many_arguments)]
+fn evaluate_endpoint(
+    model: &PyEndpointModel,
+    physical: &PyPhysicalDoseBundle,
+    quantity: &str,
+    mask_name: &str,
+    mask_voxels: Vec<bool>,
+) -> PyResult<PyEndpointEvaluation> {
+    let bundle = &physical.inner;
+    let (values, unit) = physical_selection(bundle, quantity)?;
+    run_endpoint_evaluation(
+        model,
+        &bundle.case_id,
+        mask_name,
+        &mask_voxels,
+        quantity,
+        &unit,
+        values,
+        bundle.geometry.spacing_mm.iter().product(),
+        sha256_hex_of_json(bundle)?,
+    )
+}
+
+/// Same as `evaluate_endpoint` for a biological bundle.
+#[pyfunction]
+fn evaluate_endpoint_biological(
+    model: &PyEndpointModel,
+    bundle: &PyBiologicalDoseBundle,
+    quantity: &str,
+    mask_name: &str,
+    mask_voxels: Vec<bool>,
+) -> PyResult<PyEndpointEvaluation> {
+    let inner = &bundle.inner;
+    let (values, unit) = biological_selection(inner, quantity)?;
+    run_endpoint_evaluation(
+        model,
+        &inner.case_id,
+        mask_name,
+        &mask_voxels,
+        quantity,
+        &unit,
+        values,
+        inner.geometry.spacing_mm.iter().product(),
+        sha256_hex_of_json(inner)?,
+    )
+}
+
+/// Combine a TCP and an NTCP evaluation into a UTCP report.
+/// `combination` is `p_plus` (TCP·(1−NTCP)) or `difference` (TCP−NTCP).
+#[pyfunction]
+fn combine_utcp(
+    tcp: &PyEndpointEvaluation,
+    ntcp: &PyEndpointEvaluation,
+    combination: &str,
+) -> PyResult<PyEndpointEvaluation> {
+    let combination = match combination {
+        "p_plus" => nctforge_bio::UtcpCombination::PPlus,
+        "difference" => nctforge_bio::UtcpCombination::Difference,
+        other => {
+            return Err(reject(format!(
+                "unknown UTCP combination {other:?}; use p_plus or difference"
+            )));
+        }
+    };
+    let evaluation = nctforge_bio::combine_utcp(
+        &tcp.inner,
+        &tcp.bytes,
+        &ntcp.inner,
+        &ntcp.bytes,
+        combination,
+    )
+    .map_err(reject)?;
+    let bytes = serde_json::to_vec_pretty(&evaluation).map_err(reject)?;
+    Ok(PyEndpointEvaluation {
+        inner: evaluation,
+        bytes,
+    })
+}
+
 /// Re-hash every artifact declared by a bundle's manifest; returns the
 /// verified manifest's case id and artifact count.
 #[pyfunction]
@@ -1283,6 +1793,10 @@ fn _nctforge(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyBiologicalDoseBundle>()?;
     m.add_class::<PyAppliedFractionation>()?;
     m.add_class::<PyDoseVolumeHistogram>()?;
+    m.add_class::<PyRegionDoseMetrics>()?;
+    m.add_class::<PyEndpointModel>()?;
+    m.add_class::<PyAppliedDoseStatistic>()?;
+    m.add_class::<PyEndpointEvaluation>()?;
     m.add_function(wrap_pyfunction!(backends, m)?)?;
     m.add_function(wrap_pyfunction!(file_sha256, m)?)?;
     m.add_function(wrap_pyfunction!(generate_case, m)?)?;
@@ -1300,6 +1814,13 @@ fn _nctforge(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(apply_model, m)?)?;
     m.add_function(wrap_pyfunction!(compute_dvh, m)?)?;
     m.add_function(wrap_pyfunction!(compute_dvh_biological, m)?)?;
+    m.add_function(wrap_pyfunction!(compute_metrics, m)?)?;
+    m.add_function(wrap_pyfunction!(compute_metrics_biological, m)?)?;
+    m.add_function(wrap_pyfunction!(load_endpoint_model, m)?)?;
+    m.add_function(wrap_pyfunction!(load_endpoint_evaluation, m)?)?;
+    m.add_function(wrap_pyfunction!(evaluate_endpoint, m)?)?;
+    m.add_function(wrap_pyfunction!(evaluate_endpoint_biological, m)?)?;
+    m.add_function(wrap_pyfunction!(combine_utcp, m)?)?;
     m.add_function(wrap_pyfunction!(verify_evidence_bundle, m)?)?;
     Ok(())
 }

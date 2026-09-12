@@ -330,6 +330,84 @@ class DoseVolumeHistogram:
     def region_volume_mm3(self) -> float: ...
     def to_json(self) -> str: ...
 
+class RegionDoseMetrics:
+    """Exact ``nctforge.dose-metrics/0.1.0`` metrics over a voxel mask."""
+
+    @property
+    def schema_version(self) -> str: ...
+    @property
+    def region(self) -> str: ...
+    @property
+    def quantity(self) -> str: ...
+    @property
+    def unit(self) -> str: ...
+    @property
+    def minimum_dose(self) -> float: ...
+    @property
+    def mean_dose(self) -> float: ...
+    @property
+    def maximum_dose(self) -> float: ...
+    @property
+    def dx(self) -> list[tuple[float, float]]:
+        """Requested ``D_x`` readings as ``(percent, dose)`` pairs."""
+    @property
+    def vx(self) -> list[tuple[float, float]]:
+        """Requested ``V_x`` readings as ``(level, volume_fraction)`` pairs."""
+    @property
+    def eud(self) -> list[tuple[float, float]]:
+        """Requested EUD readings as ``(a, dose)`` pairs."""
+    def to_json(self) -> str: ...
+
+class EndpointModel:
+    """A validated ``nctforge.endpoint-model/0.1.0`` artifact."""
+
+    @property
+    def schema_version(self) -> str: ...
+    @property
+    def id(self) -> str: ...
+    @property
+    def endpoint(self) -> str:
+        """``tcp`` or ``ntcp``."""
+    def to_json(self) -> str: ...
+
+class AppliedDoseStatistic:
+    """The scalar dose statistic a volume-collapsed endpoint consumed."""
+
+    @property
+    def kind(self) -> str: ...
+    @property
+    def parameter(self) -> float | None:
+        """EUD organ parameter when ``kind`` is ``eud``."""
+    @property
+    def value(self) -> float: ...
+    @property
+    def unit(self) -> str: ...
+
+class EndpointEvaluation:
+    """A scored ``nctforge.endpoint-evaluation/0.1.0`` report."""
+
+    @property
+    def schema_version(self) -> str: ...
+    @property
+    def case_id(self) -> str: ...
+    @property
+    def endpoint(self) -> str:
+        """``tcp``, ``ntcp``, or ``utcp``."""
+    @property
+    def region(self) -> str: ...
+    @property
+    def quantity(self) -> str: ...
+    @property
+    def probability(self) -> float: ...
+    @property
+    def dose_statistic(self) -> AppliedDoseStatistic | None:
+        """Absent for ``voxel_poisson_tcp`` and UTCP combinations."""
+    @property
+    def qualification(self) -> str: ...
+    def to_json(self) -> str: ...
+    def write(self, output: str | PathLike[str]) -> None:
+        """Write the evaluation JSON; refuses to overwrite an existing file."""
+
 def load_physical_dose_bundle(path: str | PathLike[str]) -> PhysicalDoseBundle: ...
 def collect_run(working_directory: str | PathLike[str]) -> PhysicalDoseBundle:
     """Collect a completed OpenMC run directory into a dose bundle."""
@@ -356,5 +434,49 @@ def compute_dvh_biological(
     bins: int,
 ) -> DoseVolumeHistogram:
     """Histogram ``component:NAME`` or ``biological_total`` over the mask."""
+def compute_metrics(
+    physical: PhysicalDoseBundle,
+    quantity: str,
+    mask_name: str,
+    mask_voxels: list[bool],
+    dx: list[float],
+    vx: list[float],
+    eud: list[float],
+) -> RegionDoseMetrics:
+    """Exact D_x/V_x/min/mean/max/EUD metrics over the mask."""
+def compute_metrics_biological(
+    bundle: BiologicalDoseBundle,
+    quantity: str,
+    mask_name: str,
+    mask_voxels: list[bool],
+    dx: list[float],
+    vx: list[float],
+    eud: list[float],
+) -> RegionDoseMetrics:
+    """Same as :func:`compute_metrics` for a biological bundle."""
+def load_endpoint_model(path: str | PathLike[str]) -> EndpointModel: ...
+def load_endpoint_evaluation(path: str | PathLike[str]) -> EndpointEvaluation: ...
+def evaluate_endpoint(
+    model: EndpointModel,
+    physical: PhysicalDoseBundle,
+    quantity: str,
+    mask_name: str,
+    mask_voxels: list[bool],
+) -> EndpointEvaluation:
+    """Score a TCP/NTCP model over a physical-bundle dose selection."""
+def evaluate_endpoint_biological(
+    model: EndpointModel,
+    bundle: BiologicalDoseBundle,
+    quantity: str,
+    mask_name: str,
+    mask_voxels: list[bool],
+) -> EndpointEvaluation:
+    """Same as :func:`evaluate_endpoint` for a biological bundle."""
+def combine_utcp(
+    tcp: EndpointEvaluation,
+    ntcp: EndpointEvaluation,
+    combination: str,
+) -> EndpointEvaluation:
+    """Combine TCP and NTCP evaluations; ``p_plus`` or ``difference``."""
 def verify_evidence_bundle(root: str | PathLike[str]) -> tuple[str, int]:
     """Re-hash every manifest artifact; returns (case_id, artifact count)."""

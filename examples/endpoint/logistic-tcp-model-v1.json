@@ -1,0 +1,15 @@
+{
+  "schema_version": "nctforge.endpoint-model/0.1.0",
+  "id": "nctforge.examples.logistic-tcp.v1",
+  "endpoint": "tcp",
+  "function": {
+    "kind": "logistic",
+    "d50": 50.0,
+    "gamma50": 2.0
+  },
+  "dose_statistic": {
+    "statistic": "eud",
+    "a": 8.0
+  },
+  "validity_domain": "illustrative logistic TCP over serial-leaning EUD; synthetic parameters, no clinical claim"
+}
