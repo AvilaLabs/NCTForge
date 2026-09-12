@@ -24,7 +24,10 @@ use crate::{
 pub const OPENMC_DEFAULT_STRIDE: u64 = 152_917;
 pub const CANDIDATE_REFERENCE_SEEDS: [u64; 3] = [20260831, 314159265, 271828182];
 const EXECUTION_PROFILE_SCHEMA: &str = "nctforge.openmc-execution-profile/0.1.0";
+const EXECUTION_PROFILE_SCHEMA_V2: &str = "nctforge.openmc-execution-profile/0.2.0";
 const INPUT_MANIFEST_SCHEMA: &str = "nctforge.openmc-input-manifest/0.1.0";
+const INPUT_MANIFEST_SCHEMA_V2: &str = "nctforge.openmc-input-manifest/0.2.0";
+pub const ACCEPTANCE_CONTRACT_SCHEMA: &str = "nctforge.acceptance-contract/0.1.0";
 const XML_MEDIA_TYPE: &str = "application/xml";
 const JSON_MEDIA_TYPE: &str = "application/json";
 const IDENTITY_DIRECTION: [f64; 9] = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0];
@@ -53,6 +56,13 @@ const NEUTRON_FLUX_TALLY_ID: u32 = 9;
 const PHOTON_FLUX_TALLY_ID: u32 = 10;
 const NEUTRON_LEAKAGE_TALLY_ID: u32 = 11;
 const PHOTON_LEAKAGE_TALLY_ID: u32 = 12;
+
+// Acceptance ROI meshes and their mesh filters start here; each region gets
+// one mesh, one mesh filter, and ROI_TALLIES_PER_REGION tallies.
+const ROI_MESH_ID_BASE: u32 = 2;
+const ROI_MESH_FILTER_ID_BASE: u32 = 10;
+const ROI_TALLY_ID_BASE: u32 = 21;
+const ROI_TALLIES_PER_REGION: u32 = 9;
 
 /// Versioned controls that materially affect one OpenMC input deck.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -83,11 +93,24 @@ pub struct OpenMcExecutionProfile {
     pub event_based: bool,
     pub neutron_diagnostic_energy_grid_ev: Vec<f64>,
     pub photon_diagnostic_energy_grid_ev: Vec<f64>,
+    /// Run scale override introduced by profile schema 0.2.0. When absent the
+    /// case's `requested_histories` applies. Required for candidate-reference
+    /// executions, whose history count is larger than the smoke case value.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub requested_histories: Option<u64>,
 }
 
 impl OpenMcExecutionProfile {
     pub fn validate(&self) -> Result<(), OpenMcProfileError> {
-        if self.schema_version != EXECUTION_PROFILE_SCHEMA {
+        if self.schema_version != EXECUTION_PROFILE_SCHEMA
+            && self.schema_version != EXECUTION_PROFILE_SCHEMA_V2
+        {
+            return Err(OpenMcProfileError::UnsupportedSchema(
+                self.schema_version.clone(),
+            ));
+        }
+        if self.requested_histories.is_some() && self.schema_version != EXECUTION_PROFILE_SCHEMA_V2
+        {
             return Err(OpenMcProfileError::UnsupportedSchema(
                 self.schema_version.clone(),
             ));
@@ -116,6 +139,16 @@ impl OpenMcExecutionProfile {
             }
             if !CANDIDATE_REFERENCE_SEEDS.contains(&self.seed) {
                 return Err(OpenMcProfileError::UnregisteredCandidateSeed(self.seed));
+            }
+            match self.requested_histories {
+                None => return Err(OpenMcProfileError::MissingCandidateHistories),
+                Some(histories) if !histories.is_multiple_of(u64::from(self.batches)) => {
+                    return Err(OpenMcProfileError::HistoriesNotDivisibleByBatches {
+                        histories,
+                        batches: self.batches,
+                    });
+                }
+                _ => {}
             }
         }
         if self.seed == 0 {
@@ -190,6 +223,163 @@ pub enum OpenMcTemperatureMethod {
     Nearest,
 }
 
+/// Predeclared acceptance contract bound into a candidate-reference deck.
+///
+/// Declares the single-bin reporting regions (which become their own tally
+/// meshes so ROI sums carry proper batch statistics), the central-axis depth
+/// profile selection, the evaluated mean deposited energies for the
+/// reaction-rate audits, the gate tolerances, and the registered seed set.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct OpenMcAcceptanceContract {
+    pub schema_version: String,
+    pub id: String,
+    pub case_id: String,
+    pub regions: Vec<OpenMcAcceptanceRegion>,
+    pub evaluated_mean_deposited_energy_ev: OpenMcEvaluatedDepositedEnergies,
+    pub gates: OpenMcAcceptanceGates,
+    pub seeds: Vec<u64>,
+    pub min_batches: u32,
+}
+
+impl OpenMcAcceptanceContract {
+    pub fn validate(&self) -> Result<(), OpenMcInputError> {
+        if self.schema_version != ACCEPTANCE_CONTRACT_SCHEMA {
+            return Err(OpenMcInputError::UnsupportedAcceptanceSchema(
+                self.schema_version.clone(),
+            ));
+        }
+        if self.id.trim().is_empty() || self.case_id.trim().is_empty() {
+            return Err(OpenMcInputError::InvalidAcceptance(
+                "id and case_id must be nonempty".into(),
+            ));
+        }
+        if self.regions.len() < 2 || self.seeds.len() < 3 || self.min_batches < 50 {
+            return Err(OpenMcInputError::InvalidAcceptance(
+                "acceptance requires at least two single-bin regions, three seeds, and fifty batches"
+                    .into(),
+            ));
+        }
+        for seed in &self.seeds {
+            if !CANDIDATE_REFERENCE_SEEDS.contains(seed) {
+                return Err(OpenMcInputError::InvalidAcceptance(format!(
+                    "seed {seed} is not a registered candidate-reference seed"
+                )));
+            }
+        }
+        let mut names = std::collections::BTreeSet::new();
+        for region in &self.regions {
+            if !names.insert(region.name.as_str()) {
+                return Err(OpenMcInputError::InvalidAcceptance(format!(
+                    "duplicate region {}",
+                    region.name
+                )));
+            }
+            for axis in [
+                &region.bounds_cm.x_cm,
+                &region.bounds_cm.y_cm,
+                &region.bounds_cm.z_cm,
+            ] {
+                if !axis.iter().all(|v| v.is_finite()) || axis[0] >= axis[1] {
+                    return Err(OpenMcInputError::InvalidAcceptance(format!(
+                        "region {} has degenerate bounds",
+                        region.name
+                    )));
+                }
+            }
+            if region.dimensions.iter().any(|dim| *dim == 0 || *dim > 1024) {
+                return Err(OpenMcInputError::InvalidAcceptance(format!(
+                    "region {} has unsupported dimensions {:?}",
+                    region.name, region.dimensions
+                )));
+            }
+        }
+        if !self
+            .regions
+            .iter()
+            .any(|region| region.precision_gated && region.dimensions == [1, 1, 1])
+        {
+            return Err(OpenMcInputError::InvalidAcceptance(
+                "at least one single-bin region must carry the precision gates".into(),
+            ));
+        }
+        for gate in [
+            self.gates.roi_relative_standard_uncertainty_max,
+            self.gates.voxel_median_relative_uncertainty_max,
+            self.gates.voxel_p95_relative_uncertainty_max,
+            self.gates.reaction_rate_agreement,
+            self.gates.neutron_heating_agreement,
+            self.gates.coupled_heating_agreement,
+            self.gates.chi_square_p_min,
+        ] {
+            if !gate.is_finite() || gate <= 0.0 {
+                return Err(OpenMcInputError::InvalidAcceptance(
+                    "gate tolerances must be positive".into(),
+                ));
+            }
+        }
+        if !(0.0..1.0).contains(&self.gates.voxel_max_fraction) {
+            return Err(OpenMcInputError::InvalidAcceptance(
+                "voxel_max_fraction must lie in (0,1)".into(),
+            ));
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct OpenMcAcceptanceRegion {
+    /// Lowercase region token used in tally names (`nctforge.roi.<name>.`).
+    pub name: String,
+    pub bounds_cm: OpenMcRegionBounds,
+    /// Mesh dimensions for the region. `[1,1,1]` gives a single-bin region
+    /// whose tally carries proper batch statistics for the ROI sum; a depth
+    /// profile uses e.g. `[1,1,40]` so each bin is its own batch-summed slice.
+    pub dimensions: [u32; 3],
+    /// When true the predeclared precision gates apply to this region's bins.
+    pub precision_gated: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct OpenMcRegionBounds {
+    pub x_cm: [f64; 2],
+    pub y_cm: [f64; 2],
+    pub z_cm: [f64; 2],
+}
+
+/// Evaluated mean deposited energies for the reaction-rate audits, bound to
+/// the evidence that derived them.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct OpenMcEvaluatedDepositedEnergies {
+    pub b10_mt107_ev: f64,
+    pub n14_mt103_ev: f64,
+    /// SHA-256 of the evidence document the constants were taken from.
+    pub evidence_sha256: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct OpenMcAcceptanceGates {
+    /// ROI-mean one-sigma relative sampling uncertainty ceiling.
+    pub roi_relative_standard_uncertainty_max: f64,
+    /// Voxels at or above this fraction of a component's maximum enter the
+    /// voxel-level precision gates.
+    pub voxel_max_fraction: f64,
+    pub voxel_median_relative_uncertainty_max: f64,
+    pub voxel_p95_relative_uncertainty_max: f64,
+    /// Reaction-rate times evaluated energy versus response estimator.
+    pub reaction_rate_agreement: f64,
+    /// B+N+H response sum versus dedicated neutron heating.
+    pub neutron_heating_agreement: f64,
+    /// Component sum versus dedicated coupled heating.
+    pub coupled_heating_agreement: f64,
+    /// Reduced-chi-square consistency floor across independent seeds.
+    pub chi_square_p_min: f64,
+}
+
 /// Exact JSON bytes used to create a deck. Hashes are calculated before parse.
 #[derive(Debug, Clone, Copy)]
 pub struct OpenMcInputArtifacts<'a> {
@@ -199,6 +389,9 @@ pub struct OpenMcInputArtifacts<'a> {
     pub response_set_json: &'a [u8],
     pub nuclear_data_manifest_json: &'a [u8],
     pub execution_profile_json: &'a [u8],
+    /// Acceptance contract required for `candidate_reference` decks and
+    /// forbidden otherwise, so smoke manifests remain byte-identical.
+    pub acceptance_json: Option<&'a [u8]>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -213,7 +406,26 @@ pub struct OpenMcInputManifest {
     pub execution: OpenMcRunControls,
     pub scoring_mesh: OpenMcScoringMesh,
     pub tallies: Vec<OpenMcTallyContract>,
+    /// Single-bin acceptance region meshes, present only when the deck binds
+    /// an acceptance contract (schema 0.2.0).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub rois: Vec<OpenMcRoiMesh>,
     pub xml_artifacts: Vec<OpenMcInputManifestArtifact>,
+}
+
+/// A single-bin acceptance region realized as its own OpenMC mesh so the
+/// region sum carries proper batch statistics.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct OpenMcRoiMesh {
+    pub name: String,
+    pub mesh_id: u32,
+    pub mesh_filter_id: u32,
+    pub dimensions: [u32; 3],
+    pub lower_left_cm: [f64; 3],
+    pub upper_right_cm: [f64; 3],
+    pub volume_cm3: f64,
+    pub mass_g: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -227,6 +439,8 @@ pub struct OpenMcInputBindings {
     pub response_generation_method: ContentReference,
     pub independent_response_review: ContentReference,
     pub execution_profile: ContentReference,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub acceptance: Option<ContentReference>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -271,6 +485,25 @@ pub struct OpenMcTallyContract {
     pub quantity: OpenMcTallyQuantity,
     pub raw_unit: OpenMcRawTallyUnit,
     pub collection_normalization: OpenMcCollectionNormalization,
+    /// `dose` tallies feed the physical dose bundle on the scoring mesh;
+    /// `acceptance` tallies are validated and evaluated but never collected.
+    /// Absent in schema 0.1.0 manifests, where all tallies follow the
+    /// historical dose/audit/diagnostic conventions.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scope: Option<OpenMcTallyScope>,
+    /// Acceptance region this tally reports on, when `scope` is `acceptance`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub roi: Option<String>,
+    /// Expected result bins (one for single-bin region tallies).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bins: Option<u32>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum OpenMcTallyScope {
+    Dose,
+    Acceptance,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -353,6 +586,45 @@ impl OpenMcInputDeck {
             parse_json("execution_profile", artifacts.execution_profile_json)?;
         execution_profile.validate()?;
 
+        // Contract presence and profile purpose must agree before any
+        // contract-internal consistency check runs.
+        if execution_profile.purpose == OpenMcExecutionPurpose::CandidateReference
+            && artifacts.acceptance_json.is_none()
+        {
+            return Err(OpenMcInputError::CandidateReferenceRequiresAcceptance);
+        }
+        if execution_profile.purpose != OpenMcExecutionPurpose::CandidateReference
+            && artifacts.acceptance_json.is_some()
+        {
+            return Err(OpenMcInputError::AcceptanceRequiresCandidateReference);
+        }
+        let acceptance = match artifacts.acceptance_json {
+            Some(bytes) => {
+                let contract: OpenMcAcceptanceContract = parse_json("acceptance", bytes)?;
+                contract.validate()?;
+                if contract.case_id != case.case_id {
+                    return Err(OpenMcInputError::InvalidAcceptance(format!(
+                        "acceptance case_id {} does not match case {}",
+                        contract.case_id, case.case_id
+                    )));
+                }
+                if !contract.seeds.contains(&execution_profile.seed) {
+                    return Err(OpenMcInputError::InvalidAcceptance(format!(
+                        "profile seed {} is not in the acceptance seed set",
+                        execution_profile.seed
+                    )));
+                }
+                if execution_profile.batches < contract.min_batches {
+                    return Err(OpenMcInputError::InvalidAcceptance(format!(
+                        "profile batches {} below acceptance minimum {}",
+                        execution_profile.batches, contract.min_batches
+                    )));
+                }
+                Some(contract)
+            }
+            None => None,
+        };
+
         if case.material != material {
             return Err(OpenMcInputError::CaseMaterialMismatch);
         }
@@ -415,17 +687,81 @@ impl OpenMcInputDeck {
         let scoring_mesh = scoring_mesh(case)?;
         validate_source_containment(&source, &scoring_mesh)?;
         let batch_count = u64::from(execution_profile.batches);
-        if !case.requested_histories.is_multiple_of(batch_count) {
+        let requested_histories = execution_profile
+            .requested_histories
+            .unwrap_or(case.requested_histories);
+        if !requested_histories.is_multiple_of(batch_count) {
             return Err(OpenMcInputError::HistoriesNotDivisibleByBatches {
-                histories: case.requested_histories,
+                histories: requested_histories,
                 batches: execution_profile.batches,
             });
         }
-        let particles_per_batch = case.requested_histories / batch_count;
+        let particles_per_batch = requested_histories / batch_count;
         if particles_per_batch == 0 || particles_per_batch > i64::MAX as u64 {
             return Err(OpenMcInputError::InvalidParticlesPerBatch(
                 particles_per_batch,
             ));
+        }
+
+        // Realize each acceptance region as a single-bin OpenMC mesh so the
+        // region sum carries proper batch statistics; summing scoring-mesh
+        // voxels would discard within-batch covariance.
+        let density_g_cm3 = scoring_mesh.voxel_mass_g / scoring_mesh.voxel_volume_cm3;
+        let mut roi_meshes: Vec<OpenMcRoiMesh> = Vec::new();
+        if let Some(contract) = &acceptance {
+            for (index, region) in contract.regions.iter().enumerate() {
+                if !region
+                    .name
+                    .chars()
+                    .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
+                {
+                    return Err(OpenMcInputError::InvalidAcceptance(format!(
+                        "region name {} is not a lowercase tally token",
+                        region.name
+                    )));
+                }
+                let bounds = &region.bounds_cm;
+                for (axis, lo, mesh_lo, mesh_hi) in [
+                    (
+                        "x",
+                        bounds.x_cm,
+                        scoring_mesh.lower_left_cm[0],
+                        scoring_mesh.upper_right_cm[0],
+                    ),
+                    (
+                        "y",
+                        bounds.y_cm,
+                        scoring_mesh.lower_left_cm[1],
+                        scoring_mesh.upper_right_cm[1],
+                    ),
+                    (
+                        "z",
+                        bounds.z_cm,
+                        scoring_mesh.lower_left_cm[2],
+                        scoring_mesh.upper_right_cm[2],
+                    ),
+                ] {
+                    if lo[0] < mesh_lo || lo[1] > mesh_hi {
+                        return Err(OpenMcInputError::InvalidAcceptance(format!(
+                            "region {} {axis} bounds exceed the scoring mesh",
+                            region.name
+                        )));
+                    }
+                }
+                let volume_cm3 = (bounds.x_cm[1] - bounds.x_cm[0])
+                    * (bounds.y_cm[1] - bounds.y_cm[0])
+                    * (bounds.z_cm[1] - bounds.z_cm[0]);
+                roi_meshes.push(OpenMcRoiMesh {
+                    name: region.name.clone(),
+                    mesh_id: ROI_MESH_ID_BASE + index as u32,
+                    mesh_filter_id: ROI_MESH_FILTER_ID_BASE + index as u32,
+                    dimensions: region.dimensions,
+                    lower_left_cm: [bounds.x_cm[0], bounds.y_cm[0], bounds.z_cm[0]],
+                    upper_right_cm: [bounds.x_cm[1], bounds.y_cm[1], bounds.z_cm[1]],
+                    volume_cm3,
+                    mass_g: volume_cm3 * density_g_cm3,
+                });
+            }
         }
 
         let geometry_xml = geometry_xml(case, &scoring_mesh)?;
@@ -436,7 +772,12 @@ impl OpenMcInputDeck {
             particles_per_batch,
             execution_profile.batches,
         )?;
-        let tallies_xml = tallies_xml(&response_set, &execution_profile, &scoring_mesh)?;
+        let tallies_xml = tallies_xml(
+            &response_set,
+            &execution_profile,
+            &roi_meshes,
+            &scoring_mesh,
+        )?;
 
         let mut files = vec![
             generated_file("geometry.xml", XML_MEDIA_TYPE, geometry_xml),
@@ -444,6 +785,13 @@ impl OpenMcInputDeck {
             generated_file("settings.xml", XML_MEDIA_TYPE, settings_xml),
             generated_file("tallies.xml", XML_MEDIA_TYPE, tallies_xml),
         ];
+        if let Some(bytes) = artifacts.acceptance_json {
+            files.push(generated_file(
+                "nctforge-acceptance-contract.json",
+                JSON_MEDIA_TYPE,
+                bytes.to_vec(),
+            ));
+        }
         let xml_artifacts = files
             .iter()
             .map(|file| OpenMcInputManifestArtifact {
@@ -457,7 +805,12 @@ impl OpenMcInputDeck {
             .clone()
             .expect("folding validation requires independent review");
         let manifest = OpenMcInputManifest {
-            schema_version: INPUT_MANIFEST_SCHEMA.into(),
+            schema_version: if acceptance.is_some() {
+                INPUT_MANIFEST_SCHEMA_V2
+            } else {
+                INPUT_MANIFEST_SCHEMA
+            }
+            .into(),
             case_id: case.case_id.clone(),
             backend_id: "openmc".into(),
             openmc_version: TARGET_OPENMC_VERSION.into(),
@@ -471,17 +824,21 @@ impl OpenMcInputDeck {
                 response_generation_method: response_set.generation_method.clone(),
                 independent_response_review,
                 execution_profile: execution_reference,
+                acceptance: acceptance.as_ref().map(|contract| {
+                    content_reference(&contract.id, artifacts.acceptance_json.unwrap())
+                }),
             },
             execution: OpenMcRunControls {
                 purpose: execution_profile.purpose,
-                requested_histories: case.requested_histories,
+                requested_histories,
                 batches: execution_profile.batches,
                 particles_per_batch,
                 seed: execution_profile.seed,
                 stride: execution_profile.stride,
             },
             scoring_mesh,
-            tallies: tally_contracts(),
+            tallies: tally_contracts(&roi_meshes),
+            rois: roi_meshes,
             xml_artifacts,
         };
         let mut manifest_bytes = serde_json::to_vec_pretty(&manifest)
@@ -852,6 +1209,7 @@ fn settings_xml(
 fn tallies_xml(
     response: &NeutronResponseSet,
     profile: &OpenMcExecutionProfile,
+    rois: &[OpenMcRoiMesh],
     mesh: &OpenMcScoringMesh,
 ) -> Result<Vec<u8>, OpenMcInputError> {
     xml_document("tallies", |writer| {
@@ -863,7 +1221,21 @@ fn tallies_xml(
         text_element(writer, "upper_right", &format_numbers(&mesh.upper_right_cm))?;
         writer.write_event(Event::End(BytesEnd::new("mesh")))?;
 
+        for roi in rois {
+            let mesh_id = roi.mesh_id.to_string();
+            let mut mesh_element = BytesStart::new("mesh");
+            mesh_element.push_attribute(("id", mesh_id.as_str()));
+            writer.write_event(Event::Start(mesh_element))?;
+            text_element(writer, "dimension", &format_integers(&roi.dimensions))?;
+            text_element(writer, "lower_left", &format_numbers(&roi.lower_left_cm))?;
+            text_element(writer, "upper_right", &format_numbers(&roi.upper_right_cm))?;
+            writer.write_event(Event::End(BytesEnd::new("mesh")))?;
+        }
+
         filter_with_bins(writer, MESH_FILTER_ID, "mesh", "1")?;
+        for roi in rois {
+            filter_with_bins(writer, roi.mesh_filter_id, "mesh", &roi.mesh_id.to_string())?;
+        }
         filter_with_bins(writer, NEUTRON_FILTER_ID, "particle", "neutron")?;
         filter_with_bins(writer, PHOTON_FILTER_ID, "particle", "photon")?;
         energy_function_filter(
@@ -1014,8 +1386,119 @@ fn tallies_xml(
             &["current"],
             "analog",
         )?;
+        for (index, roi) in rois.iter().enumerate() {
+            let base = ROI_TALLY_ID_BASE + index as u32 * ROI_TALLIES_PER_REGION;
+            let mesh_filter = roi.mesh_filter_id;
+            let prefix = format!("nctforge.roi.{}", roi.name);
+            for (offset, name, filters, nuclides, scores, estimator) in
+                roi_tally_plan(&prefix, mesh_filter)
+            {
+                tally(
+                    writer,
+                    base + offset,
+                    &name,
+                    &filters,
+                    &nuclides,
+                    &scores,
+                    estimator,
+                )?;
+            }
+        }
         Ok(())
     })
+}
+
+/// The nine single-bin acceptance tallies emitted per ROI region: the three
+/// neutron response components, photon heating, neutron-heating and
+/// coupled-heating audits, the B-10/N-14 reaction-rate audits, and the
+/// energy-integrated neutron fluence.
+fn roi_tally_plan(
+    prefix: &str,
+    mesh_filter: u32,
+) -> [(
+    u32,
+    String,
+    Vec<u32>,
+    Vec<&'static str>,
+    Vec<&'static str>,
+    &'static str,
+); 9] {
+    let neutron = NEUTRON_FILTER_ID;
+    let photon = PHOTON_FILTER_ID;
+    [
+        (
+            0,
+            format!("{prefix}.component.boron.response"),
+            vec![mesh_filter, neutron, BORON_RESPONSE_FILTER_ID],
+            vec![],
+            vec!["flux"],
+            "tracklength",
+        ),
+        (
+            1,
+            format!("{prefix}.component.nitrogen.response"),
+            vec![mesh_filter, neutron, NITROGEN_RESPONSE_FILTER_ID],
+            vec![],
+            vec!["flux"],
+            "tracklength",
+        ),
+        (
+            2,
+            format!("{prefix}.component.hydrogen.response"),
+            vec![mesh_filter, neutron, HYDROGEN_RESPONSE_FILTER_ID],
+            vec![],
+            vec!["flux"],
+            "tracklength",
+        ),
+        (
+            3,
+            format!("{prefix}.component.photon.heating"),
+            vec![mesh_filter, photon],
+            vec![],
+            vec!["heating"],
+            "collision",
+        ),
+        (
+            4,
+            format!("{prefix}.audit.neutron_heating"),
+            vec![mesh_filter, neutron],
+            vec![],
+            vec!["heating"],
+            "tracklength",
+        ),
+        (
+            5,
+            format!("{prefix}.physical_total.coupled_heating"),
+            vec![mesh_filter],
+            vec![],
+            vec!["heating"],
+            "collision",
+        ),
+        (
+            6,
+            format!("{prefix}.audit.b10_mt107"),
+            vec![mesh_filter, neutron],
+            vec!["B10"],
+            vec!["(n,a)"],
+            "tracklength",
+        ),
+        (
+            7,
+            format!("{prefix}.audit.n14_mt103"),
+            vec![mesh_filter, neutron],
+            vec!["N14"],
+            vec!["(n,p)"],
+            "tracklength",
+        ),
+        (
+            8,
+            format!("{prefix}.diagnostic.neutron_fluence"),
+            vec![mesh_filter, neutron],
+            vec![],
+            vec!["flux"],
+            "tracklength",
+        ),
+    ]
 }
 
 fn energy_function_filter(
@@ -1101,8 +1584,8 @@ fn text_element(writer: &mut Writer<Vec<u8>>, name: &str, text: &str) -> io::Res
     writer.write_event(Event::End(BytesEnd::new(name)))
 }
 
-fn tally_contracts() -> Vec<OpenMcTallyContract> {
-    vec![
+fn tally_contracts(rois: &[OpenMcRoiMesh]) -> Vec<OpenMcTallyContract> {
+    let mut contracts = vec![
         response_tally_contract(
             BORON_TALLY_ID,
             "nctforge.component.boron.response",
@@ -1158,7 +1641,87 @@ fn tally_contracts() -> Vec<OpenMcTallyContract> {
             "nctforge.diagnostic.photon_surface_current",
             ParticleType::Photon,
         ),
-    ]
+    ];
+    for (index, roi) in rois.iter().enumerate() {
+        let base = ROI_TALLY_ID_BASE + index as u32 * ROI_TALLIES_PER_REGION;
+        let prefix = format!("nctforge.roi.{}", roi.name);
+        let bins = roi.dimensions.iter().product();
+        let acceptance = |mut contract: OpenMcTallyContract, offset: u32| {
+            contract.id = base + offset;
+            contract.scope = Some(OpenMcTallyScope::Acceptance);
+            contract.roi = Some(roi.name.clone());
+            contract.bins = Some(bins);
+            contract
+        };
+        contracts.push(acceptance(
+            response_tally_contract(
+                0,
+                &format!("{prefix}.component.boron.response"),
+                DoseComponent::Boron,
+            ),
+            0,
+        ));
+        contracts.push(acceptance(
+            response_tally_contract(
+                0,
+                &format!("{prefix}.component.nitrogen.response"),
+                DoseComponent::Nitrogen,
+            ),
+            1,
+        ));
+        contracts.push(acceptance(
+            response_tally_contract(
+                0,
+                &format!("{prefix}.component.hydrogen.response"),
+                DoseComponent::Hydrogen,
+            ),
+            2,
+        ));
+        contracts.push(acceptance(
+            heating_tally_contract(
+                0,
+                &format!("{prefix}.component.photon.heating"),
+                Some(DoseComponent::Photon),
+                Some(ParticleType::Photon),
+            ),
+            3,
+        ));
+        contracts.push(acceptance(
+            heating_tally_contract(
+                0,
+                &format!("{prefix}.audit.neutron_heating"),
+                None,
+                Some(ParticleType::Neutron),
+            ),
+            4,
+        ));
+        contracts.push(acceptance(
+            heating_tally_contract(
+                0,
+                &format!("{prefix}.physical_total.coupled_heating"),
+                None,
+                None,
+            ),
+            5,
+        ));
+        contracts.push(acceptance(
+            reaction_tally_contract(0, &format!("{prefix}.audit.b10_mt107")),
+            6,
+        ));
+        contracts.push(acceptance(
+            reaction_tally_contract(0, &format!("{prefix}.audit.n14_mt103")),
+            7,
+        ));
+        contracts.push(acceptance(
+            flux_tally_contract(
+                0,
+                &format!("{prefix}.diagnostic.neutron_fluence"),
+                ParticleType::Neutron,
+            ),
+            8,
+        ));
+    }
+    contracts
 }
 
 fn response_tally_contract(id: u32, name: &str, component: DoseComponent) -> OpenMcTallyContract {
@@ -1170,6 +1733,9 @@ fn response_tally_contract(id: u32, name: &str, component: DoseComponent) -> Ope
         quantity: OpenMcTallyQuantity::ResponseWeightedTrackLength,
         raw_unit: OpenMcRawTallyUnit::GrayCubicCentimeterPerSourceNeutron,
         collection_normalization: OpenMcCollectionNormalization::DivideByVoxelVolumeCm3,
+        scope: None,
+        roi: None,
+        bins: None,
     }
 }
 
@@ -1188,6 +1754,9 @@ fn heating_tally_contract(
         raw_unit: OpenMcRawTallyUnit::ElectronVoltPerSourceNeutron,
         collection_normalization:
             OpenMcCollectionNormalization::ElectronVoltToJouleDivideByVoxelMassKg,
+        scope: None,
+        roi: None,
+        bins: None,
     }
 }
 
@@ -1200,6 +1769,9 @@ fn reaction_tally_contract(id: u32, name: &str) -> OpenMcTallyContract {
         quantity: OpenMcTallyQuantity::ReactionRate,
         raw_unit: OpenMcRawTallyUnit::ReactionsPerSourceNeutron,
         collection_normalization: OpenMcCollectionNormalization::None,
+        scope: None,
+        roi: None,
+        bins: None,
     }
 }
 
@@ -1212,6 +1784,9 @@ fn flux_tally_contract(id: u32, name: &str, particle: ParticleType) -> OpenMcTal
         quantity: OpenMcTallyQuantity::EnergyBinnedTrackLength,
         raw_unit: OpenMcRawTallyUnit::CentimeterPerSourceNeutron,
         collection_normalization: OpenMcCollectionNormalization::DivideByVoxelVolumeCm3,
+        scope: None,
+        roi: None,
+        bins: None,
     }
 }
 
@@ -1224,6 +1799,9 @@ fn leakage_tally_contract(id: u32, name: &str, particle: ParticleType) -> OpenMc
         quantity: OpenMcTallyQuantity::SurfaceCurrent,
         raw_unit: OpenMcRawTallyUnit::ParticlesPerSourceNeutron,
         collection_normalization: OpenMcCollectionNormalization::None,
+        scope: None,
+        roi: None,
+        bins: None,
     }
 }
 
@@ -1284,6 +1862,10 @@ pub enum OpenMcProfileError {
     InsufficientCandidateBatches(u32),
     #[error("candidate-reference seed {0} is not in the frozen three-seed set")]
     UnregisteredCandidateSeed(u64),
+    #[error("candidate-reference profiles must declare requested_histories (schema 0.2.0)")]
+    MissingCandidateHistories,
+    #[error("requested histories {histories} do not divide into {batches} batches")]
+    HistoriesNotDivisibleByBatches { histories: u64, batches: u32 },
     #[error("OpenMC seed must be nonzero")]
     ZeroSeed,
     #[error("OpenMC execution setting {0} is outside the frozen profile")]
@@ -1360,10 +1942,18 @@ pub enum OpenMcInputError {
         #[source]
         source: io::Error,
     },
+    #[error("unsupported acceptance-contract schema {0:?}")]
+    UnsupportedAcceptanceSchema(String),
+    #[error("acceptance contract is invalid: {0}")]
+    InvalidAcceptance(String),
+    #[error("candidate-reference decks require a bound acceptance contract")]
+    CandidateReferenceRequiresAcceptance,
+    #[error("acceptance contracts may only bind candidate-reference decks")]
+    AcceptanceRequiresCandidateReference,
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use std::collections::BTreeSet;
 
     use nctforge_core::GridGeometry;
@@ -1378,18 +1968,18 @@ mod tests {
 
     use super::*;
 
-    const COMPONENT_PROFILE_JSON: &[u8] = include_bytes!(
+    pub(crate) const COMPONENT_PROFILE_JSON: &[u8] = include_bytes!(
         "../../../benchmarks/synthetic/nf-bnct-001/transport/component-profile.json"
     );
-    const MATERIAL_JSON: &[u8] =
+    pub(crate) const MATERIAL_JSON: &[u8] =
         include_bytes!("../../../benchmarks/synthetic/nf-bnct-001/transport/material.json");
-    const SOURCE_JSON: &[u8] =
+    pub(crate) const SOURCE_JSON: &[u8] =
         include_bytes!("../../../benchmarks/synthetic/nf-bnct-001/transport/source.json");
-    const PROFILE_JSON: &[u8] = include_bytes!(
+    pub(crate) const PROFILE_JSON: &[u8] = include_bytes!(
         "../../../benchmarks/synthetic/nf-bnct-001/transport/openmc-smoke-profile.json"
     );
 
-    fn case() -> TransportCase {
+    pub(crate) fn case() -> TransportCase {
         TransportCase {
             schema_version: "nctforge.transport-case/0.1.0".into(),
             case_id: "nf-bnct-001".into(),
@@ -1538,13 +2128,13 @@ mod tests {
         }
     }
 
-    struct InputBytes {
-        data_root: tempfile::TempDir,
-        nuclear_data_json: Vec<u8>,
-        response_set_json: Vec<u8>,
+    pub(crate) struct InputBytes {
+        pub(crate) data_root: tempfile::TempDir,
+        pub(crate) nuclear_data_json: Vec<u8>,
+        pub(crate) response_set_json: Vec<u8>,
     }
 
-    fn input_bytes() -> InputBytes {
+    pub(crate) fn input_bytes() -> InputBytes {
         let data_root = tempfile::tempdir().unwrap();
         std::fs::create_dir(data_root.path().join("neutron")).unwrap();
         std::fs::create_dir(data_root.path().join("photon")).unwrap();
@@ -1600,9 +2190,192 @@ mod tests {
                 response_set_json: &inputs.response_set_json,
                 nuclear_data_manifest_json: &inputs.nuclear_data_json,
                 execution_profile_json: PROFILE_JSON,
+                acceptance_json: None,
             },
         )
         .unwrap()
+    }
+
+    /// A candidate-reference variant of the smoke profile at schema 0.2.0.
+    fn candidate_profile_json(seed: u64) -> Vec<u8> {
+        let mut profile: serde_json::Value = serde_json::from_slice(PROFILE_JSON).unwrap();
+        profile["schema_version"] = serde_json::json!("nctforge.openmc-execution-profile/0.2.0");
+        profile["id"] = serde_json::json!("nctforge.test.candidate-reference.v1");
+        profile["purpose"] = serde_json::json!("candidate_reference");
+        profile["batches"] = serde_json::json!(50);
+        profile["seed"] = serde_json::json!(seed);
+        profile["requested_histories"] = serde_json::json!(1_000_000u64);
+        serde_json::to_vec_pretty(&profile).unwrap()
+    }
+
+    fn acceptance_contract_json() -> Vec<u8> {
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "schema_version": ACCEPTANCE_CONTRACT_SCHEMA,
+            "id": "nctforge.test.acceptance.v1",
+            "case_id": "nf-bnct-001",
+            "regions": [
+                {"name": "core",
+                 "bounds_cm": {"x_cm": [-2.0, 2.0], "y_cm": [-2.0, 2.0], "z_cm": [-2.0, 2.0]},
+                 "dimensions": [1, 1, 1], "precision_gated": true},
+                {"name": "axis",
+                 "bounds_cm": {"x_cm": [-0.5, 0.5], "y_cm": [-0.5, 0.5], "z_cm": [-10.0, 10.0]},
+                 "dimensions": [1, 1, 40], "precision_gated": false}
+            ],
+            "evaluated_mean_deposited_energy_ev": {
+                "b10_mt107_ev": 2_341_900.4411541675,
+                "n14_mt103_ev": 625_976.8493398946,
+                "evidence_sha256": "a".repeat(64)
+            },
+            "gates": {
+                "roi_relative_standard_uncertainty_max": 0.01,
+                "voxel_max_fraction": 0.2,
+                "voxel_median_relative_uncertainty_max": 0.03,
+                "voxel_p95_relative_uncertainty_max": 0.05,
+                "reaction_rate_agreement": 0.02,
+                "neutron_heating_agreement": 0.03,
+                "coupled_heating_agreement": 0.03,
+                "chi_square_p_min": 0.001
+            },
+            "seeds": CANDIDATE_REFERENCE_SEEDS,
+            "min_batches": 50
+        }))
+        .unwrap()
+    }
+
+    fn generate_acceptance() -> OpenMcInputDeck {
+        let inputs = input_bytes();
+        let profile = candidate_profile_json(CANDIDATE_REFERENCE_SEEDS[0]);
+        let contract = acceptance_contract_json();
+        OpenMcInputDeck::generate(
+            &case(),
+            inputs.data_root.path(),
+            OpenMcInputArtifacts {
+                component_profile_json: COMPONENT_PROFILE_JSON,
+                material_json: MATERIAL_JSON,
+                source_json: SOURCE_JSON,
+                response_set_json: &inputs.response_set_json,
+                nuclear_data_manifest_json: &inputs.nuclear_data_json,
+                execution_profile_json: &profile,
+                acceptance_json: Some(&contract),
+            },
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn acceptance_deck_adds_roi_meshes_and_contract() {
+        let deck = generate_acceptance();
+        let manifest = &deck.manifest;
+        assert_eq!(
+            manifest.schema_version,
+            "nctforge.openmc-input-manifest/0.2.0"
+        );
+        assert_eq!(manifest.rois.len(), 2);
+        assert_eq!(manifest.rois[0].name, "core");
+        assert_eq!(manifest.rois[0].dimensions, [1, 1, 1]);
+        assert_eq!(manifest.rois[0].volume_cm3, 64.0);
+        assert_eq!(manifest.rois[1].dimensions, [1, 1, 40]);
+        assert_eq!(manifest.rois[1].volume_cm3, 20.0);
+        assert_eq!(manifest.execution.particles_per_batch, 20_000);
+        assert!(manifest.bindings.acceptance.is_some());
+        // 12 scoring tallies + 9 acceptance tallies per region.
+        assert_eq!(manifest.tallies.len(), 12 + 2 * 9);
+        let roi_tallies: Vec<_> = manifest
+            .tallies
+            .iter()
+            .filter(|t| t.scope == Some(OpenMcTallyScope::Acceptance))
+            .collect();
+        assert_eq!(roi_tallies.len(), 18);
+        assert!(
+            roi_tallies
+                .iter()
+                .all(|t| t.bins == Some(1) || t.bins == Some(40))
+        );
+        assert!(manifest.tallies.iter().any(|t| t.name
+            == "nctforge.roi.axis.physical_total.coupled_heating"
+            && t.bins == Some(40)));
+        assert!(deck.file("nctforge-acceptance-contract.json").is_some());
+        let tallies = std::str::from_utf8(&deck.file("tallies.xml").unwrap().bytes).unwrap();
+        assert!(tallies.contains("nctforge.roi.core.component.boron.response"));
+        assert!(tallies.contains("<mesh id=\"3\""));
+        assert!(tallies.contains("<filter id=\"11\" type=\"mesh\">"));
+    }
+
+    #[test]
+    fn acceptance_deck_is_deterministic() {
+        assert_eq!(generate_acceptance(), generate_acceptance());
+    }
+
+    #[test]
+    fn rejects_acceptance_contract_on_smoke_profile() {
+        let inputs = input_bytes();
+        let contract = acceptance_contract_json();
+        let error = OpenMcInputDeck::generate(
+            &case(),
+            inputs.data_root.path(),
+            OpenMcInputArtifacts {
+                component_profile_json: COMPONENT_PROFILE_JSON,
+                material_json: MATERIAL_JSON,
+                source_json: SOURCE_JSON,
+                response_set_json: &inputs.response_set_json,
+                nuclear_data_manifest_json: &inputs.nuclear_data_json,
+                execution_profile_json: PROFILE_JSON,
+                acceptance_json: Some(&contract),
+            },
+        )
+        .unwrap_err();
+        assert!(matches!(
+            error,
+            OpenMcInputError::AcceptanceRequiresCandidateReference
+        ));
+    }
+
+    #[test]
+    fn rejects_candidate_reference_without_contract() {
+        let inputs = input_bytes();
+        let profile = candidate_profile_json(CANDIDATE_REFERENCE_SEEDS[0]);
+        let error = OpenMcInputDeck::generate(
+            &case(),
+            inputs.data_root.path(),
+            OpenMcInputArtifacts {
+                component_profile_json: COMPONENT_PROFILE_JSON,
+                material_json: MATERIAL_JSON,
+                source_json: SOURCE_JSON,
+                response_set_json: &inputs.response_set_json,
+                nuclear_data_manifest_json: &inputs.nuclear_data_json,
+                execution_profile_json: &profile,
+                acceptance_json: None,
+            },
+        )
+        .unwrap_err();
+        assert!(matches!(
+            error,
+            OpenMcInputError::CandidateReferenceRequiresAcceptance
+        ));
+    }
+
+    #[test]
+    fn validates_acceptance_contract_contents() {
+        let mut contract: OpenMcAcceptanceContract =
+            serde_json::from_slice(&acceptance_contract_json()).unwrap();
+        contract.validate().unwrap();
+
+        // Duplicate region names are rejected.
+        let mut dup = contract.clone();
+        dup.regions.push(dup.regions[0].clone());
+        assert!(dup.validate().is_err());
+        // Degenerate bounds are rejected.
+        let mut bad_bounds = contract.clone();
+        bad_bounds.regions[0].bounds_cm.x_cm = [1.0, 1.0];
+        assert!(bad_bounds.validate().is_err());
+        // At least one precision-gated single-bin region is required.
+        contract.regions[0].precision_gated = false;
+        assert!(contract.validate().is_err());
+        // Seeds outside the frozen set are rejected.
+        let mut bad_seed: OpenMcAcceptanceContract =
+            serde_json::from_slice(&acceptance_contract_json()).unwrap();
+        bad_seed.seeds = vec![1, 2, 3];
+        assert!(bad_seed.validate().is_err());
     }
 
     #[test]
@@ -1688,6 +2461,7 @@ mod tests {
                 response_set_json: &response_json,
                 nuclear_data_manifest_json: &inputs.nuclear_data_json,
                 execution_profile_json: PROFILE_JSON,
+                acceptance_json: None,
             },
         )
         .unwrap_err();
@@ -1714,6 +2488,7 @@ mod tests {
                 response_set_json: &inputs.response_set_json,
                 nuclear_data_manifest_json: &inputs.nuclear_data_json,
                 execution_profile_json: PROFILE_JSON,
+                acceptance_json: None,
             },
         )
         .unwrap_err();
@@ -1742,6 +2517,7 @@ mod tests {
                 response_set_json: &response_json,
                 nuclear_data_manifest_json: &inputs.nuclear_data_json,
                 execution_profile_json: PROFILE_JSON,
+                acceptance_json: None,
             },
         )
         .unwrap_err();
@@ -1766,6 +2542,7 @@ mod tests {
                 response_set_json: &inputs.response_set_json,
                 nuclear_data_manifest_json: &inputs.nuclear_data_json,
                 execution_profile_json: PROFILE_JSON,
+                acceptance_json: None,
             },
         )
         .unwrap_err();
@@ -1790,6 +2567,7 @@ mod tests {
                 response_set_json: &inputs.response_set_json,
                 nuclear_data_manifest_json: &inputs.nuclear_data_json,
                 execution_profile_json: PROFILE_JSON,
+                acceptance_json: None,
             },
         )
         .unwrap_err();

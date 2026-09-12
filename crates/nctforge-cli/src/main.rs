@@ -47,7 +47,7 @@ use nctforge_openmc::{
     DataAcquisitionClient, DataAcquisitionProfileDocument, DataAcquisitionReceiptDocument,
     EvaluatedNeutronSourceSelectionDocument, EvaluatedSourceQualification, NuclearDataManifest,
     OpenMcBackend, OpenMcInputArtifacts, OpenMcInputDeck, OpenMcNeutronTransportDomain,
-    OpenMcNeutronTransportDomainDocument,
+    OpenMcNeutronTransportDomainDocument, evaluate_runs,
 };
 use nctforge_transport::{
     CompletedRun, ComponentDefinitionProfile, MaterialDefinition, ResponseGenerationMethod,
@@ -133,6 +133,10 @@ enum OpenMcCommand {
         /// Root containing cross_sections.xml and every selected HDF5 file.
         #[arg(long)]
         nuclear_data_root: PathBuf,
+        /// Predeclared acceptance contract (required for candidate-reference
+        /// profiles, forbidden otherwise).
+        #[arg(long)]
+        acceptance: Option<PathBuf>,
         /// New output directory for the generated deck; it must not already exist.
         #[arg(long)]
         output: PathBuf,
@@ -146,6 +150,19 @@ enum OpenMcCommand {
         #[arg(long, default_value_t = 0)]
         exit_code: i32,
         /// New output path for the physical dose bundle JSON.
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Evaluate completed candidate-reference runs against their bound
+    /// acceptance contract (precision, estimator, and seed-consistency gates).
+    Evaluate {
+        /// Completed run directory; repeat once per evaluated seed.
+        #[arg(long = "run", required = true)]
+        runs: Vec<PathBuf>,
+        /// Exit code for each run, in the same order (default zero for all).
+        #[arg(long = "exit-code")]
+        exit_codes: Vec<i32>,
+        /// New output path for the acceptance report JSON.
         #[arg(long)]
         output: PathBuf,
     },
@@ -1257,6 +1274,7 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                 nuclear_data_manifest,
                 execution_profile,
                 nuclear_data_root,
+                acceptance,
                 output,
             } => {
                 let case_json = fs::read(&case)?;
@@ -1267,6 +1285,7 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                 let response_set_json = fs::read(&response_set)?;
                 let nuclear_data_manifest_json = fs::read(&nuclear_data_manifest)?;
                 let execution_profile_json = fs::read(&execution_profile)?;
+                let acceptance_json = acceptance.as_ref().map(fs::read).transpose()?;
                 let deck = OpenMcInputDeck::generate(
                     &case,
                     &nuclear_data_root,
@@ -1277,6 +1296,7 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                         response_set_json: &response_set_json,
                         nuclear_data_manifest_json: &nuclear_data_manifest_json,
                         execution_profile_json: &execution_profile_json,
+                        acceptance_json: acceptance_json.as_deref(),
                     },
                 )?;
                 deck.write_new(&output)?;
@@ -1316,6 +1336,40 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                 println!("case: {}", bundle.case_id);
                 println!("components: {}", bundle.components.len());
                 println!("provenance: {}", bundle.provenance_id);
+            }
+            OpenMcCommand::Evaluate {
+                runs,
+                exit_codes,
+                output,
+            } => {
+                let exit_codes = if exit_codes.is_empty() {
+                    vec![0; runs.len()]
+                } else {
+                    exit_codes
+                };
+                let run_refs: Vec<&Path> = runs.iter().map(PathBuf::as_path).collect();
+                let report = evaluate_runs(&run_refs, &exit_codes)?;
+                let json = serde_json::to_vec_pretty(&report)?;
+                let mut file = fs::OpenOptions::new()
+                    .write(true)
+                    .create_new(true)
+                    .open(&output)?;
+                file.write_all(&json)?;
+                file.write_all(b"\n")?;
+                file.sync_all()?;
+                println!("acceptance report at {}", output.display());
+                println!("case: {}", report.case_id);
+                println!("runs evaluated: {}", report.runs.len());
+                println!(
+                    "estimator comparisons: {} ({} failed)",
+                    report.estimator_comparisons.len(),
+                    report
+                        .estimator_comparisons
+                        .iter()
+                        .filter(|c| !c.passed)
+                        .count()
+                );
+                println!("gates passed: {}", report.gates_passed);
             }
         },
         Some(Command::Njoy(args)) => match args.command {

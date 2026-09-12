@@ -395,6 +395,37 @@ history count must divide exactly into those batches.
 The three initial seeds are frozen as decimal `20260831`, `314159265`, and
 `271828182`.
 
+The predeclared acceptance contract is
+[`transport/openmc-acceptance-contract.json`](transport/openmc-acceptance-contract.json),
+with SHA-256
+`640d7e876a2cd61913136aab58f6ac8ba3d21bf23648b6bc98f2fc38ba339a5f`. It declares
+three acceptance regions — `core` (`CORE` in centimetres, one bin,
+precision-gated), `central_axis_2cm` (`CENTRAL_AXIS_2CM`, one bin,
+precision-gated), and `central_axis_profile` (the beam-axis column over the
+full phantom depth, forty 5-mm bins, estimator-gated) — the evaluated mean
+deposited energies for the reaction-rate audits bound to the smoke
+estimator-comparison evidence, the gate tolerances below, the frozen seed
+set, and the fifty-batch minimum. Each region is realized in the generated
+deck as its own OpenMC mesh with nine ROI-scoped tallies so region sums carry
+proper batch statistics; acceptance tallies are excluded from the physical
+dose bundle.
+
+The per-seed execution profiles are
+[`transport/openmc-candidate-reference-profile-seed-20260831.json`](transport/openmc-candidate-reference-profile-seed-20260831.json)
+(SHA-256 `e1a9e3f63f15ec4bcdd962f0edcfee65b42e5829fb6e94e0147f726cde701989`),
+[`transport/openmc-candidate-reference-profile-seed-314159265.json`](transport/openmc-candidate-reference-profile-seed-314159265.json)
+(SHA-256 `312426955b3c13edb4342db6fd4b5ff275ee400faa3d354be8f68aa10d57f94c`),
+and
+[`transport/openmc-candidate-reference-profile-seed-271828182.json`](transport/openmc-candidate-reference-profile-seed-271828182.json)
+(SHA-256 `39f6f886c53c5f565889926822c90f4d3b21e31f5e0ff85a1fcf8ab0e8999c6f`).
+Each freezes schema `0.2.0`, `candidate_reference` purpose, fifty active
+batches, and 300,000,000 requested histories (6,000,000 per batch) — the
+history count selected to bring the diffuse photon-heating precision gates
+inside tolerance with margin. Deck generation refuses a candidate-reference
+profile without a bound acceptance contract and refuses to bind a contract to
+any other purpose; the acceptance report is produced by
+`nctforge openmc evaluate` and gates are described below.
+
 ## Predeclared acceptance gates
 
 ### Geometry

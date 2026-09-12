@@ -391,6 +391,44 @@ The collected smoke bundle is execution evidence only — a five-batch,
 thousand-history run cannot produce reference values, and the bundle makes no
 clinical or qualification claim.
 
+### Candidate-reference runs and acceptance evaluation
+
+Candidate-reference execution profiles (`purpose: candidate_reference`,
+profile schema `0.2.0`) must bind a predeclared acceptance contract via
+`openmc generate --acceptance`; smoke profiles may not bind one. The contract
+(`nctforge.acceptance-contract/0.1.0`) declares the acceptance regions — each
+realized as its own OpenMC mesh so region sums carry proper batch statistics —
+the evaluated mean deposited energies for the reaction-rate audits, the
+precision and estimator-comparison gate tolerances, the frozen seed set, and
+the minimum batch count. The generator emits one mesh plus nine ROI-scoped
+tallies per region, binds the contract hash into the input manifest, and
+writes the contract JSON into the deck directory.
+
+`OpenMcBackend` can now drive a run itself: `prepare` generates the deck from
+the configured artifact set, and `execute` launches the configured binary in
+the run directory, captures stdout/stderr, and freezes an
+`nctforge.openmc-run-receipt/0.1.0` recording the executable hash, environment
+overlay, timestamps, exit code, and content hashes of every log and
+statepoint artifact.
+
+`openmc evaluate` reads each run directory's manifest, contract, and
+statepoint; verifies seed registration and uniqueness, run-header and
+tally-contract bindings, and the manifest's acceptance binding; then applies
+the predeclared gates — ROI precision, per-voxel precision at or above 20% of
+each component's maximum, and the estimator comparisons — plus reduced
+chi-square consistency across independent seeds. It emits a content-hashed
+`nctforge.openmc-acceptance-report/0.1.0`:
+
+```text
+nctforge openmc evaluate \
+  --run RUN-DIRECTORY-SEED-A --run RUN-DIRECTORY-SEED-B --run RUN-DIRECTORY-SEED-C \
+  --output NEW-ACCEPTANCE-REPORT.json
+```
+
+These are conformance thresholds for the synthetic benchmark, not clinical
+commissioning tolerances; a passing report earns reference-result status for
+the run set only within the case's declared qualification ceiling.
+
 A controlled ENDF/B-VIII.1 + TENDL-2025 mixed-source candidate was then
 executed under selection schema `0.3.0`. The six shared nuclides reproduce the
 baseline exactly, but all four TENDL-2025 substitutions remain rejected with

@@ -422,6 +422,15 @@ pub fn collect_statepoint(
         {
             return Err(OpenMcCollectError::EstimatorMismatch(contract.name.clone()));
         }
+        if let Some(bins) = contract.bins {
+            if tally.mean.len() != bins as usize {
+                return Err(OpenMcCollectError::DoseBinCountMismatch {
+                    tally: contract.name.clone(),
+                    expected: bins as usize,
+                    actual: tally.mean.len(),
+                });
+            }
+        }
     }
 
     let mesh = &manifest.scoring_mesh;
@@ -439,6 +448,9 @@ pub fn collect_statepoint(
         let tally = statepoint
             .tally(&contract.name)
             .expect("tally presence checked above");
+        if contract.scope == Some(crate::input::OpenMcTallyScope::Acceptance) {
+            continue;
+        }
         let is_mesh = tally.filter_ids.contains(&mesh.mesh_id);
         let is_dose = matches!(
             contract.quantity,
