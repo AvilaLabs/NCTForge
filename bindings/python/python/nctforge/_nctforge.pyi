@@ -566,3 +566,15 @@ def import_phits(
     as ``nctforge import phits``). ``components`` maps each component to a
     file path or ``(path, energy_index)``; ``FILE_err.ext`` siblings supply
     relative errors when present. ``producer_version`` is required."""
+def export_mcnp_deck(
+    case: str | PathLike[str],
+    output: str | PathLike[str],
+    assignment: str | PathLike[str] | None = None,
+    xs_suffix: str | None = None,
+    seed: int | None = None,
+) -> str:
+    """Emit an MCNP input deck for a transport case (same path as ``nctforge
+    export mcnp``) and write it to ``output``. ``xs_suffix`` (for example
+    ``"80c"``) is the operator's declared cross-section library suffix;
+    omitting it emits bare ZAIDs resolved by xsdir defaults. Returns the deck
+    text."""

@@ -621,6 +621,32 @@ interchange path above — the Python `import_mcnp_meshtal` and
 against documented formats; acceptance against real MCNP/PHITS-produced
 files is an open R4 gate.
 
+`nctforge export mcnp` goes the other direction — it emits an MCNP input
+deck for a transport case:
+
+```text
+nctforge export mcnp \
+  --case benchmarks/synthetic/nf-bnct-001/transport/case.json \
+  --xs-suffix 80c \
+  --seed 42 \
+  --output deck.i
+```
+
+The deck carries the scoring grid as one `RPP` box — `voxel_box` material
+regions become carved `RPP` cells and any `voxel_set` region puts the whole
+grid into a `LAT=1` lattice with a per-material-universe `FILL` array (same
+semantics as the OpenMC emitter) — plus `M` cards from the declared nuclide
+mass fractions, the plane source as an `SDEF` card, `NPS` from the
+requested histories, and `FMESH` neutron/photon flux tallies on the case
+mesh. Cross-section tables come from `--xs-suffix` (recorded in the deck
+header) or bare ZAIDs resolved by `xsdir` defaults — NCTForge never invents
+a data library. Component-dose folding is deliberately absent from the
+deck: folding flux into the four components applies the published response
+set, which is the external pipeline's declared step before `import mcnp`
+re-ingests the meshtal. A source plane outside the grid is rejected rather
+than silently scoring zeros. Python parity is `export_mcnp_deck`. Deck
+execution against real MCNP remains an open acceptance gate.
+
 ### Exposure-plan tables and diagnostics
 
 The `nctforge plan` family bridges spreadsheet workflows and the JSON

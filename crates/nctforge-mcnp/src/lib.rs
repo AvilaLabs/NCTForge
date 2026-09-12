@@ -20,6 +20,8 @@
 //! the bundle's `i + nx*j + nx*ny*k` order, so file ordering assumptions are
 //! never relied on.
 
+pub mod deck;
+
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::PathBuf;

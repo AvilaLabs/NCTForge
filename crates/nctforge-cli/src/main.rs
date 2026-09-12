@@ -126,6 +126,8 @@ enum Command {
     /// Import external transport results into a validated physical dose
     /// bundle (interchange document, MCNP meshtal, or PHITS tally output).
     Import(ImportArgs),
+    /// Export transport input to an external code (MCNP deck).
+    Export(ExportArgs),
     /// Compute exact dose-volume metrics (D_x, V_x, min/mean/max, EUD)
     /// over a named voxel mask.
     Metrics {
@@ -417,6 +419,42 @@ enum MaskCommand {
 struct ImportArgs {
     #[command(subcommand)]
     command: ImportCommand,
+}
+
+#[derive(Debug, Args)]
+struct ExportArgs {
+    #[command(subcommand)]
+    command: ExportCommand,
+}
+
+#[derive(Debug, Subcommand)]
+enum ExportCommand {
+    /// Emit an MCNP input deck for a transport case.
+    ///
+    /// The deck carries the case grid as an RPP box (voxel-box regions as
+    /// carved RPP cells, voxel-set regions via a LAT=1 lattice fill), M
+    /// cards from the declared nuclide fractions, the plane source as an
+    /// SDEF card, and FMESH flux tallies on the case mesh. Component-dose
+    /// folding is deliberately not emitted — it is the external pipeline's
+    /// declared step before `nctforge import mcnp` re-ingests the meshtal.
+    Mcnp {
+        /// `nctforge.transport-case/0.1.0` document.
+        #[arg(long)]
+        case: PathBuf,
+        /// Optional `nctforge.material-assignment/0.2.0` region assignment.
+        #[arg(long)]
+        assignment: Option<PathBuf>,
+        /// Cross-section table suffix appended to every ZAID (for example
+        /// `80c`); omit to emit bare ZAIDs resolved by xsdir defaults.
+        #[arg(long)]
+        xs_suffix: Option<String>,
+        /// Optional `RAND SEED=` value for the deck.
+        #[arg(long)]
+        seed: Option<u64>,
+        /// New output path for the deck.
+        #[arg(long)]
+        output: PathBuf,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -4270,6 +4308,43 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                 );
             }
         },
+        Some(Command::Export(args)) => match args.command {
+            ExportCommand::Mcnp {
+                case,
+                assignment,
+                xs_suffix,
+                seed,
+                output,
+            } => {
+                let case_bytes = fs::read(&case)?;
+                let case_doc: TransportCase =
+                    serde_json::from_slice(&case_bytes).map_err(|error| {
+                        io::Error::other(format!("case {}: {error}", case.display()))
+                    })?;
+                let assignment_doc = assignment
+                    .map(|path| -> io::Result<MaterialAssignment> {
+                        serde_json::from_slice(&fs::read(&path)?).map_err(|error| {
+                            io::Error::other(format!("assignment {}: {error}", path.display()))
+                        })
+                    })
+                    .transpose()?;
+                let deck = nctforge_mcnp::deck::export_mcnp_deck(
+                    &case_doc,
+                    assignment_doc.as_ref(),
+                    &nctforge_mcnp::deck::McnpDeckOptions {
+                        xs_suffix,
+                        seed,
+                        case_sha256: format!(
+                            "sha256:{}",
+                            nctforge_evidence::sha256_hex(&case_bytes)
+                        ),
+                    },
+                )
+                .map_err(|error| io::Error::other(format!("mcnp export: {error}")))?;
+                write_new_text(&output, deck.as_bytes())?;
+                println!("wrote MCNP deck at {}", output.display());
+            }
+        },
         Some(Command::Plan(args)) => match args.command {
             PlanCommand::Import {
                 table,
@@ -4794,6 +4869,15 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
         }
     }
     Ok(())
+}
+
+fn write_new_text(path: &Path, bytes: &[u8]) -> io::Result<()> {
+    let mut file = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)?;
+    file.write_all(bytes)?;
+    file.sync_all()
 }
 
 fn write_new_json<T: serde::Serialize>(path: &Path, value: &T) -> io::Result<()> {

@@ -25,7 +25,8 @@ use nctforge_evidence::{CaseManifest, EvidenceBundleManifest, sha256_file};
 use nctforge_openmc::OpenMcBackend;
 use nctforge_transport::{
     BackendDescriptor, CompletedRun, ComponentDefinitionProfile, FixedSourceDefinition,
-    MaterialDefinition, NeutronResponseSet, ResponseGenerationMethod, TransportBackend,
+    MaterialAssignment, MaterialDefinition, NeutronResponseSet, ResponseGenerationMethod,
+    TransportBackend, TransportCase,
 };
 use pyo3::create_exception;
 use pyo3::exceptions::{PyException, PyValueError};
@@ -1209,6 +1210,50 @@ fn import_phits(
     })
 }
 
+/// Emit an MCNP input deck for a transport case (same path as
+/// `nctforge export mcnp`). The deck scores flux on the case mesh; component
+/// folding is the external pipeline's declared step before `import_mcnp_meshtal`
+/// re-ingests the meshtal. Returns the deck text; also writes it to `output`.
+#[pyfunction]
+#[pyo3(signature = (case, output, assignment=None, xs_suffix=None, seed=None))]
+fn export_mcnp_deck(
+    case: PathBuf,
+    output: PathBuf,
+    assignment: Option<PathBuf>,
+    xs_suffix: Option<String>,
+    seed: Option<u64>,
+) -> PyResult<String> {
+    let case_bytes = std::fs::read(&case).map_err(reject)?;
+    let case_doc: TransportCase = serde_json::from_slice(&case_bytes).map_err(reject)?;
+    let assignment_doc = assignment
+        .map(|path| {
+            std::fs::read(&path)
+                .map_err(reject)
+                .and_then(|bytes| serde_json::from_slice::<MaterialAssignment>(&bytes).map_err(reject))
+        })
+        .transpose()?;
+    use sha2::Digest;
+    let deck = nctforge_mcnp::deck::export_mcnp_deck(
+        &case_doc,
+        assignment_doc.as_ref(),
+        &nctforge_mcnp::deck::McnpDeckOptions {
+            xs_suffix,
+            seed,
+            case_sha256: format!("sha256:{:x}", sha2::Sha256::digest(&case_bytes)),
+        },
+    )
+    .map_err(reject)?;
+    use std::io::Write as _;
+    let mut file = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&output)
+        .map_err(reject)?;
+    file.write_all(deck.as_bytes()).map_err(reject)?;
+    file.sync_all().map_err(reject)?;
+    Ok(deck)
+}
+
 /// A validated biological model contract.
 #[pyclass(frozen, name = "BiologicalModel")]
 struct PyBiologicalModel {
@@ -2158,5 +2203,6 @@ fn _nctforge(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(import_component_dose, m)?)?;
     m.add_function(wrap_pyfunction!(import_mcnp_meshtal, m)?)?;
     m.add_function(wrap_pyfunction!(import_phits, m)?)?;
+    m.add_function(wrap_pyfunction!(export_mcnp_deck, m)?)?;
     Ok(())
 }

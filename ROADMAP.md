@@ -485,10 +485,21 @@ Implementation status:
   and Python `import_mcnp_meshtal`/`import_phits` are parity surfaces with
   document-hash provenance. Parser fixtures are authored to documented
   formats — real-engine acceptance remains the open gate;
+- complete (documented-format slice): MCNP deck export — `nctforge export
+  mcnp` and Python `export_mcnp_deck` emit a deterministic deck from a
+  transport case: grid `RPP` box, `voxel_box` regions as carved CSG cells,
+  `voxel_set` regions via a `LAT=1` lattice `FILL` array (one universe per
+  distinct material), `M` cards from declared mass fractions (operator's
+  `--xs-suffix` or xsdir defaults — never an invented library), `SDEF`
+  plane source, `NPS`, and `FMESH` flux tallies on the case mesh. The deck
+  deliberately carries no component folding — that stays the external
+  pipeline's declared step before `import mcnp` re-ingests the meshtal.
+  Source planes outside the grid are rejected. Execution against real MCNP
+  remains the open acceptance gate;
 - pending: committed real-engine parser fixtures per producing system for
   OP-04;
-- pending: OP-05 MCNP deck export, OP-10 external-dose/BED combined
-  analysis, and the cross-code frozen-case comparison.
+- pending: OP-10 external-dose/BED combined analysis and the cross-code
+  frozen-case comparison.
 
 ## Cross-cutting distribution
 

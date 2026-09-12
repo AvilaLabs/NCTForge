@@ -26,7 +26,8 @@ canonical `to_json` serialization; the response-set `folding_ready` review
 gate; statepoint collection; DVH and dose-volume metrics; biological-model
 application and TCP/NTCP/UTCP endpoint evaluation; exposure-plan table
 import/export and weighted accumulation; and external component-dose import
-(`import_component_dose`, `import_mcnp_meshtal`, `import_phits`). Every load
+(`import_component_dose`, `import_mcnp_meshtal`, `import_phits`) plus MCNP
+deck export (`export_mcnp_deck`). Every load
 runs the same Rust `validate()` as the CLI, every rejection raises
 `NctForgeError`, and adapter provenance binds the generated interchange
 document's SHA-256 exactly as the CLI does. Transport actions stay

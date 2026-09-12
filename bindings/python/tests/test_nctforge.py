@@ -745,6 +745,24 @@ class ExternalAdapterTest(unittest.TestCase):
             # 2x2x2: index 7 = (1,1,1) = 4 x 1e-2.
             self.assertAlmostEqual(bundle.physical_total.values[7], 4.0e-2)
 
+    def test_export_mcnp_deck(self) -> None:
+        case = REPO_ROOT / "benchmarks/synthetic/nf-bnct-001/transport/case.json"
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "deck.i"
+            deck = nctforge.export_mcnp_deck(case, out, xs_suffix="80c", seed=42)
+            self.assertEqual(deck, out.read_text())
+            self.assertIn("mode n p", deck)
+            self.assertIn("fmesh4:n geom=xyz", deck)
+            self.assertIn("fmesh14:p", deck)
+            self.assertIn("m1 1001.80c", deck)
+            self.assertIn("5010.80c", deck)
+            self.assertIn("nps 1000", deck)
+            self.assertIn("rand seed=42", deck)
+            self.assertIn("sha256:", deck)
+            # No overwrite of an existing deck.
+            with self.assertRaises(NctForgeError):
+                nctforge.export_mcnp_deck(case, out, xs_suffix="80c")
+
     def test_adapters_reject_bad_specs(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = _write(tmp, "meshtal", MESHTAL_FIXTURE)

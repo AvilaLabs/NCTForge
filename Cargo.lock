@@ -2655,6 +2655,7 @@ name = "nctforge-mcnp"
 version = "0.1.0"
 dependencies = [
  "nctforge-core",
+ "nctforge-transport",
  "serde",
  "serde_json",
  "thiserror 2.0.20",
