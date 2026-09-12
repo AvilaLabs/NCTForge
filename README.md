@@ -603,6 +603,26 @@ Endpoints in absolute units (not per-source-particle), non-positive source
 strengths, limits without a same-named mask, and zero-statistic regions
 are reported explicitly — the last as unbounded rather than an error.
 
+`nctforge position` provides research positioning helpers. `position aim`
+derives a fixed source whose beam axis passes through a region mask's
+centroid: the source plane is placed just inside the bounding-box face the
+beam enters, its aperture centered on the beam axis, for any axis approach
+(`+x`…`-z`) or an oblique `--direction dx,dy,dz`. `position rotate` applies
+a right-hand-rule quarter-turn about a patient axis, remapping the source
+plane, aperture, and direction; rotations that would require a
+non-axis-aligned aperture are rejected. `aim` emits the source JSON plus a
+`nctforge.position-report/0.1.0` recording the centroid, entry face and
+point, and source-to-centroid distance:
+
+```text
+nctforge position aim \
+  --case transport/case.json --source transport/source.json \
+  --mask CORE.json --approach +z --half-widths-cm 2.0,2.0 \
+  --output-source NEW-SOURCE.json --output-report NEW-REPORT.json
+nctforge position rotate --source NEW-SOURCE.json --axis y --degrees 90 \
+  --output-source NEW-ROTATED.json
+```
+
 `nctforge dvh` computes a deterministic `nctforge.dose-volume-histogram/0.1.0`
 over a named voxel mask for any component or total in a physical or
 biological bundle — equal-width dose bins, differential volume fractions that

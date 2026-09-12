@@ -117,6 +117,9 @@ enum Command {
     /// Combine or construct RegionMask volumes (subtraction, union,
     /// intersection, CT-threshold regions) for limiting-organ construction.
     Mask(MaskArgs),
+    /// Aim a fixed source at a region centroid or rotate a source about a
+    /// patient axis (research positioning helpers).
+    Position(PositionArgs),
     /// Evaluate organ-limited irradiation time over a per-source-particle
     /// dose endpoint, reporting the limiting structure and assumptions.
     IrradiationTime {
@@ -194,6 +197,70 @@ enum NiftiCommand {
         /// New output path for the resampled `.nii` file.
         #[arg(long)]
         output: PathBuf,
+    },
+}
+
+#[derive(Debug, Args)]
+struct PositionArgs {
+    #[command(subcommand)]
+    command: PositionCommand,
+}
+
+#[derive(Debug, Subcommand)]
+enum PositionCommand {
+    /// Derive a source aimed so the beam axis passes through a mask's
+    /// centroid, emitting a positioned source JSON and a position report.
+    Aim {
+        /// Transport-case JSON supplying the patient grid.
+        #[arg(long)]
+        case: PathBuf,
+        /// Source JSON whose particle/energy/id the result inherits.
+        #[arg(long)]
+        source: PathBuf,
+        /// RegionMask JSON whose centroid is the aim target.
+        #[arg(long)]
+        mask: PathBuf,
+        /// Axis approach `+x|-x|+y|-y|+z|-z` (conflicts with --direction).
+        #[arg(
+            long,
+            conflicts_with = "direction",
+            required_unless_present = "direction"
+        )]
+        approach: Option<String>,
+        /// Arbitrary beam direction `dx,dy,dz` in LPS (conflicts with --approach).
+        #[arg(long)]
+        direction: Option<String>,
+        /// Aperture half-widths `HU,HV` in cm along the plane's two axes.
+        #[arg(long, value_delimiter = ',')]
+        half_widths_cm: Vec<f64>,
+        /// How far inside the entry face the source plane sits, in cm.
+        #[arg(long, default_value_t = 0.01)]
+        margin_cm: f64,
+        /// New output path for the positioned source JSON.
+        #[arg(long)]
+        output_source: PathBuf,
+        /// New output path for the position report JSON.
+        #[arg(long)]
+        output_report: PathBuf,
+    },
+    /// Rotate a source's plane, aperture, and beam direction about a world
+    /// axis by a multiple of 90 degrees (right-hand rule).
+    Rotate {
+        /// Source JSON to rotate.
+        #[arg(long)]
+        source: PathBuf,
+        /// World axis to rotate about: `x`, `y`, or `z`.
+        #[arg(long)]
+        axis: String,
+        /// Rotation in degrees; must be a multiple of 90.
+        #[arg(long)]
+        degrees: f64,
+        /// Rotation center `x,y,z` in LPS mm (default: world origin).
+        #[arg(long, value_delimiter = ',', default_values_t = [0.0, 0.0, 0.0])]
+        center_mm: Vec<f64>,
+        /// New output path for the rotated source JSON.
+        #[arg(long)]
+        output_source: PathBuf,
     },
 }
 
@@ -4179,6 +4246,111 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                 None => println!("no region bounds the irradiation (all endpoint rates zero)"),
             }
         }
+        Some(Command::Position(args)) => match args.command {
+            PositionCommand::Aim {
+                case,
+                source,
+                mask,
+                approach,
+                direction,
+                half_widths_cm,
+                margin_cm,
+                output_source,
+                output_report,
+            } => {
+                let case: TransportCase = serde_json::from_slice(&fs::read(&case)?)?;
+                let template: nctforge_transport::FixedSourceDefinition =
+                    serde_json::from_slice(&fs::read(&source)?)?;
+                let mask = read_region_mask(&mask)?;
+                if half_widths_cm.len() != 2 {
+                    return Err(
+                        io::Error::other("--half-widths-cm must be HU,HV (two values)").into(),
+                    );
+                }
+                let direction = if let Some(text) = &direction {
+                    let parts: Vec<f64> = text
+                        .split(',')
+                        .map(|part| {
+                            part.trim().parse().map_err(|_| {
+                                io::Error::other(format!(
+                                    "--direction component {part:?} is not a number"
+                                ))
+                            })
+                        })
+                        .collect::<Result<_, _>>()?;
+                    if parts.len() != 3 {
+                        return Err(io::Error::other(
+                            "--direction must be dx,dy,dz (three components)",
+                        )
+                        .into());
+                    }
+                    [parts[0], parts[1], parts[2]]
+                } else {
+                    nctforge_transport::AxisApproach::parse(approach.as_deref().unwrap_or_default())
+                        .map_err(|error| io::Error::other(error.to_string()))?
+                        .unit_vector()
+                };
+                let (positioned, mut report) = nctforge_transport::aim_source_at_centroid(
+                    &template,
+                    &case.geometry,
+                    &mask,
+                    direction,
+                    [half_widths_cm[0], half_widths_cm[1]],
+                    margin_cm,
+                )
+                .map_err(|error| io::Error::other(error.to_string()))?;
+                report.case_id = case.case_id.clone();
+                write_new_json(&output_source, &positioned)?;
+                write_new_json(&output_report, &report)?;
+                println!("positioned source at {}", output_source.display());
+                println!(
+                    "target {:?} centroid LPS [{:.3}, {:.3}, {:.3}] mm",
+                    report.target_region,
+                    report.target_centroid_lps_mm[0],
+                    report.target_centroid_lps_mm[1],
+                    report.target_centroid_lps_mm[2]
+                );
+                println!(
+                    "entry {:?}/{:?} at [{:.3}, {:.3}, {:.3}] mm, source-to-centroid {:.3} mm",
+                    report.entry_axis,
+                    report.entry_side,
+                    report.entry_point_lps_mm[0],
+                    report.entry_point_lps_mm[1],
+                    report.entry_point_lps_mm[2],
+                    report.source_to_centroid_mm
+                );
+            }
+            PositionCommand::Rotate {
+                source,
+                axis,
+                degrees,
+                center_mm,
+                output_source,
+            } => {
+                let source: nctforge_transport::FixedSourceDefinition =
+                    serde_json::from_slice(&fs::read(&source)?)?;
+                let axis = match axis.as_str() {
+                    "x" => nctforge_transport::PlaneAxis::X,
+                    "y" => nctforge_transport::PlaneAxis::Y,
+                    "z" => nctforge_transport::PlaneAxis::Z,
+                    other => {
+                        return Err(io::Error::other(format!(
+                            "--axis must be x|y|z, got {other:?}"
+                        ))
+                        .into());
+                    }
+                };
+                let rotated = nctforge_transport::rotate_source(
+                    &source,
+                    [center_mm[0], center_mm[1], center_mm[2]],
+                    axis,
+                    degrees,
+                )
+                .map_err(|error| io::Error::other(error.to_string()))?;
+                write_new_json(&output_source, &rotated)?;
+                println!("rotated source at {}", output_source.display());
+            }
+        },
         None => {
             println!("NCTForge research scaffold");
             println!("Not commissioned or certified for clinical use.");

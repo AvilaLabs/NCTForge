@@ -109,18 +109,9 @@ impl FixedSourceDefinition {
             ));
         }
 
-        match &self.space {
-            SourceSpatialDistribution::UniformCartesianPlane {
-                x_range_cm,
-                y_range_cm,
-                z_cm,
-                ..
-            } => {
-                if !valid_interval(*x_range_cm) || !valid_interval(*y_range_cm) || !z_cm.is_finite()
-                {
-                    return Err(TransportModelError::InvalidSourceSpace);
-                }
-            }
+        let (_, offset_cm, u_range_cm, v_range_cm) = self.space.plane_parts();
+        if !valid_interval(u_range_cm) || !valid_interval(v_range_cm) || !offset_cm.is_finite() {
+            return Err(TransportModelError::InvalidSourceSpace);
         }
         match &self.angle {
             AngularDistribution::Monodirectional { unit_vector } => {
@@ -166,6 +157,72 @@ pub enum SourceSpatialDistribution {
         z_cm: f64,
         interval_convention: IntervalConvention,
     },
+    /// Uniform sampling over a bounded plane perpendicular to a world axis.
+    /// `u_range_cm`/`v_range_cm` are world-coordinate intervals along the
+    /// plane's in-plane axes in canonical order: `X` planes span (y, z),
+    /// `Y` planes span (x, z), `Z` planes span (x, y). `offset_cm` is the
+    /// world coordinate of the plane along `axis`.
+    UniformAxisPlane {
+        axis: PlaneAxis,
+        u_range_cm: [f64; 2],
+        v_range_cm: [f64; 2],
+        offset_cm: f64,
+        interval_convention: IntervalConvention,
+    },
+}
+
+/// World axis a `UniformAxisPlane` is perpendicular to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PlaneAxis {
+    X,
+    Y,
+    Z,
+}
+
+impl PlaneAxis {
+    /// Index (0, 1, 2) of this axis in a world-coordinate triple.
+    #[must_use]
+    pub fn index(self) -> usize {
+        match self {
+            PlaneAxis::X => 0,
+            PlaneAxis::Y => 1,
+            PlaneAxis::Z => 2,
+        }
+    }
+
+    /// In-plane world-axis indices `(u, v)` in canonical order.
+    #[must_use]
+    pub fn in_plane_axes(self) -> (usize, usize) {
+        match self {
+            PlaneAxis::X => (1, 2),
+            PlaneAxis::Y => (0, 2),
+            PlaneAxis::Z => (0, 1),
+        }
+    }
+}
+
+impl SourceSpatialDistribution {
+    /// Normalize any planar variant to `(axis, offset_cm, u_range_cm,
+    /// v_range_cm)` in world coordinates.
+    #[must_use]
+    pub fn plane_parts(&self) -> (PlaneAxis, f64, [f64; 2], [f64; 2]) {
+        match *self {
+            SourceSpatialDistribution::UniformCartesianPlane {
+                x_range_cm,
+                y_range_cm,
+                z_cm,
+                ..
+            } => (PlaneAxis::Z, z_cm, x_range_cm, y_range_cm),
+            SourceSpatialDistribution::UniformAxisPlane {
+                axis,
+                u_range_cm,
+                v_range_cm,
+                offset_cm,
+                ..
+            } => (axis, offset_cm, u_range_cm, v_range_cm),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

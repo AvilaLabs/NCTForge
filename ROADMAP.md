@@ -385,6 +385,12 @@ Implementation status:
   structure, per-region time and particle budgets, and declared
   assumptions; zero-statistic regions are unbounded and absolute-unit
   endpoints are rejected;
+- complete (OP-03, first slice): positioning helpers — `nctforge position
+  aim` derives a `UniformAxisPlane` source whose beam axis passes through a
+  mask centroid (axis approaches and oblique directions), reporting the
+  entry face/point and source-to-centroid distance; `position rotate`
+  applies quarter-turns about a patient axis and rejects
+  non-axis-aligned results. Matched GUI/Python surfaces remain open;
 - in progress (OP-01): NIfTI imaging I/O — `nctforge-nifti` reads and writes
   NIfTI-1 `.nii`/`.nii.gz` 3-D scalar volumes (`u8`–`f64`), prefers sform
   over qform, converts RAS+ to patient LPS with transform provenance,

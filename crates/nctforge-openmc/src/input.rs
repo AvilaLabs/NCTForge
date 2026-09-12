@@ -8,7 +8,7 @@ use nctforge_core::{ContentReference, DoseComponent, GridGeometry};
 use nctforge_transport::{
     AngularDistribution, ComponentDefinitionProfile, EnergyDistribution, FixedSourceDefinition,
     MATERIAL_ASSIGNMENT_SCHEMA, MaterialAssignment, MaterialDefinition, NeutronResponseSet,
-    ParticleType, SourceSpatialDistribution, TransportCase,
+    ParticleType, TransportCase,
 };
 use quick_xml::Writer;
 use quick_xml::events::{BytesDecl, BytesEnd, BytesStart, BytesText, Event};
@@ -1138,18 +1138,14 @@ fn validate_source_containment(
     source: &FixedSourceDefinition,
     mesh: &OpenMcScoringMesh,
 ) -> Result<(), OpenMcInputError> {
-    let SourceSpatialDistribution::UniformCartesianPlane {
-        x_range_cm,
-        y_range_cm,
-        z_cm,
-        ..
-    } = source.space;
-    let contained = x_range_cm[0] > mesh.lower_left_cm[0]
-        && x_range_cm[1] < mesh.upper_right_cm[0]
-        && y_range_cm[0] > mesh.lower_left_cm[1]
-        && y_range_cm[1] < mesh.upper_right_cm[1]
-        && z_cm > mesh.lower_left_cm[2]
-        && z_cm < mesh.upper_right_cm[2];
+    let (plane_axis, offset_cm, u_range_cm, v_range_cm) = source.space.plane_parts();
+    let (u_axis, v_axis) = plane_axis.in_plane_axes();
+    let contained = u_range_cm[0] > mesh.lower_left_cm[u_axis]
+        && u_range_cm[1] < mesh.upper_right_cm[u_axis]
+        && v_range_cm[0] > mesh.lower_left_cm[v_axis]
+        && v_range_cm[1] < mesh.upper_right_cm[v_axis]
+        && offset_cm > mesh.lower_left_cm[plane_axis.index()]
+        && offset_cm < mesh.upper_right_cm[plane_axis.index()];
     if !contained {
         return Err(OpenMcInputError::SourceOutsideGeometry);
     }
@@ -1449,26 +1445,25 @@ fn settings_xml(
         source_element.push_attribute(("particle", "neutron"));
         writer.write_event(Event::Start(source_element))?;
 
-        let SourceSpatialDistribution::UniformCartesianPlane {
-            x_range_cm,
-            y_range_cm,
-            z_cm,
-            ..
-        } = source.space;
+        // Any planar spatial distribution emits as an axis-aligned box
+        // collapsed along the plane axis (zero thickness -> plane source).
+        let (plane_axis, offset_cm, u_range_cm, v_range_cm) = source.space.plane_parts();
+        let (u_axis, v_axis) = plane_axis.in_plane_axes();
+        let mut lower = [0.0; 3];
+        let mut upper = [0.0; 3];
+        lower[plane_axis.index()] = offset_cm;
+        upper[plane_axis.index()] = offset_cm;
+        lower[u_axis] = u_range_cm[0];
+        upper[u_axis] = u_range_cm[1];
+        lower[v_axis] = v_range_cm[0];
+        upper[v_axis] = v_range_cm[1];
         let mut space = BytesStart::new("space");
         space.push_attribute(("type", "box"));
         writer.write_event(Event::Start(space))?;
         text_element(
             writer,
             "parameters",
-            &format_numbers(&[
-                x_range_cm[0],
-                y_range_cm[0],
-                z_cm,
-                x_range_cm[1],
-                y_range_cm[1],
-                z_cm,
-            ]),
+            &format_numbers(&[lower[0], lower[1], lower[2], upper[0], upper[1], upper[2]]),
         )?;
         writer.write_event(Event::End(BytesEnd::new("space")))?;
 

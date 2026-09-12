@@ -114,6 +114,48 @@ impl GridGeometry {
                 ),
         ])
     }
+
+    /// World-axis-aligned bounding box `(minimum, maximum)` of the grid's
+    /// voxel extents in LPS millimetres. `origin_mm` is voxel index
+    /// `[0,0,0]`'s center, so each face sits half a spacing beyond the
+    /// extreme centers along the (possibly rotated) voxel axes.
+    pub fn bounding_box_lps_mm(&self) -> Result<([f64; 3], [f64; 3]), ValidationError> {
+        self.voxel_count()?;
+        let mut minimum = self.origin_mm;
+        let mut maximum = self.origin_mm;
+        // Axis `axis`'s half-extent in voxel-index units is `shape/2` about
+        // the [0,0,0] center; walk the eight extreme-index corners.
+        for corner in 0..8 {
+            let local = [
+                (if corner & 1 == 0 {
+                    -0.5
+                } else {
+                    self.shape[0] as f64 - 0.5
+                }) * self.spacing_mm[0],
+                (if corner & 2 == 0 {
+                    -0.5
+                } else {
+                    self.shape[1] as f64 - 0.5
+                }) * self.spacing_mm[1],
+                (if corner & 4 == 0 {
+                    -0.5
+                } else {
+                    self.shape[2] as f64 - 0.5
+                }) * self.spacing_mm[2],
+            ];
+            for axis in 0..3 {
+                let value = self.origin_mm[axis]
+                    + self.direction[axis * 3].mul_add(
+                        local[0],
+                        self.direction[axis * 3 + 1]
+                            .mul_add(local[1], self.direction[axis * 3 + 2] * local[2]),
+                    );
+                minimum[axis] = minimum[axis].min(value);
+                maximum[axis] = maximum[axis].max(value);
+            }
+        }
+        Ok((minimum, maximum))
+    }
 }
 
 /// The four physical dose groups retained before biological weighting.
@@ -339,6 +381,48 @@ impl RegionMask {
             mean: sum / count as f64,
             maximum,
         })
+    }
+
+    /// Centroid of the included voxels' centers in LPS millimetres.
+    ///
+    /// `geometry` must describe the grid this mask indexes; the mask must
+    /// select at least one voxel.
+    pub fn centroid_lps_mm(&self, geometry: &GridGeometry) -> Result<[f64; 3], ValidationError> {
+        let total = geometry.voxel_count()?;
+        if self.voxels.len() != total {
+            return Err(ValidationError::MaskVoxelCountMismatch {
+                name: self.name.clone(),
+                other: "geometry".into(),
+                expected: total,
+                actual: self.voxels.len(),
+            });
+        }
+        let nx = geometry.shape[0] as usize;
+        let ny = geometry.shape[1] as usize;
+        let mut centroid = [0.0_f64; 3];
+        let mut count = 0_usize;
+        for (index, inside) in self.voxels.iter().copied().enumerate() {
+            if !inside {
+                continue;
+            }
+            let voxel = [
+                (index % nx) as u32,
+                ((index % (nx * ny)) / nx) as u32,
+                (index / (nx * ny)) as u32,
+            ];
+            let center = geometry.voxel_center_lps_mm(voxel)?;
+            for axis in 0..3 {
+                centroid[axis] += center[axis];
+            }
+            count += 1;
+        }
+        if count == 0 {
+            return Err(ValidationError::EmptyMask(self.name.clone()));
+        }
+        for axis in &mut centroid {
+            *axis /= count as f64;
+        }
+        Ok(centroid)
     }
 }
 

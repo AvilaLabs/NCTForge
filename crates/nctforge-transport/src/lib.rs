@@ -8,15 +8,20 @@ use nctforge_core::PhysicalDoseBundle;
 use serde::{Deserialize, Serialize};
 
 mod model;
+mod positioning;
 mod response;
 
 pub use model::{
     AngularDistribution, EnergyDistribution, FixedSourceDefinition, IntervalConvention,
     MATERIAL_ASSIGNMENT_SCHEMA, MaterialAssignment, MaterialDefinition, MaterialRegion,
-    MaterialRegionShape, NeutronThermalTreatment, NuclideMassFraction, ParticleType,
+    MaterialRegionShape, NeutronThermalTreatment, NuclideMassFraction, ParticleType, PlaneAxis,
     SourceSpatialDistribution, TransportCase, TransportModelError,
 };
 pub use nctforge_core::ContentReference;
+pub use positioning::{
+    AxisApproach, EntrySide, POSITION_REPORT_SCHEMA, PositionReport, PositioningError,
+    aim_source_at_centroid, rotate_source,
+};
 pub use response::{
     AtomDensityBasis, ComponentDefinitionProfile, ComponentEstimator, ComponentRule,
     FoldNormalization, GridPolicy, HeatrMethod, MethodQualification, NeutronResponseSemantics,
