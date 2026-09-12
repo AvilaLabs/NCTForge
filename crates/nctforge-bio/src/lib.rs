@@ -24,19 +24,55 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use thiserror::Error;
 
-pub const BIOLOGICAL_MODEL_SCHEMA: &str = "nctforge.biological-model/0.1.0";
-pub const BIOLOGICAL_DOSE_BUNDLE_SCHEMA: &str = "nctforge.biological-dose-bundle/0.1.0";
+pub const BIOLOGICAL_MODEL_SCHEMA: &str = "nctforge.biological-model/0.2.0";
+pub const BIOLOGICAL_DOSE_BUNDLE_SCHEMA: &str = "nctforge.biological-dose-bundle/0.2.0";
 
 /// Dimensionless effectiveness weight applied to one physical component.
 pub type WeightMap = BTreeMap<String, f64>;
 
 /// Weight semantics currently supported. `fixed_per_component` applies one
 /// constant weight per dose component; per-region overrides replace the
-/// default weight inside a named region mask.
+/// default weight inside a named region mask. `photon_isoeffective`
+/// declares the weights are photon-isoeffect factors (RBE/CBE relative to
+/// the photon component), which requires every photon weight to be exactly
+/// 1.0 so the weighted sum is expressed in photon-equivalent dose.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum WeightSemantics {
     FixedPerComponent,
+    PhotonIsoeffective,
+}
+
+/// Linear-quadratic fractionation parameters for the biological total.
+///
+/// The model's weighted total is a per-source-particle endpoint;
+/// `source_particles_per_fraction` converts it to a per-fraction dose `d`,
+/// and the reported total becomes the photon-isoeffective EQD2
+/// `n·d·(1 + d/(α/β)) / (1 + 2/(α/β))`. Component volumes keep their
+/// linear weighted values — only the total carries the EQD2 transform.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Fractionation {
+    /// Number of identical fractions.
+    pub fraction_count: u32,
+    /// Source particles delivered per fraction; converts the
+    /// per-particle weighted total to a per-fraction dose.
+    pub source_particles_per_fraction: f64,
+    /// α/β ratio in the endpoint's dose unit, applied outside named regions.
+    pub default_alpha_beta: f64,
+    /// Per-region α/β overrides; each name needs a mask at apply time.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub region_alpha_beta: BTreeMap<String, f64>,
+}
+
+/// The fractionation schedule actually applied to a bundle's total.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AppliedFractionation {
+    pub fraction_count: u32,
+    pub source_particles_per_fraction: f64,
+    /// Region names whose α/β overrides were applied.
+    pub regions_applied: Vec<String>,
 }
 
 /// A separately versioned biological model artifact.
@@ -58,6 +94,13 @@ pub struct BiologicalModel {
     pub region_weights: BTreeMap<String, WeightMap>,
     /// Evidence reference for where the weight values came from.
     pub derivation: Option<ContentReference>,
+    /// Free-text description of the model's validity domain (dose range,
+    /// tissue types, endpoint); recorded for provenance, not enforced.
+    pub validity_domain: Option<String>,
+    /// Optional linear-quadratic fractionation applied to the biological
+    /// total. Requires `input_unit` `gray_per_source_particle`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fractionation: Option<Fractionation>,
 }
 
 impl BiologicalModel {
@@ -94,6 +137,44 @@ impl BiologicalModel {
                 return Err(BioError::Invalid("region name is empty".into()));
             }
             check(weights, "region_weights")?;
+        }
+        if self.weight_semantics == WeightSemantics::PhotonIsoeffective {
+            let photon = component_name(DoseComponent::Photon);
+            if self.component_weights[photon] != 1.0
+                || self
+                    .region_weights
+                    .values()
+                    .any(|weights| weights[photon] != 1.0)
+            {
+                return Err(BioError::Invalid(
+                    "photon_isoeffective semantics require every photon weight to be exactly 1.0"
+                        .into(),
+                ));
+            }
+        }
+        if let Some(fractionation) = &self.fractionation {
+            if self.input_unit != DoseUnit::GrayPerSourceParticle {
+                return Err(BioError::Invalid(
+                    "fractionated models require gray_per_source_particle input".into(),
+                ));
+            }
+            if fractionation.fraction_count == 0
+                || !fractionation.source_particles_per_fraction.is_finite()
+                || fractionation.source_particles_per_fraction <= 0.0
+                || !fractionation.default_alpha_beta.is_finite()
+                || fractionation.default_alpha_beta <= 0.0
+            {
+                return Err(BioError::Invalid(
+                    "fractionation requires fraction_count >= 1, positive particles per fraction, and positive alpha/beta".into(),
+                ));
+            }
+            for (region, ratio) in &fractionation.region_alpha_beta {
+                if region.trim().is_empty() || !ratio.is_finite() || *ratio <= 0.0 {
+                    return Err(BioError::Invalid(format!(
+                        "fractionation alpha/beta for region {region:?} must be finite and positive"
+                    )));
+                }
+            }
         }
         if let Some(derivation) = &self.derivation {
             derivation
@@ -174,6 +255,10 @@ pub struct BiologicalDoseBundle {
     /// Unit label of the weighted values — deliberately never `gray`.
     pub unit: String,
     pub components: Vec<WeightedDoseVolume>,
+    /// The fractionation schedule applied to the total, when the model
+    /// declared one; the total then carries `weighted_eqd2` values.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fractionation: Option<AppliedFractionation>,
     pub total: BiologicalTotal,
     /// Region names whose override weights were actually applied.
     pub regions_applied: Vec<String>,
@@ -243,11 +328,15 @@ fn weighted_unit(unit: DoseUnit) -> String {
 
 /// Apply a biological model to a physical dose bundle.
 ///
-/// `regions` supplies the masks named by `model.region_weights`; a model
-/// region without a matching mask is rejected, as is a mask that does not
-/// cover the bundle grid. When a voxel belongs to several named regions the
-/// first matching region in `model.region_weights` order applies — call this
-/// out explicitly because overlapping ROI masks are a real possibility.
+/// `regions` supplies the masks named by `model.region_weights` and by
+/// `fractionation.region_alpha_beta`; a model region without a matching
+/// mask is rejected, as is a mask that does not cover the bundle grid. When
+/// a voxel belongs to several named regions the first matching region in
+/// the respective map's order applies — call this out explicitly because
+/// overlapping ROI masks are a real possibility. Weight and alpha/beta
+/// region selections are independent: a voxel picks its weight table from
+/// `region_weights` and its α/β from `region_alpha_beta`, each defaulting
+/// when no listed region contains it.
 pub fn apply_biological_model(
     model: &BiologicalModel,
     model_bytes: &[u8],
@@ -343,6 +432,52 @@ pub fn apply_biological_model(
         }
     }
 
+    // Fractionated models turn the linear weighted total into a
+    // photon-isoeffective EQD2: per-fraction dose d = w·particles, BED =
+    // n·d·(1 + d/(α/β)), EQD2 = BED/(1 + 2/(α/β)), with per-region α/β.
+    // First-order sigma propagation: σ_EQD2 = σ_w·p·n(1+2d/r)/(1+2/r).
+    let mut applied_fractionation = None;
+    let mut total_unit = weighted_unit(model.input_unit);
+    if let Some(fractionation) = &model.fractionation {
+        let n = f64::from(fractionation.fraction_count);
+        let p = fractionation.source_particles_per_fraction;
+        for name in fractionation.region_alpha_beta.keys() {
+            let mask = masks.get(name.as_str()).ok_or_else(|| {
+                BioError::Invalid(format!("fractionation region {name} has no supplied mask"))
+            })?;
+            if mask.len() != voxel_count {
+                return Err(BioError::Invalid(format!(
+                    "fractionation mask {name} covers {} voxels, grid needs {voxel_count}",
+                    mask.len()
+                )));
+            }
+        }
+        let alpha_beta_of = |voxel: usize| -> f64 {
+            fractionation
+                .region_alpha_beta
+                .keys()
+                .find(|name| masks[name.as_str()][voxel])
+                .map_or(fractionation.default_alpha_beta, |name| {
+                    fractionation.region_alpha_beta[name]
+                })
+        };
+        for voxel in 0..voxel_count {
+            let ratio = alpha_beta_of(voxel);
+            let d = total_values[voxel] * p;
+            total_values[voxel] = n * d * (1.0 + d / ratio) / (1.0 + 2.0 / ratio);
+            if have_sigma {
+                let derivative = p * n * (1.0 + 2.0 * d / ratio) / (1.0 + 2.0 / ratio);
+                total_sigma[voxel] *= derivative;
+            }
+        }
+        total_unit = "weighted_eqd2".into();
+        applied_fractionation = Some(AppliedFractionation {
+            fraction_count: fractionation.fraction_count,
+            source_particles_per_fraction: p,
+            regions_applied: fractionation.region_alpha_beta.keys().cloned().collect(),
+        });
+    }
+
     let mut regions_applied: Vec<String> = model.region_weights.keys().cloned().collect();
     regions_applied.retain(|name| masks.contains_key(name.as_str()));
     let bundle = BiologicalDoseBundle {
@@ -357,8 +492,9 @@ pub fn apply_biological_model(
         weight_semantics: model.weight_semantics,
         unit,
         components,
+        fractionation: applied_fractionation,
         total: BiologicalTotal {
-            unit: weighted_unit(model.input_unit),
+            unit: total_unit,
             values: total_values,
             absolute_standard_uncertainty: have_sigma.then_some(total_sigma),
             uncertainty_method: if have_sigma {
@@ -447,6 +583,8 @@ mod tests {
             component_weights: weights,
             region_weights: BTreeMap::new(),
             derivation: None,
+            validity_domain: None,
+            fractionation: None,
         }
     }
 
@@ -526,5 +664,99 @@ mod tests {
         assert_ne!(bundle.unit, "gray_per_source_particle");
         assert_eq!(bundle.qualification, "synthetic_research_only_not_clinical");
         assert_eq!(bundle.physical_bundle_provenance, "test-provenance");
+    }
+
+    #[test]
+    fn photon_isoeffective_requires_unit_photon_weight() {
+        let mut model = model();
+        model.weight_semantics = WeightSemantics::PhotonIsoeffective;
+        assert!(model.validate().is_ok()); // fixture photon weight is 1.0
+
+        model.component_weights.insert("photon".into(), 1.2);
+        assert!(model.validate().is_err());
+
+        model.component_weights.insert("photon".into(), 1.0);
+        let mut region = WeightMap::from([
+            ("boron".to_string(), 4.0),
+            ("nitrogen".to_string(), 2.0),
+            ("hydrogen".to_string(), 1.0),
+            ("photon".to_string(), 1.1),
+        ]);
+        model.region_weights.insert("tumor".into(), region.clone());
+        assert!(model.validate().is_err());
+        region.insert("photon".into(), 1.0);
+        model.region_weights.insert("tumor".into(), region);
+        assert!(model.validate().is_ok());
+    }
+
+    #[test]
+    fn fractionation_transforms_total_to_eqd2_with_region_alpha_beta() {
+        let mut model = model();
+        let mut fractionation = Fractionation {
+            fraction_count: 30,
+            source_particles_per_fraction: 1.0e12,
+            default_alpha_beta: 3.0,
+            region_alpha_beta: BTreeMap::from([("tumor".to_string(), 10.0)]),
+        };
+        model.fractionation = Some(fractionation.clone());
+        let bytes = serde_json::to_vec_pretty(&model).unwrap();
+        let mask = RegionMask {
+            name: "tumor".into(),
+            voxels: vec![true, false],
+        };
+        let bundle = apply_biological_model(
+            &model,
+            &bytes,
+            &physical_bundle(),
+            std::slice::from_ref(&mask),
+        )
+        .unwrap();
+
+        // Weighted per-particle total w = 3.8e-12 + 2.5*2e-13 + 1*5e-14 +
+        // 1*3e-13 = 4.65e-12 (tumor boron weight is default: model has no
+        // region_weights here, only region alpha/beta).
+        let w = 3.8e-12 + 2.5 * 2.0e-13 + 5.0e-14 + 3.0e-13;
+        let d = w * 1.0e12; // per-fraction dose
+        let eqd2_tumor = 30.0 * d * (1.0 + d / 10.0) / (1.0 + 2.0 / 10.0);
+        let eqd2_default = 30.0 * d * (1.0 + d / 3.0) / (1.0 + 2.0 / 3.0);
+        assert!((bundle.total.values[0] - eqd2_tumor).abs() / eqd2_tumor < 1e-9);
+        assert!((bundle.total.values[1] - eqd2_default).abs() / eqd2_default < 1e-9);
+        assert_eq!(bundle.total.unit, "weighted_eqd2");
+        assert_eq!(bundle.fractionation.unwrap().regions_applied, vec!["tumor"]);
+
+        fractionation
+            .region_alpha_beta
+            .insert("missing".into(), 5.0);
+        model.fractionation = Some(fractionation);
+        let bytes = serde_json::to_vec_pretty(&model).unwrap();
+        assert!(
+            apply_biological_model(
+                &model,
+                &bytes,
+                &physical_bundle(),
+                std::slice::from_ref(&mask)
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn fractionation_requires_per_particle_input_and_valid_parameters() {
+        let mut model = model();
+        model.input_unit = DoseUnit::Gray;
+        model.fractionation = Some(Fractionation {
+            fraction_count: 10,
+            source_particles_per_fraction: 1.0e9,
+            default_alpha_beta: 3.0,
+            region_alpha_beta: BTreeMap::new(),
+        });
+        assert!(model.validate().is_err());
+
+        model.input_unit = DoseUnit::GrayPerSourceParticle;
+        model.fractionation.as_mut().unwrap().default_alpha_beta = 0.0;
+        assert!(model.validate().is_err());
+        model.fractionation.as_mut().unwrap().default_alpha_beta = 3.0;
+        model.fractionation.as_mut().unwrap().fraction_count = 0;
+        assert!(model.validate().is_err());
     }
 }

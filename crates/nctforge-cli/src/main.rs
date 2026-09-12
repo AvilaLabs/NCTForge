@@ -559,7 +559,7 @@ struct BioArgs {
 enum BioCommand {
     /// Produce a biological dose bundle from a physical dose bundle.
     Apply {
-        /// Biological model JSON (`nctforge.biological-model/0.1.0`).
+        /// Biological model JSON (`nctforge.biological-model/0.2.0`).
         #[arg(long)]
         model: PathBuf,
         /// Physical dose bundle JSON produced by `openmc collect`.

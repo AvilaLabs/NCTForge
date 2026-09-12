@@ -12,7 +12,8 @@ use std::fs;
 use std::path::PathBuf;
 
 use nctforge_bio::{
-    BiologicalDoseBundle, BiologicalModel, RegionMask, apply_biological_model,
+    AppliedFractionation, BiologicalDoseBundle, BiologicalModel, RegionMask,
+    apply_biological_model,
 };
 use nctforge_core::PhysicalDoseBundle;
 use nctforge_dicom::{
@@ -906,7 +907,7 @@ impl PyBiologicalModel {
     }
 }
 
-/// Load and validate a `nctforge.biological-model/0.1.0` artifact.
+/// Load and validate a `nctforge.biological-model/0.2.0` artifact.
 #[pyfunction]
 fn load_biological_model(path: PathBuf) -> PyResult<PyBiologicalModel> {
     let bytes = fs::read(&path).map_err(reject)?;
@@ -922,6 +923,30 @@ fn load_biological_model(path: PathBuf) -> PyResult<PyBiologicalModel> {
 #[pyclass(frozen, name = "BiologicalDoseBundle")]
 struct PyBiologicalDoseBundle {
     inner: BiologicalDoseBundle,
+}
+
+/// The fractionation schedule a model applied to a bundle's total.
+#[pyclass(frozen, name = "AppliedFractionation")]
+struct PyAppliedFractionation {
+    inner: AppliedFractionation,
+}
+
+#[pymethods]
+impl PyAppliedFractionation {
+    #[getter]
+    fn fraction_count(&self) -> u32 {
+        self.inner.fraction_count
+    }
+
+    #[getter]
+    fn source_particles_per_fraction(&self) -> f64 {
+        self.inner.source_particles_per_fraction
+    }
+
+    #[getter]
+    fn regions_applied(&self) -> Vec<String> {
+        self.inner.regions_applied.clone()
+    }
 }
 
 #[pymethods]
@@ -940,6 +965,23 @@ impl PyBiologicalDoseBundle {
     #[getter]
     fn unit(&self) -> &str {
         &self.inner.unit
+    }
+
+    /// `fixed_per_component` or `photon_isoeffective`.
+    #[getter]
+    fn weight_semantics(&self) -> PyResult<String> {
+        serde_json::to_value(self.inner.weight_semantics)
+            .and_then(serde_json::from_value::<String>)
+            .map_err(reject)
+    }
+
+    /// The applied fractionation schedule, when the model declared one.
+    #[getter]
+    fn fractionation(&self) -> Option<PyAppliedFractionation> {
+        self.inner
+            .fractionation
+            .clone()
+            .map(|inner| PyAppliedFractionation { inner })
     }
 
     #[getter]
@@ -1239,6 +1281,7 @@ fn _nctforge(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyPhysicalDoseBundle>()?;
     m.add_class::<PyBiologicalModel>()?;
     m.add_class::<PyBiologicalDoseBundle>()?;
+    m.add_class::<PyAppliedFractionation>()?;
     m.add_class::<PyDoseVolumeHistogram>()?;
     m.add_function(wrap_pyfunction!(backends, m)?)?;
     m.add_function(wrap_pyfunction!(file_sha256, m)?)?;

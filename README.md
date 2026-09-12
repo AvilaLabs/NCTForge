@@ -489,17 +489,33 @@ the run set only within the case's declared qualification ceiling.
 ### Biological interpretation and dose-volume histograms
 
 `nctforge-bio` is a separately versioned interpretation layer. A
-`nctforge.biological-model/0.1.0` artifact assigns dimensionless
+`nctforge.biological-model/0.2.0` artifact assigns dimensionless
 effectiveness weights to the four physical dose components, with optional
 per-region overrides; `bio apply` produces a
-`nctforge.biological-dose-bundle/0.1.0` whose weighted values never alias
-physical dose (`weighted_gray*` unit labels, a `synthetic_research_only`
-qualification, and content hashes binding the model and physical bundle).
-The biological total's uncertainty is the fully-correlated sum of the
-weighted component sigmas, since all components share transport histories.
+`nctforge.biological-dose-bundle/0.2.0` whose weighted values never alias
+physical dose (`weighted_gray*`/`weighted_eqd2` unit labels, a
+`synthetic_research_only` qualification, and content hashes binding the
+model and physical bundle). The biological total's uncertainty is the
+fully-correlated sum of the weighted component sigmas, since all components
+share transport histories.
+
+Two weight-semantics families are supported. `fixed_per_component` treats
+the weights as free research factors; `photon_isoeffective` declares them
+photon-isoeffect factors (RBE/CBE relative to photon dose) and requires
+every photon weight — defaults and all region overrides — to be exactly
+1.0. A model may also declare a linear-quadratic `fractionation` block
+(fraction count, source particles per fraction, a default α/β, and
+optional per-region α/β overrides): the weighted per-source-particle
+total is then transformed to a photon-isoeffective EQD2,
+`n·d·(1 + d/(α/β)) / (1 + 2/(α/β))` with `d` the per-fraction dose, while
+component volumes keep their linear weighted values and the applied
+schedule is recorded in the bundle. Weight and α/β region selections are
+independent — each uses the first matching mask in its own map's order.
+Models carry a free-text `validity_domain` for provenance.
+
 The NF-BNCT-001 specification's exclusion of CBE/RBE/Gy-Eq claims is
 preserved: biological bundles exist only when a model artifact is supplied,
-and a demonstration model plus a core-region mask live under
+and demonstration models plus a core-region mask live under
 `examples/biological/`:
 
 ```text

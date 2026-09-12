@@ -255,13 +255,23 @@ class PhysicalDoseBundle:
     def to_json(self) -> str: ...
 
 class BiologicalModel:
-    """A validated ``nctforge.biological-model/0.1.0`` artifact."""
+    """A validated ``nctforge.biological-model/0.2.0`` artifact."""
 
     @property
     def schema_version(self) -> str: ...
     @property
     def id(self) -> str: ...
     def to_json(self) -> str: ...
+
+class AppliedFractionation:
+    """The fractionation schedule a model applied to a bundle's total."""
+
+    @property
+    def fraction_count(self) -> int: ...
+    @property
+    def source_particles_per_fraction(self) -> float: ...
+    @property
+    def regions_applied(self) -> list[str]: ...
 
 class BiologicalDoseBundle:
     """A validated biological dose bundle; never aliases physical dose."""
@@ -273,6 +283,12 @@ class BiologicalDoseBundle:
     @property
     def unit(self) -> str:
         """Weighted unit label, deliberately never ``gray``."""
+    @property
+    def weight_semantics(self) -> str:
+        """``fixed_per_component`` or ``photon_isoeffective``."""
+    @property
+    def fractionation(self) -> AppliedFractionation | None:
+        """Applied schedule when the model declared fractionation."""
     @property
     def geometry(self) -> Geometry: ...
     @property

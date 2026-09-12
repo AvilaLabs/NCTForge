@@ -10,6 +10,7 @@ gates pass; :func:`backends` reports those flags honestly.
 """
 
 from nctforge._nctforge import (
+    AppliedFractionation,
     Artifact,
     Backend,
     BiologicalDoseBundle,
@@ -53,6 +54,7 @@ from nctforge._nctforge import __version__ as _extension_version
 __version__ = _extension_version
 
 __all__ = [
+    "AppliedFractionation",
     "Artifact",
     "Backend",
     "BiologicalDoseBundle",

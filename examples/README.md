@@ -6,10 +6,16 @@ the reviewed synthetic benchmark corpus.
 ## `biological/`
 
 - `fixed-component-weights-model-v1.json` — a demonstration
-  `nctforge.biological-model/0.1.0` with fixed per-component effectiveness
+  `nctforge.biological-model/0.2.0` with fixed per-component effectiveness
   weights and a tumor-like boron override inside the `core` region. The
   weights are illustrative research values only; they carry no clinical CBE
   or RBE claim and are not part of the frozen NF-BNCT-001 benchmark outputs.
+- `photon-isoeffective-lq-model-v1.json` — a `photon_isoeffective` variant
+  whose weights are RBE/CBE-style photon-isoeffect factors (photon weight
+  pinned to 1.0) with a linear-quadratic fractionation block: 30 fractions,
+  1.0e9 source particles per fraction, α/β = 10 inside `core` and 3
+  elsewhere. `bio apply` then reports the total in `weighted_eqd2` and
+  records the applied schedule. Illustrative research values only.
 - `core-region-mask.json` — the 512-voxel mask selecting the
   acceptance-contract `CORE` box (voxel centers within ±20 mm on every axis)
   on the benchmark's 40×40×40, 5 mm grid.

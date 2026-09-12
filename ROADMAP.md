@@ -338,10 +338,21 @@ Exit evidence:
 Implementation status:
 
 - complete: biological interpretation layer — `nctforge-bio` applies a
-  separately versioned `nctforge.biological-model/0.1.0` artifact to a
-  physical dose bundle, producing `nctforge.biological-dose-bundle/0.1.0`
-  whose `weighted_gray*` units and `synthetic_research_only` qualification
-  can never alias physical dose;
+  separately versioned `nctforge.biological-model/0.2.0` artifact to a
+  physical dose bundle, producing `nctforge.biological-dose-bundle/0.2.0`
+  whose `weighted_gray*`/`weighted_eqd2` units and `synthetic_research_only`
+  qualification can never alias physical dose;
+- complete (OP-08, first slice): biological model families — models now
+  declare `fixed_per_component` or `photon_isoeffective` weight semantics
+  (the latter requiring every photon weight to be exactly 1.0), an optional
+  free-text `validity_domain`, and an optional linear-quadratic
+  `fractionation` block (fraction count, source particles per fraction,
+  default + per-region α/β). A fractionated model transforms the weighted
+  per-particle total to `weighted_eqd2` — `n·d·(1+d/(α/β))/(1+2/(α/β))` —
+  with first-order sigma propagation, while components stay linear
+  weighted values; both schema bumps are 0.2.0 because
+  `deny_unknown_fields` makes the new fields forward-incompatible.
+  Published reference-case fixtures and sensitivity sweeps remain open;
 - complete: deterministic `nctforge.dose-volume-histogram/0.1.0` over named
   voxel masks for any bundle component or total;
 - complete: evidence-bundle export — `evidence export` collects inputs,

@@ -290,7 +290,7 @@ def _physical_bundle_json() -> str:
 def _model_json() -> str:
     return json.dumps(
         {
-            "schema_version": "nctforge.biological-model/0.1.0",
+            "schema_version": "nctforge.biological-model/0.2.0",
             "id": "nctforge.tests.fixed-weights.v1",
             "weight_semantics": "fixed_per_component",
             "input_unit": "gray_per_source_particle",
@@ -370,7 +370,7 @@ class BiologicalLayerTest(unittest.TestCase):
             reloaded = json.loads(out.read_text())
             self.assertEqual(
                 reloaded["schema_version"],
-                "nctforge.biological-dose-bundle/0.1.0",
+                "nctforge.biological-dose-bundle/0.2.0",
             )
 
     def test_region_mask_name_must_match(self) -> None:
@@ -392,6 +392,46 @@ class BiologicalLayerTest(unittest.TestCase):
             )
             with self.assertRaises(NctForgeError):
                 nctforge.apply_model(model, bundle, [("core", mask)])
+
+    def test_photon_isoeffective_fractionated_total(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            bundle = nctforge.load_physical_dose_bundle(
+                _write(tmp, "dose.json", _physical_bundle_json())
+            )
+            model_document = json.loads(_model_json())
+            model_document["weight_semantics"] = "photon_isoeffective"
+            model_document["fractionation"] = {
+                "fraction_count": 30,
+                "source_particles_per_fraction": 1.0e12,
+                "default_alpha_beta": 3.0,
+            }
+            model = nctforge.load_biological_model(
+                _write(tmp, "model.json", json.dumps(model_document))
+            )
+            biological = nctforge.apply_model(model, bundle, [])
+            self.assertEqual(biological.weight_semantics, "photon_isoeffective")
+            # Weighted per-particle total w = 3.8e-12 + 2.5*2e-13 + 1*5e-14 +
+            # 1*3e-13 = 4.65e-12; d = w * 1e12 = 4.65; EQD2 with n=30, r=3.
+            d = 4.65
+            expected = 30.0 * d * (1.0 + d / 3.0) / (1.0 + 2.0 / 3.0)
+            self.assertAlmostEqual(
+                biological.biological_total.values[0],
+                expected,
+                delta=expected * 1e-12,
+            )
+            self.assertEqual(
+                biological.biological_total.unit, "weighted_eqd2"
+            )
+
+    def test_photon_isoeffective_rejects_non_unit_photon_weight(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            model_document = json.loads(_model_json())
+            model_document["weight_semantics"] = "photon_isoeffective"
+            model_document["component_weights"]["photon"] = 1.4
+            with self.assertRaises(NctForgeError):
+                nctforge.load_biological_model(
+                    _write(tmp, "model.json", json.dumps(model_document))
+                )
 
 
 class EvidenceBundleTest(unittest.TestCase):
