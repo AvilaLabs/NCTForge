@@ -5,7 +5,9 @@
 **Status:** Geometry, resolved material, and source frozen; first NJOY
 processing and transported-photon suitability evidence rejected and
 dispositioned as explained (ADR 0031); component response tables generated and
-deterministically verified; reference transport results unqualified
+deterministically verified; OpenMC smoke execution complete with the ADR 0007
+estimator comparisons frozen as evidence; reference transport results
+unqualified pending statepoint import into the platform result model
 
 **Qualification ceiling:** Synthetic research only
 
@@ -344,7 +346,7 @@ with SHA-256
 as `independently_reviewed` under the ADR 0031 in-house verification path.
 The reviewed set satisfies `validate_for_folding` and may be bound to OpenMC
 input generation. It does not qualify the reference results, which remain
-pending smoke execution, statepoint import, and estimator comparison.
+pending statepoint import into the platform result model.
 
 ## Execution profiles
 
@@ -353,6 +355,20 @@ pending smoke execution, statepoint import, and estimator comparison.
 The smoke profile only establishes that the full pipeline executes and all
 artifacts validate. It has no scientific acceptance threshold and cannot create
 reference results.
+
+The profile has now executed under OpenMC 0.16.0 at the frozen commit on the
+generated deck, producing a five-batch statepoint whose twelve tallies match
+the manifest contract. The executed energy-function tables are bitwise
+identical to the sealed response set, coupled heating closes against neutron
+plus photon heating within combined uncertainty, the boron plus nitrogen plus
+hydrogen response sum agrees with the dedicated neutron-heating estimator at
+the 1e-9 relative level, and the B-10 and N-14 reaction-rate audits reproduce
+the evaluated mean deposited energies within 2e-4. The comparison evidence is
+[`transport/provenance/openmc-smoke-estimator-comparison.json`](transport/provenance/openmc-smoke-estimator-comparison.json),
+with SHA-256
+`724b73f60a237833fe58a71c1ddc97a33bb9c3aea6114ea807e86bad434e0c86`,
+produced by `scripts/compare-openmc-smoke-estimators.py`. These are
+correlated shared-history diagnostics (ADR 0005), not independent validation.
 
 Its machine input is
 [`transport/openmc-smoke-profile.json`](transport/openmc-smoke-profile.json),
@@ -522,9 +538,14 @@ imbalances and documented photon-data coverage gaps — and are carried in
 response-set provenance rather than blocking generation. The component
 response tables are generated under the frozen method and sealed
 `independently_reviewed` by deterministic in-house regeneration; the sealed
-set satisfies `validate_for_folding` for OpenMC input generation. Reference
-transport results remain unqualified pending smoke execution, statepoint
-import, and the independent estimator comparison of ADR 0007. The archive
+set satisfies `validate_for_folding` for OpenMC input generation. The smoke
+profile has executed under the frozen OpenMC revision: the statepoint honors
+the tally contract, executed response tables are bitwise identical to the
+sealed set, coupled heating closes, and the ADR 0007 estimator comparisons
+(reaction-rate times evaluated mean deposited energy, component sum versus
+dedicated total) agree within their tolerances as correlated diagnostics.
+Reference transport results remain unqualified pending statepoint import into
+the platform result model. The archive
 drift is resolved at the MT 301 response level and the processed OpenMC
 selection is inspected.
 Changing any frozen quantity creates a new benchmark specification version and

@@ -346,6 +346,26 @@ executes under OpenMC 0.16.0 at commit
 `617d35a5063c57796b43428bc401e627d2011046` with `OPENMC_CROSS_SECTIONS`
 pointed at the manifest's `cross_sections.xml`.
 
+After execution, `scripts/compare-openmc-smoke-estimators.py` binds the
+statepoint to its input manifest and sealed response set, checks the tally
+contract and executed energy-function tables, and freezes the ADR 0007
+correlated-diagnostic estimator comparisons (coupled-heating closure,
+component sum versus dedicated neutron heating, and reaction-rate times
+evaluated mean deposited energy for B-10 and N-14) as a content-hashed report:
+
+```text
+python3 scripts/compare-openmc-smoke-estimators.py \
+  --statepoint DECK-DIRECTORY/statepoint.5.h5 \
+  --input-manifest DECK-DIRECTORY/nctforge-input-manifest.json \
+  --response-set benchmarks/synthetic/nf-bnct-001/transport/provenance/neutron-response-set.json \
+  --material benchmarks/synthetic/nf-bnct-001/transport/material.json \
+  --execution-profile benchmarks/synthetic/nf-bnct-001/transport/openmc-smoke-profile.json \
+  --execution-root PATH-TO-NJOY-EXECUTION-ROOT \
+  --execution-receipt benchmarks/synthetic/nf-bnct-001/transport/provenance/njoy2016-78-execution-receipt.json \
+  --report-id nctforge.nf-bnct-001.openmc-smoke-estimator-comparison.v1 \
+  --output NEW-COMPARISON-REPORT.json
+```
+
 A controlled ENDF/B-VIII.1 + TENDL-2025 mixed-source candidate was then
 executed under selection schema `0.3.0`. The six shared nuclides reproduce the
 baseline exactly, but all four TENDL-2025 substitutions remain rejected with

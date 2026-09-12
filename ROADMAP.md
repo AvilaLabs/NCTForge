@@ -186,8 +186,16 @@ Implementation status:
   seals the set as independently reviewed under the in-house deterministic
   verification path (ADR 0031); all 72 in-domain kinematic findings are
   carried into the generation report, none waived;
-- pending: smoke execution, statepoint import, and independent estimator
-  comparison.
+- complete: smoke execution under OpenMC 0.16.0 at the frozen commit —
+  `openmc generate` materializes the deterministic deck bound to the reviewed
+  response set, the run produces a five-batch statepoint honoring all twelve
+  tally contracts, and `compare-openmc-smoke-estimators.py` freezes the ADR
+  0007 correlated-diagnostic evidence: executed energy-function tables bitwise
+  identical to the sealed set, coupled-heating closure within combined
+  uncertainty, component response sum versus the dedicated neutron-heating
+  estimator at the 1e-9 relative level, and B-10/N-14 reaction-rate audits
+  reproducing the evaluated mean deposited energies within 2e-4;
+- pending: statepoint import into the platform result model.
 
 ## R3 — End-to-end research alpha
 
