@@ -183,7 +183,10 @@ workspace loads any validated physical or biological bundle
 file — component statistics, totals, a region-mask DVH plot, and region
 dose-volume metrics (`D_x`, `V_x`, EUD via the same `RegionDoseMetrics` path
 as the CLI and Python, exportable as `nctforge.dose-metrics/0.1.0`) — while
-keeping the two layers visually distinct. The evidence workspace can verify an exported
+keeping the two layers visually distinct. A NIfTI section inspects
+`.nii`/`.nii.gz` volumes, writes region masks, resamples onto a bundle's
+grid, and exports dose volumes — the same `nctforge-nifti` paths as
+`nctforge nifti`. The evidence workspace can verify an exported
 `artifact-manifest.json` in place. Select the `?` button or press `F1` for
 contextual guidance, bundled offline answers, and guided tours that dim the
 application and spotlight live workflow controls. Interactive transport actions

@@ -416,8 +416,11 @@ Implementation status:
   dimensions/datatypes/transforms/non-mm units. `nctforge nifti` provides
   `info`, `to-mask`, `export-dose`, and `resample` (nearest/trilinear);
   affine handling is regression-tested against independent `nibabel`
-  output including an oblique sform. Remaining parity work: broader
-  convergence evidence, CT-aligned mesh conversion, and GUI surfaces;
+  output including an oblique sform. The GUI dose workspace surfaces the
+  same four operations — volume inspection with transform provenance,
+  mask writing, dose export, and nearest/trilinear resampling onto a
+  bundle grid. Remaining parity work: broader convergence evidence and
+  CT-aligned mesh conversion;
 - complete (OP-06): weighted exposure/fraction aggregation — the
   `nctforge.exposure-plan/0.1.0` contract binds each exposure's dose bundle
   by SHA-256 with an explicit weight, weight basis, duration, and boron

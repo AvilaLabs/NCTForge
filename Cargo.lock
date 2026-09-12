@@ -2642,6 +2642,7 @@ dependencies = [
  "nctforge-core",
  "nctforge-dicom",
  "nctforge-evidence",
+ "nctforge-nifti",
  "nctforge-openmc",
  "nctforge-plan",
  "nctforge-transport",

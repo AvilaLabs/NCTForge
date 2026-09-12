@@ -522,6 +522,140 @@ impl DosePanel {
     }
 }
 
+/// UI state for the NIfTI section of the dose workspace — the same four
+/// operations as `nctforge nifti` over the shared `nctforge-nifti` crate.
+#[derive(Default)]
+struct NiftiPanel {
+    input_path: String,
+    image: Option<nctforge_nifti::NiftiImage>,
+    mask_name: String,
+    mask_output: String,
+    bundle_path: String,
+    export_quantity: String,
+    export_output: String,
+    resample_nearest: bool,
+    resample_output: String,
+    status: Option<String>,
+    error: Option<String>,
+}
+
+impl NiftiPanel {
+    fn inspect(&mut self) {
+        self.image = None;
+        self.error = None;
+        self.status = None;
+        match nctforge_nifti::read_nifti_file(Path::new(self.input_path.trim())) {
+            Ok(image) => self.image = Some(image),
+            Err(error) => self.error = Some(error.to_string()),
+        }
+    }
+
+    fn write_mask(&mut self) {
+        self.error = None;
+        self.status = None;
+        let Some(image) = &self.image else {
+            self.error = Some("Inspect a NIfTI volume first.".into());
+            return;
+        };
+        let name = self.mask_name.trim();
+        let output = self.mask_output.trim();
+        if name.is_empty() || output.is_empty() {
+            self.error = Some("mask name and output path are required".into());
+            return;
+        }
+        let mask = nctforge_nifti::to_mask(image, name);
+        match std::fs::write(output, serde_json::to_string_pretty(&mask).unwrap() + "\n") {
+            Ok(()) => {
+                self.status = Some(format!(
+                    "mask {} written ({} voxels included)",
+                    mask.name,
+                    mask.voxels.iter().filter(|v| **v).count()
+                ));
+            }
+            Err(e) => self.error = Some(e.to_string()),
+        }
+    }
+
+    fn export_dose(&mut self) {
+        self.error = None;
+        self.status = None;
+        let quantity = self.export_quantity.trim();
+        let output = self.export_output.trim();
+        let loaded = match DoseArtifact::load(Path::new(self.bundle_path.trim())) {
+            Ok(loaded) => loaded,
+            Err(error) => {
+                self.error = Some(error);
+                return;
+            }
+        };
+        let Some((name, values, _)) = loaded
+            .artifact
+            .rows()
+            .into_iter()
+            .find(|(name, ..)| *name == quantity || format!("component:{name}") == quantity)
+        else {
+            self.error = Some(format!("unknown quantity {quantity:?}"));
+            return;
+        };
+        let geometry = match &loaded.artifact {
+            DoseArtifact::Physical(b) => b.geometry.clone(),
+            DoseArtifact::Biological(b) => b.geometry.clone(),
+        };
+        let image = nctforge_nifti::NiftiImage {
+            geometry,
+            values: values.to_vec(),
+            datatype: 64,
+            transform_source: "sform",
+            description: format!("nctforge {} {name}", loaded.artifact.case_id()),
+            intent_name: String::new(),
+            units_declared_mm: true,
+        };
+        match nctforge_nifti::write_nifti(&image, Path::new(output)) {
+            Ok(()) => self.status = Some(format!("wrote {output}")),
+            Err(e) => self.error = Some(e.to_string()),
+        }
+    }
+
+    fn resample(&mut self) {
+        self.error = None;
+        self.status = None;
+        let Some(image) = &self.image else {
+            self.error = Some("Inspect a NIfTI volume first.".into());
+            return;
+        };
+        let output = self.resample_output.trim();
+        let loaded = match DoseArtifact::load(Path::new(self.bundle_path.trim())) {
+            Ok(loaded) => loaded,
+            Err(error) => {
+                self.error = Some(error);
+                return;
+            }
+        };
+        let geometry = match &loaded.artifact {
+            DoseArtifact::Physical(b) => b.geometry.clone(),
+            DoseArtifact::Biological(b) => b.geometry.clone(),
+        };
+        let interpolation = if self.resample_nearest {
+            nctforge_nifti::Interpolation::Nearest
+        } else {
+            nctforge_nifti::Interpolation::Trilinear
+        };
+        let resampled = nctforge_nifti::NiftiImage {
+            geometry: geometry.clone(),
+            values: nctforge_nifti::resample_to_grid(image, &geometry, interpolation),
+            datatype: 64,
+            transform_source: "sform",
+            description: "nctforge resampled".into(),
+            intent_name: String::new(),
+            units_declared_mm: true,
+        };
+        match nctforge_nifti::write_nifti(&resampled, Path::new(output)) {
+            Ok(()) => self.status = Some(format!("wrote {output}")),
+            Err(e) => self.error = Some(e.to_string()),
+        }
+    }
+}
+
 /// UI state for the evidence workspace's bundle-verification panel.
 #[derive(Default)]
 struct EvidencePanel {
@@ -777,6 +911,7 @@ impl PositionPanel {
 struct WorkbenchPanels {
     dose: DosePanel,
     evidence: EvidencePanel,
+    nifti: NiftiPanel,
     plan: PlanPanel,
     position: PositionPanel,
 }
@@ -1074,7 +1209,9 @@ fn show_workbench(
                         tour_targets,
                     ),
                     WorkspaceTab::Plan => show_plan_workspace(ui, &mut panels.plan),
-                    WorkspaceTab::Dose => show_dose_workspace(ui, &mut panels.dose),
+                    WorkspaceTab::Dose => {
+                        show_dose_workspace(ui, &mut panels.dose, &mut panels.nifti);
+                    }
                     WorkspaceTab::Evidence => show_evidence_workspace(
                         ui,
                         case.as_deref(),
@@ -1699,7 +1836,7 @@ fn show_plan_workspace(ui: &mut egui::Ui, panel: &mut PlanPanel) {
     });
 }
 
-fn show_dose_workspace(ui: &mut egui::Ui, panel: &mut DosePanel) {
+fn show_dose_workspace(ui: &mut egui::Ui, panel: &mut DosePanel, nifti: &mut NiftiPanel) {
     show_workspace_heading(
         ui,
         "Dose components",
@@ -1919,6 +2056,107 @@ fn show_dose_workspace(ui: &mut egui::Ui, panel: &mut DosePanel) {
             if let Some(status) = &panel.metrics_status {
                 ui.colored_label(egui::Color32::LIGHT_GREEN, status);
             }
+        }
+    });
+
+    ui.add_space(14.0);
+    ui.heading("NIfTI volumes");
+    ui.label("Same `nctforge-nifti` paths as `nctforge nifti` — sform-preferred RAS→LPS handling.");
+    egui::Frame::group(ui.style()).show(ui, |ui| {
+        ui.horizontal(|ui| {
+            ui.label("Volume");
+            ui.add(
+                egui::TextEdit::singleline(&mut nifti.input_path)
+                    .desired_width(320.0)
+                    .hint_text("/path/to/volume.nii[.gz]"),
+            );
+            if ui.button("Inspect").clicked() {
+                nifti.inspect();
+            }
+        });
+        if let Some(image) = &nifti.image {
+            let g = &image.geometry;
+            ui.monospace(format!(
+                "{}×{}×{} · spacing [{:.2}, {:.2}, {:.2}] mm · origin [{:.1}, {:.1}, {:.1}] mm",
+                g.shape[0],
+                g.shape[1],
+                g.shape[2],
+                g.spacing_mm[0],
+                g.spacing_mm[1],
+                g.spacing_mm[2],
+                g.origin_mm[0],
+                g.origin_mm[1],
+                g.origin_mm[2],
+            ));
+            ui.monospace(format!(
+                "transform: {} · datatype {} · {}",
+                image.transform_source,
+                image.datatype,
+                if image.units_declared_mm {
+                    "mm units declared"
+                } else {
+                    "mm units assumed (unspecified)"
+                }
+            ));
+            ui.horizontal(|ui| {
+                ui.label("Mask name");
+                ui.add(
+                    egui::TextEdit::singleline(&mut nifti.mask_name)
+                        .desired_width(110.0)
+                        .hint_text("region name"),
+                );
+                ui.add(
+                    egui::TextEdit::singleline(&mut nifti.mask_output)
+                        .desired_width(240.0)
+                        .hint_text("region-mask.json"),
+                );
+                if ui.button("Write mask").clicked() {
+                    nifti.write_mask();
+                }
+            });
+            ui.horizontal(|ui| {
+                ui.label("Resample to bundle grid");
+                ui.radio_value(&mut nifti.resample_nearest, true, "nearest");
+                ui.radio_value(&mut nifti.resample_nearest, false, "trilinear");
+                ui.add(
+                    egui::TextEdit::singleline(&mut nifti.resample_output)
+                        .desired_width(200.0)
+                        .hint_text("resampled.nii"),
+                );
+                if ui.button("Resample").clicked() {
+                    nifti.resample();
+                }
+            });
+        }
+        ui.horizontal(|ui| {
+            ui.label("Dose bundle");
+            ui.add(
+                egui::TextEdit::singleline(&mut nifti.bundle_path)
+                    .desired_width(280.0)
+                    .hint_text("dose-bundle.json (export source / resample target)"),
+            );
+        });
+        ui.horizontal(|ui| {
+            ui.label("Export dose");
+            ui.add(
+                egui::TextEdit::singleline(&mut nifti.export_quantity)
+                    .desired_width(130.0)
+                    .hint_text("physical_total"),
+            );
+            ui.add(
+                egui::TextEdit::singleline(&mut nifti.export_output)
+                    .desired_width(200.0)
+                    .hint_text("dose.nii"),
+            );
+            if ui.button("Export").clicked() {
+                nifti.export_dose();
+            }
+        });
+        if let Some(error) = &nifti.error {
+            ui.colored_label(egui::Color32::LIGHT_RED, format!("NIfTI rejected: {error}"));
+        }
+        if let Some(status) = &nifti.status {
+            ui.colored_label(egui::Color32::LIGHT_GREEN, status);
         }
     });
 }
@@ -2669,6 +2907,62 @@ mod tests {
         panel.compute_metrics();
         assert!(panel.metrics.is_none());
         assert!(panel.metrics_error.is_some());
+    }
+
+    #[test]
+    fn nifti_panel_exports_inspects_masks_and_resamples() {
+        let scratch = tempfile::tempdir().unwrap();
+        let bundle_path = scratch.path().join("bundle.json");
+        std::fs::write(
+            &bundle_path,
+            serde_json::to_vec_pretty(&physical_bundle_json()).unwrap(),
+        )
+        .unwrap();
+
+        let mut panel = NiftiPanel {
+            bundle_path: bundle_path.to_string_lossy().into(),
+            export_quantity: "physical_total".into(),
+            export_output: scratch.path().join("dose.nii").to_string_lossy().into(),
+            ..Default::default()
+        };
+        panel.export_dose();
+        assert!(panel.error.is_none(), "export rejected: {:?}", panel.error);
+        assert!(panel.status.is_some());
+
+        panel.input_path = panel.export_output.clone();
+        panel.inspect();
+        assert!(panel.error.is_none(), "inspect rejected: {:?}", panel.error);
+        let image = panel.image.as_ref().unwrap();
+        assert_eq!(image.geometry.shape, [2, 1, 1]);
+        assert_eq!(image.values, vec![1.75e-12, 1.75e-12]);
+
+        panel.mask_name = "total-field".into();
+        panel.mask_output = scratch.path().join("mask.json").to_string_lossy().into();
+        panel.write_mask();
+        assert!(panel.error.is_none(), "mask rejected: {:?}", panel.error);
+        let mask: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&panel.mask_output).unwrap()).unwrap();
+        assert_eq!(mask["name"], "total-field");
+        assert_eq!(mask["voxels"], serde_json::json!([true, true]));
+
+        panel.resample_nearest = false;
+        panel.resample_output = scratch
+            .path()
+            .join("resampled.nii")
+            .to_string_lossy()
+            .into();
+        panel.resample();
+        assert!(
+            panel.error.is_none(),
+            "resample rejected: {:?}",
+            panel.error
+        );
+        let resampled = nctforge_nifti::read_nifti_file(Path::new(&panel.resample_output)).unwrap();
+        assert_eq!(resampled.values, vec![1.75e-12, 1.75e-12]);
+
+        panel.image = None;
+        panel.write_mask();
+        assert!(panel.error.as_deref().unwrap().contains("Inspect"));
     }
 
     #[test]

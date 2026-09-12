@@ -21,6 +21,7 @@ nctforge-bio = { path = "../nctforge-bio" }
 nctforge-core = { path = "../nctforge-core" }
 nctforge-dicom = { path = "../nctforge-dicom" }
 nctforge-evidence = { path = "../nctforge-evidence" }
+nctforge-nifti = { path = "../nctforge-nifti" }
 nctforge-openmc = { path = "../nctforge-openmc" }
 nctforge-plan = { path = "../nctforge-plan" }
 nctforge-transport = { path = "../nctforge-transport" }
