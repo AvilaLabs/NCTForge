@@ -482,12 +482,192 @@ impl PlanPanel {
     }
 }
 
+/// UI state for the transport workspace's source-positioning panel. Runs the
+/// same `nctforge_transport::aim_source_at_centroid`/`rotate_source` path as
+/// `nctforge position` and the Python bindings.
+struct PositionPanel {
+    source_path: String,
+    mask_path: String,
+    roi: usize,
+    approach: usize,
+    half_width_u_cm: String,
+    half_width_v_cm: String,
+    margin_cm: String,
+    report: Option<nctforge_transport::PositionReport>,
+    positioned: Option<nctforge_transport::FixedSourceDefinition>,
+    rotate_axis: usize,
+    rotate_degrees: String,
+    save_source_path: String,
+    save_report_path: String,
+    error: Option<String>,
+    status: Option<String>,
+}
+
+impl Default for PositionPanel {
+    fn default() -> Self {
+        Self {
+            source_path: String::new(),
+            mask_path: String::new(),
+            roi: 0,
+            approach: 0,
+            half_width_u_cm: "1.0".into(),
+            half_width_v_cm: "1.0".into(),
+            margin_cm: "0.1".into(),
+            report: None,
+            positioned: None,
+            rotate_axis: 0,
+            rotate_degrees: "90".into(),
+            save_source_path: String::new(),
+            save_report_path: String::new(),
+            error: None,
+            status: None,
+        }
+    }
+}
+
+const APPROACHES: [&str; 6] = ["+x", "-x", "+y", "-y", "+z", "-z"];
+const ROTATE_AXES: [&str; 3] = ["x", "y", "z"];
+
+impl PositionPanel {
+    fn mask(&self, case: &ViewerCase) -> Result<RegionMask, String> {
+        let path = self.mask_path.trim();
+        if !path.is_empty() {
+            return std::fs::read(Path::new(path))
+                .map_err(|e| e.to_string())
+                .and_then(|bytes| serde_json::from_slice(&bytes).map_err(|e| e.to_string()));
+        }
+        let roi = case
+            .verified
+            .structures
+            .rois
+            .get(self.roi)
+            .ok_or("select a target ROI")?;
+        Ok(RegionMask {
+            name: roi.name.clone(),
+            voxels: roi.voxels.clone(),
+        })
+    }
+
+    fn load_source(&self) -> Result<nctforge_transport::FixedSourceDefinition, String> {
+        let source: nctforge_transport::FixedSourceDefinition =
+            std::fs::read(Path::new(self.source_path.trim()))
+                .map_err(|e| e.to_string())
+                .and_then(|bytes| serde_json::from_slice(&bytes).map_err(|e| e.to_string()))?;
+        source.validate().map_err(|e| e.to_string())?;
+        Ok(source)
+    }
+
+    fn parse_f64(text: &str, field: &str) -> Result<f64, String> {
+        text.trim()
+            .parse::<f64>()
+            .map_err(|e| format!("{field}: {e}"))
+    }
+
+    fn aim(&mut self, case: &ViewerCase) {
+        self.error = None;
+        self.status = None;
+        let outcome = (|| {
+            let source = self.load_source()?;
+            let mask = self.mask(case)?;
+            let direction = nctforge_transport::AxisApproach::parse(APPROACHES[self.approach])
+                .map_err(|e| e.to_string())?
+                .unit_vector();
+            let half_widths = [
+                Self::parse_f64(&self.half_width_u_cm, "half-width u")?,
+                Self::parse_f64(&self.half_width_v_cm, "half-width v")?,
+            ];
+            let margin = Self::parse_f64(&self.margin_cm, "margin")?;
+            let (positioned, mut report) = nctforge_transport::aim_source_at_centroid(
+                &source,
+                &case.verified.ct.geometry,
+                &mask,
+                direction,
+                half_widths,
+                margin,
+            )
+            .map_err(|e| e.to_string())?;
+            report.case_id = case.verified.report.case_id.to_string();
+            Ok((positioned, report))
+        })();
+        match outcome {
+            Ok((positioned, report)) => {
+                self.positioned = Some(positioned);
+                self.report = Some(report);
+                self.status = Some("source positioned".into());
+            }
+            Err(error) => {
+                self.positioned = None;
+                self.report = None;
+                self.error = Some(error);
+            }
+        }
+    }
+
+    fn rotate(&mut self) {
+        self.error = None;
+        self.status = None;
+        let outcome = (|| {
+            let source = match &self.positioned {
+                Some(positioned) => positioned.clone(),
+                None => self.load_source()?,
+            };
+            let axis = match ROTATE_AXES[self.rotate_axis] {
+                "x" => nctforge_transport::PlaneAxis::X,
+                "y" => nctforge_transport::PlaneAxis::Y,
+                _ => nctforge_transport::PlaneAxis::Z,
+            };
+            let degrees = Self::parse_f64(&self.rotate_degrees, "degrees")?;
+            let center = self
+                .report
+                .as_ref()
+                .map(|r| r.target_centroid_lps_mm)
+                .unwrap_or([0.0; 3]);
+            nctforge_transport::rotate_source(&source, center, axis, degrees)
+                .map_err(|e| e.to_string())
+        })();
+        match outcome {
+            Ok(rotated) => {
+                self.positioned = Some(rotated);
+                self.status = Some("source rotated".into());
+            }
+            Err(error) => self.error = Some(error),
+        }
+    }
+
+    fn save(&mut self, source: bool) {
+        let (path, payload) = if source {
+            (
+                self.save_source_path.trim().to_owned(),
+                self.positioned
+                    .as_ref()
+                    .and_then(|s| serde_json::to_string_pretty(s).ok()),
+            )
+        } else {
+            (
+                self.save_report_path.trim().to_owned(),
+                self.report
+                    .as_ref()
+                    .and_then(|r| serde_json::to_string_pretty(r).ok()),
+            )
+        };
+        match (path.is_empty(), payload) {
+            (true, _) => self.error = Some("choose an output path first".into()),
+            (_, Some(json)) => match std::fs::write(&path, json + "\n") {
+                Ok(()) => self.status = Some(format!("wrote {path}")),
+                Err(e) => self.error = Some(e.to_string()),
+            },
+            (_, None) => self.error = Some("position a source first".into()),
+        }
+    }
+}
+
 /// Per-workspace panels shared between the app and the workbench render.
 #[derive(Default)]
 struct WorkbenchPanels {
     dose: DosePanel,
     evidence: EvidencePanel,
     plan: PlanPanel,
+    position: PositionPanel,
 }
 
 struct NctForgeApp {
@@ -776,9 +956,12 @@ fn show_workbench(
                             show_empty_state(ui);
                         }
                     }
-                    WorkspaceTab::Transport => {
-                        show_transport_workspace(ui, case.as_deref(), tour_targets)
-                    }
+                    WorkspaceTab::Transport => show_transport_workspace(
+                        ui,
+                        case.as_deref(),
+                        &mut panels.position,
+                        tour_targets,
+                    ),
                     WorkspaceTab::Plan => show_plan_workspace(ui, &mut panels.plan),
                     WorkspaceTab::Dose => show_dose_workspace(ui, &mut panels.dose),
                     WorkspaceTab::Evidence => show_evidence_workspace(
@@ -1036,6 +1219,7 @@ fn show_geometry_workspace(
 fn show_transport_workspace(
     ui: &mut egui::Ui,
     case: Option<&ViewerCase>,
+    panel: &mut PositionPanel,
     tour_targets: &mut TourTargets,
 ) {
     show_workspace_heading(
@@ -1105,6 +1289,164 @@ fn show_transport_workspace(
         ui.label("Disabled controls reflect real adapter capabilities.");
     });
     tour_targets.set(TourTarget::TransportActions, actions.response.rect);
+
+    ui.add_space(14.0);
+    ui.heading("Source positioning");
+    ui.label("Same aim/rotate path as `nctforge position` — reports the entry geometry without running transport.");
+    egui::Frame::group(ui.style()).show(ui, |ui| {
+        ui.horizontal(|ui| {
+            ui.label(egui::RichText::new("SOURCE").small().strong());
+            ui.add(
+                egui::TextEdit::singleline(&mut panel.source_path)
+                    .desired_width(420.0)
+                    .hint_text("/path/to/source.json"),
+            );
+        });
+        ui.horizontal(|ui| {
+            ui.label(egui::RichText::new("TARGET").small().strong());
+            if let Some(case) = case {
+                let names: Vec<&str> = case
+                    .verified
+                    .structures
+                    .rois
+                    .iter()
+                    .map(|roi| roi.name.as_str())
+                    .collect();
+                if !names.is_empty() {
+                    panel.roi = panel.roi.min(names.len() - 1);
+                    egui::ComboBox::from_id_salt("position-roi")
+                        .selected_text(names[panel.roi])
+                        .show_ui(ui, |ui| {
+                            for (index, name) in names.iter().enumerate() {
+                                ui.selectable_value(&mut panel.roi, index, *name);
+                            }
+                        });
+                }
+            }
+            ui.label("or mask file:");
+            ui.add(
+                egui::TextEdit::singleline(&mut panel.mask_path)
+                    .desired_width(300.0)
+                    .hint_text("optional /path/to/mask.json"),
+            );
+        });
+        ui.horizontal(|ui| {
+            ui.label(egui::RichText::new("APPROACH").small().strong());
+            egui::ComboBox::from_id_salt("position-approach")
+                .selected_text(APPROACHES[panel.approach])
+                .show_ui(ui, |ui| {
+                    for (index, name) in APPROACHES.iter().enumerate() {
+                        ui.selectable_value(&mut panel.approach, index, *name);
+                    }
+                });
+            ui.label("half-widths u/v cm:");
+            ui.add(egui::TextEdit::singleline(&mut panel.half_width_u_cm).desired_width(50.0));
+            ui.add(egui::TextEdit::singleline(&mut panel.half_width_v_cm).desired_width(50.0));
+            ui.label("margin cm:");
+            ui.add(egui::TextEdit::singleline(&mut panel.margin_cm).desired_width(50.0));
+            if ui
+                .add_enabled(case.is_some(), egui::Button::new("Aim at centroid"))
+                .on_disabled_hover_text("Load a case for geometry and ROI masks.")
+                .clicked()
+                && let Some(case) = case
+            {
+                panel.aim(case);
+            }
+        });
+    });
+
+    if let Some(report) = &panel.report {
+        egui::Frame::group(ui.style()).show(ui, |ui| {
+            ui.horizontal(|ui| {
+                ui.strong("Position report");
+                ui.monospace(format!("schema {}", report.schema_version));
+            });
+            ui.monospace(format!(
+                "case {} · target {} · entry {} {} face",
+                report.case_id,
+                report.target_region,
+                side_label(report.entry_side),
+                axis_label(report.entry_axis),
+            ));
+            ui.monospace(format!(
+                "centroid LPS mm: [{:.2}, {:.2}, {:.2}]",
+                report.target_centroid_lps_mm[0],
+                report.target_centroid_lps_mm[1],
+                report.target_centroid_lps_mm[2],
+            ));
+            ui.monospace(format!(
+                "entry point LPS mm: [{:.2}, {:.2}, {:.2}] · source→centroid {:.1} mm",
+                report.entry_point_lps_mm[0],
+                report.entry_point_lps_mm[1],
+                report.entry_point_lps_mm[2],
+                report.source_to_centroid_mm,
+            ));
+        });
+        ui.horizontal(|ui| {
+            ui.label(egui::RichText::new("ROTATE").small().strong());
+            egui::ComboBox::from_id_salt("position-rotate-axis")
+                .selected_text(ROTATE_AXES[panel.rotate_axis])
+                .show_ui(ui, |ui| {
+                    for (index, name) in ROTATE_AXES.iter().enumerate() {
+                        ui.selectable_value(&mut panel.rotate_axis, index, *name);
+                    }
+                });
+            ui.label("degrees:");
+            ui.add(egui::TextEdit::singleline(&mut panel.rotate_degrees).desired_width(50.0));
+            if ui
+                .button("Rotate about target centroid")
+                .on_hover_text(
+                    "Quarter-turn multiples only (90/180/270); the report stays the aim record.",
+                )
+                .clicked()
+            {
+                panel.rotate();
+            }
+        });
+        ui.horizontal(|ui| {
+            ui.label(egui::RichText::new("SAVE").small().strong());
+            ui.add(
+                egui::TextEdit::singleline(&mut panel.save_source_path)
+                    .desired_width(260.0)
+                    .hint_text("positioned-source.json"),
+            );
+            if ui.button("Write source").clicked() {
+                panel.save(true);
+            }
+            ui.add(
+                egui::TextEdit::singleline(&mut panel.save_report_path)
+                    .desired_width(260.0)
+                    .hint_text("position-report.json"),
+            );
+            if ui.button("Write report").clicked() {
+                panel.save(false);
+            }
+        });
+    }
+    if let Some(error) = &panel.error {
+        ui.colored_label(
+            egui::Color32::LIGHT_RED,
+            format!("Positioning rejected: {error}"),
+        );
+    }
+    if let Some(status) = &panel.status {
+        ui.colored_label(egui::Color32::LIGHT_GREEN, status);
+    }
+}
+
+fn axis_label(axis: nctforge_transport::PlaneAxis) -> &'static str {
+    match axis {
+        nctforge_transport::PlaneAxis::X => "x",
+        nctforge_transport::PlaneAxis::Y => "y",
+        nctforge_transport::PlaneAxis::Z => "z",
+    }
+}
+
+fn side_label(side: nctforge_transport::EntrySide) -> &'static str {
+    match side {
+        nctforge_transport::EntrySide::Low => "low",
+        nctforge_transport::EntrySide::High => "high",
+    }
 }
 
 fn capability_label(ui: &mut egui::Ui, name: &str, enabled: bool) {
@@ -1984,6 +2326,50 @@ mod tests {
             },
             "provenance_id": "test-provenance",
         })
+    }
+
+    #[test]
+    fn position_panel_aims_rotates_and_saves() {
+        let scratch = tempfile::tempdir().unwrap();
+        let case_root = scratch.path().join("case");
+        nctforge_dicom::synthetic::generate_nf_bnct_001(&case_root).unwrap();
+        let case = ViewerCase::load(&case_root).unwrap();
+        let mut panel = PositionPanel {
+            source_path: concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/../../benchmarks/synthetic/nf-bnct-001/transport/source.json"
+            )
+            .into(),
+            half_width_u_cm: "2.0".into(),
+            half_width_v_cm: "2.0".into(),
+            margin_cm: "0.1".into(),
+            ..Default::default()
+        };
+        panel.aim(&case);
+        assert!(panel.error.is_none(), "aim rejected: {:?}", panel.error);
+        let report = panel.report.as_ref().unwrap();
+        assert_eq!(report.case_id, case.verified.report.case_id);
+        assert_eq!(report.schema_version, "nctforge.position-report/0.1.0");
+        assert!(panel.positioned.is_some());
+
+        panel.rotate_axis = 1; // y
+        panel.rotate_degrees = "90".into();
+        panel.rotate();
+        assert!(panel.error.is_none(), "rotate rejected: {:?}", panel.error);
+
+        let source_out = scratch.path().join("positioned-source.json");
+        let report_out = scratch.path().join("position-report.json");
+        panel.save_source_path = source_out.to_string_lossy().into();
+        panel.save_report_path = report_out.to_string_lossy().into();
+        panel.save(true);
+        panel.save(false);
+        let saved: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&source_out).unwrap()).unwrap();
+        assert_eq!(saved["id"], "nctforge.nf-bnct-001.source.v1");
+        let report_json: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&report_out).unwrap()).unwrap();
+        assert_eq!(report_json["entry_axis"], "x");
+        assert_eq!(report_json["entry_side"], "low");
     }
 
     #[test]

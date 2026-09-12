@@ -175,7 +175,11 @@ are ignored by default and contain visibly synthetic identity values only.
 Without a case argument, the GUI opens on a research-readiness overview. Passing
 a verified case opens its geometry workspace directly. Use the left navigation
 to see the current OpenMC capability gates, the dose workspace, and the evidence
-ledger. The dose workspace loads any validated physical or biological bundle
+ledger. The transport workspace also exposes the same source-positioning helpers
+as `nctforge position` — aim a source at an ROI centroid across an approach
+axis, inspect the position report, and rotate by quarter-turns — sharing the
+authoritative `nctforge_transport` path with the CLI and Python. The dose
+workspace loads any validated physical or biological bundle
 file — component statistics, totals, and a region-mask DVH plot — while keeping
 the two layers visually distinct. The evidence workspace can verify an exported
 `artifact-manifest.json` in place. Select the `?` button or press `F1` for
