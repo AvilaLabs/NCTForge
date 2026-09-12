@@ -489,6 +489,35 @@ class EndpointEvaluation:
     def to_json(self) -> str: ...
     def write(self, output: str | PathLike[str]) -> None:
         """Write the evaluation JSON; refuses to overwrite an existing file."""
+class SensitivitySweep:
+    """A ``nctforge.bio-sensitivity-sweep/0.1.0`` record."""
+
+    @property
+    def schema_version(self) -> str: ...
+    @property
+    def case_id(self) -> str: ...
+    @property
+    def region(self) -> str: ...
+    @property
+    def parameter(self) -> str:
+        """Canonical parameter label (``component:boron``, ...)."""
+    @property
+    def quantity(self) -> str:
+        """``biological_total`` or ``weighted_eqd2``."""
+    @property
+    def unit(self) -> str: ...
+    @property
+    def model_sha256(self) -> str: ...
+    @property
+    def dose_bundle_sha256(self) -> str: ...
+    @property
+    def points(self) -> list[tuple[float, int, float, float, float]]:
+        """``(value, region_voxel_count, min, mean, max)`` per point."""
+    @property
+    def qualification(self) -> str: ...
+    def to_json(self) -> str: ...
+    def write(self, output: str | PathLike[str]) -> None:
+        """Write the sweep JSON; refuses to overwrite an existing file."""
 
 def load_physical_dose_bundle(path: str | PathLike[str]) -> PhysicalDoseBundle: ...
 def collect_run(working_directory: str | PathLike[str]) -> PhysicalDoseBundle:
@@ -564,6 +593,20 @@ def combine_utcp(
     combination: str,
 ) -> EndpointEvaluation:
     """Combine TCP and NTCP evaluations; ``p_plus`` or ``difference``."""
+def sweep_biological_model(
+    model: BiologicalModel,
+    physical: PhysicalDoseBundle,
+    region_masks: list[tuple[str, str | PathLike[str]]],
+    region: str,
+    parameter: str,
+    values: list[float],
+) -> SensitivitySweep:
+    """Sweep one model parameter (``component:<name>``,
+    ``region_weight:<region>:<component>``, ``alpha_beta:default``,
+    ``alpha_beta:<region>``, ``fraction_count``,
+    ``source_particles_per_fraction``) over ``values``, recording the
+    region-masked min/mean/max of the biological total at each point
+    (same path as ``nctforge bio sweep``)."""
 def verify_evidence_bundle(root: str | PathLike[str]) -> tuple[str, int]:
     """Re-hash every manifest artifact; returns (case_id, artifact count)."""
 def load_exposure_plan(path: str | PathLike[str]) -> ExposurePlan:

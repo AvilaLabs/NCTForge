@@ -19,6 +19,7 @@
 
 mod bed;
 mod endpoint;
+mod sweep;
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -36,6 +37,7 @@ pub use endpoint::{
     EndpointEvaluation, EndpointFunction, EndpointKind, EndpointModel, EvaluatedEndpoint,
     UtcpCombination, UtcpComponents, combine_utcp, evaluate_endpoint,
 };
+pub use sweep::{BIO_SWEEP_SCHEMA, SensitivitySweep, SweepParameter, SweepPoint, run_sweep};
 
 pub const BIOLOGICAL_MODEL_SCHEMA: &str = "nctforge.biological-model/0.2.0";
 pub const BIOLOGICAL_DOSE_BUNDLE_SCHEMA: &str = "nctforge.biological-dose-bundle/0.2.0";

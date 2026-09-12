@@ -2788,6 +2788,121 @@ fn combine_utcp(
     })
 }
 
+/// A `nctforge.bio-sensitivity-sweep/0.1.0` record.
+#[pyclass(name = "SensitivitySweep")]
+struct PySensitivitySweep {
+    inner: nctforge_bio::SensitivitySweep,
+}
+
+#[pymethods]
+impl PySensitivitySweep {
+    #[getter]
+    fn schema_version(&self) -> &str {
+        &self.inner.schema_version
+    }
+
+    #[getter]
+    fn case_id(&self) -> &str {
+        &self.inner.case_id
+    }
+
+    #[getter]
+    fn region(&self) -> &str {
+        &self.inner.region
+    }
+
+    /// Canonical parameter label (`component:boron`, `alpha_beta:tumor`, ...).
+    #[getter]
+    fn parameter(&self) -> &str {
+        &self.inner.parameter
+    }
+
+    /// The total quantity scored (`biological_total` or `weighted_eqd2`).
+    #[getter]
+    fn quantity(&self) -> &str {
+        &self.inner.quantity
+    }
+
+    #[getter]
+    fn unit(&self) -> &str {
+        &self.inner.unit
+    }
+
+    #[getter]
+    fn model_sha256(&self) -> &str {
+        &self.inner.model.sha256
+    }
+
+    #[getter]
+    fn dose_bundle_sha256(&self) -> &str {
+        &self.inner.dose_bundle.sha256
+    }
+
+    /// Sweep points as `(value, region_voxel_count, min, mean, max)` tuples.
+    #[getter]
+    fn points(&self) -> Vec<(f64, u64, f64, f64, f64)> {
+        self.inner
+            .points
+            .iter()
+            .map(|point| {
+                (
+                    point.value,
+                    point.region_voxel_count,
+                    point.minimum,
+                    point.mean,
+                    point.maximum,
+                )
+            })
+            .collect()
+    }
+
+    #[getter]
+    fn qualification(&self) -> &str {
+        &self.inner.qualification
+    }
+
+    fn to_json(&self) -> PyResult<String> {
+        serde_json::to_string_pretty(&self.inner).map_err(reject)
+    }
+
+    /// Write the sweep JSON; refuses to overwrite an existing file.
+    fn write(&self, output: PathBuf) -> PyResult<()> {
+        write_json_new(&output, &self.inner)
+    }
+}
+
+/// Sweep one biological-model parameter over an explicit value list,
+/// recording the region-masked min/mean/max of the biological total at
+/// each point. `parameter` is `component:<name>`,
+/// `region_weight:<region>:<component>`, `alpha_beta:default`,
+/// `alpha_beta:<region>`, `fraction_count`, or
+/// `source_particles_per_fraction`.
+#[pyfunction]
+#[allow(clippy::too_many_arguments)]
+fn sweep_biological_model(
+    model: &PyBiologicalModel,
+    physical: &PyPhysicalDoseBundle,
+    region_masks: Vec<(String, PathBuf)>,
+    region: &str,
+    parameter: &str,
+    values: Vec<f64>,
+) -> PyResult<PySensitivitySweep> {
+    let masks = load_named_masks(region_masks)?;
+    let parameter = nctforge_bio::SweepParameter::parse(parameter).map_err(reject)?;
+    let sweep = nctforge_bio::run_sweep(
+        &model.inner,
+        &model.bytes,
+        &physical.inner,
+        &sha256_hex_of_json(&physical.inner)?,
+        &masks,
+        region,
+        &parameter,
+        &values,
+    )
+    .map_err(reject)?;
+    Ok(PySensitivitySweep { inner: sweep })
+}
+
 /// Re-hash every artifact declared by a bundle's manifest; returns the
 /// verified manifest's case id and artifact count.
 #[pyfunction]
@@ -2828,6 +2943,7 @@ fn _nctforge(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyEndpointModel>()?;
     m.add_class::<PyAppliedDoseStatistic>()?;
     m.add_class::<PyEndpointEvaluation>()?;
+    m.add_class::<PySensitivitySweep>()?;
     m.add_class::<PyExposure>()?;
     m.add_class::<PyExposurePlan>()?;
     m.add_class::<PyExternalDoseBundle>()?;
@@ -2878,5 +2994,6 @@ fn _nctforge(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(load_bed_bundle, m)?)?;
     m.add_function(wrap_pyfunction!(combine_biological_doses, m)?)?;
     m.add_function(wrap_pyfunction!(compare_dose_bundles, m)?)?;
+    m.add_function(wrap_pyfunction!(sweep_biological_model, m)?)?;
     Ok(())
 }

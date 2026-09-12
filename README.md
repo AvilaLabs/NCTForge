@@ -535,6 +535,26 @@ nctforge bio apply \
   --output NEW-BIO-BUNDLE.json
 ```
 
+`nctforge bio sweep` runs a one-parameter sensitivity sweep: it varies a
+declared parameter (`component:<name>`, `region_weight:<region>:<component>`,
+`alpha_beta:default`, `alpha_beta:<region>`, `fraction_count`, or
+`source_particles_per_fraction`) over an explicit value list, re-validating
+and re-applying the model at each point, and records the region-masked
+min/mean/max of the biological total as
+`nctforge.bio-sensitivity-sweep/0.1.0` bound to the model and bundle
+hashes:
+
+```text
+nctforge bio sweep \
+  --model examples/biological/photon-isoeffective-lq-model-v1.json \
+  --physical-bundle DOSE-BUNDLE.json \
+  --region-mask core=examples/biological/core-region-mask.json \
+  --region core --parameter alpha_beta:core --value 3,10,20 \
+  --output NEW-SWEEP.json
+```
+
+Python exposes the same path as `sweep_biological_model`.
+
 ### Multi-exposure accumulation
 
 `nctforge accumulate` implements weighted irradiation-fraction and

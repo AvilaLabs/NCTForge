@@ -11,8 +11,8 @@ use std::process::ExitCode;
 
 use clap::{Args, Parser, Subcommand};
 use nctforge_bio::{
-    BedQuantity, BiologicalModel, RegionMask, apply_biological_model, bed_from_external,
-    combine_biological_doses,
+    BedQuantity, BiologicalModel, RegionMask, SweepParameter, apply_biological_model,
+    bed_from_external, combine_biological_doses,
 };
 use nctforge_core::{ExposurePlan, PhysicalDoseBundle, ResampleMethod};
 use nctforge_dicom::synthetic::generate_nf_bnct_001;
@@ -886,6 +886,34 @@ enum BioCommand {
         #[arg(long)]
         assumption: String,
         /// New output path for the combined-dose JSON.
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Sweep one model parameter and record region-masked total stats.
+    Sweep {
+        /// Biological model JSON (`nctforge.biological-model/0.2.0`).
+        #[arg(long)]
+        model: PathBuf,
+        /// Physical dose bundle JSON produced by `openmc collect`.
+        #[arg(long)]
+        physical_bundle: PathBuf,
+        /// Region mask as `name=path` pairs; required when the model
+        /// declares region weight overrides.
+        #[arg(long = "region-mask")]
+        region_masks: Vec<String>,
+        /// Region whose masked min/mean/max is recorded per point.
+        #[arg(long)]
+        region: String,
+        /// Parameter spec: `component:<name>`,
+        /// `region_weight:<region>:<component>`, `alpha_beta:default`,
+        /// `alpha_beta:<region>`, `fraction_count`, or
+        /// `source_particles_per_fraction`.
+        #[arg(long)]
+        parameter: String,
+        /// Parameter values; repeatable or comma-separated.
+        #[arg(long = "value", value_delimiter = ',')]
+        values: Vec<f64>,
+        /// New output path for the sensitivity-sweep JSON.
         #[arg(long)]
         output: PathBuf,
     },
@@ -4216,6 +4244,43 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                 }
                 println!("assumption: {}", combined.additivity_assumption);
                 println!("qualification: {}", combined.qualification);
+            }
+            BioCommand::Sweep {
+                model,
+                physical_bundle,
+                region_masks,
+                region,
+                parameter,
+                values,
+                output,
+            } => {
+                let model_bytes = fs::read(&model)?;
+                let model: BiologicalModel = serde_json::from_slice(&model_bytes)?;
+                let bundle_bytes = fs::read(&physical_bundle)?;
+                let physical: PhysicalDoseBundle = serde_json::from_slice(&bundle_bytes)?;
+                let masks = load_named_masks(&region_masks)?;
+                let parameter = SweepParameter::parse(&parameter)?;
+                let sweep = nctforge_bio::run_sweep(
+                    &model,
+                    &model_bytes,
+                    &physical,
+                    &nctforge_evidence::sha256_hex(&bundle_bytes),
+                    &masks,
+                    &region,
+                    &parameter,
+                    &values,
+                )?;
+                write_new_json(&output, &sweep)?;
+                println!("sensitivity sweep at {}", output.display());
+                println!("parameter: {} region: {}", sweep.parameter, sweep.region);
+                println!("quantity: {} ({})", sweep.quantity, sweep.unit);
+                for point in &sweep.points {
+                    println!(
+                        "  {} -> mean {:.6e} [{:.6e}, {:.6e}]",
+                        point.value, point.mean, point.minimum, point.maximum
+                    );
+                }
+                println!("qualification: {}", sweep.qualification);
             }
         },
         Some(Command::Dvh {

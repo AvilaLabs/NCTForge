@@ -486,6 +486,51 @@ class BiologicalLayerTest(unittest.TestCase):
             with self.assertRaises(NctForgeError):
                 nctforge.apply_model(model, bundle, [("core", mask)])
 
+    def test_sweep_biological_model_component_weight(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            bundle_path = _write(tmp, "dose.json", _physical_bundle_json())
+            model_path = _write(tmp, "model.json", _model_json())
+            mask_path = _write(
+                tmp, "mask.json", json.dumps({"name": "all", "voxels": [True, True]})
+            )
+            bundle = nctforge.load_physical_dose_bundle(bundle_path)
+            model = nctforge.load_biological_model(model_path)
+            sweep = nctforge.sweep_biological_model(
+                model,
+                bundle,
+                [("all", mask_path)],
+                "all",
+                "component:boron",
+                [0.0, 3.8],
+            )
+            self.assertEqual(
+                sweep.schema_version, "nctforge.bio-sensitivity-sweep/0.1.0"
+            )
+            self.assertEqual(sweep.parameter, "component:boron")
+            self.assertEqual(sweep.quantity, "biological_total")
+            self.assertEqual(len(sweep.points), 2)
+            # boron 0 -> 8.5e-13; boron 3.8 -> 4.65e-12 (2 voxels, uniform).
+            self.assertAlmostEqual(sweep.points[0][3], 8.5e-13)
+            self.assertAlmostEqual(sweep.points[1][3], 4.65e-12)
+            out = Path(tmp) / "sweep.json"
+            sweep.write(out)
+            reloaded = json.loads(out.read_text())
+            self.assertEqual(reloaded["case_id"], "synthetic-case")
+
+            with self.assertRaises(NctForgeError):
+                nctforge.sweep_biological_model(
+                    model, bundle, [("all", mask_path)], "all", "bogus", [1.0]
+                )
+            with self.assertRaises(NctForgeError):
+                nctforge.sweep_biological_model(
+                    model,
+                    bundle,
+                    [("all", mask_path)],
+                    "missing-region",
+                    "component:boron",
+                    [1.0],
+                )
+
     def test_make_biological_model_external_experiment(self) -> None:
         """An externally-authored model dict validates and applies in-place."""
         with tempfile.TemporaryDirectory() as tmp:

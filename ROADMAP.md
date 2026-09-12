@@ -354,8 +354,12 @@ Implementation status:
   `deny_unknown_fields` makes the new fields forward-incompatible.
   Published reference cases now live in `conformance/bio/0.2.0/` — one
   byte-fixed golden bundle per model family plus stable rejection tokens
-  (`cargo test -p nctforge-bio --test bio_conformance`); sensitivity sweeps
-  remain open;
+  (`cargo test -p nctforge-bio --test bio_conformance`). Parameter
+  sensitivity is covered by `nctforge bio sweep` / Python
+  `sweep_biological_model` — a `nctforge.bio-sensitivity-sweep/0.1.0`
+  record sweeping component weights, region overrides, or fractionation
+  parameters with per-point re-validation and region-masked
+  min/mean/max;
 - complete: deterministic `nctforge.dose-volume-histogram/0.1.0` over named
   voxel masks for any bundle component or total;
 - complete: evidence-bundle export — `evidence export` collects inputs,
