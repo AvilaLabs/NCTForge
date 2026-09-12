@@ -237,13 +237,192 @@ class ResponseSetGateTest(unittest.TestCase):
 
 
 class BackendHonestyTest(unittest.TestCase):
-    def test_openmc_capabilities_remain_closed(self) -> None:
+    def test_openmc_capabilities_match_configuration(self) -> None:
         observed = {backend.id: backend for backend in nctforge.backends()}
         self.assertIn("openmc", observed)
         openmc = observed["openmc"]
+        # The default backend executes and imports; preparation requires a
+        # configured artifact set and stays closed.
         self.assertFalse(openmc.can_prepare)
-        self.assertFalse(openmc.can_execute)
-        self.assertFalse(openmc.can_import)
+        self.assertTrue(openmc.can_execute)
+        self.assertTrue(openmc.can_import)
+
+
+def _physical_bundle_json() -> str:
+    """The same synthetic fixture used by the Rust bio/evidence tests."""
+    reference = lambda seed: {"id": seed, "sha256": seed * (64 // len(seed))}
+    component = lambda name, mean, sigma: {
+        "component": name,
+        "unit": "gray_per_source_particle",
+        "values": [mean, mean],
+        "absolute_standard_uncertainty": [sigma, sigma],
+    }
+    return json.dumps(
+        {
+            "schema_version": "nctforge.physical-dose-bundle/0.2.0",
+            "case_id": "synthetic-case",
+            "frame_of_reference_uid": None,
+            "geometry": {
+                "shape": [2, 1, 1],
+                "spacing_mm": [5.0, 5.0, 5.0],
+                "origin_mm": [-2.5, -2.5, -2.5],
+                "direction": [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
+            },
+            "component_profile": reference("ab"),
+            "response_set": reference("cd"),
+            "components": [
+                component("boron", 1.0e-12, 1.0e-14),
+                component("nitrogen", 2.0e-13, 2.0e-15),
+                component("hydrogen", 5.0e-14, 5.0e-16),
+                component("photon", 3.0e-13, 3.0e-15),
+            ],
+            "physical_total": {
+                "unit": "gray_per_source_particle",
+                "values": [1.75e-12, 1.75e-12],
+                "absolute_standard_uncertainty": [1.1e-14, 1.1e-14],
+                "uncertainty_method": "dedicated_estimator",
+            },
+            "provenance_id": "test-provenance",
+        }
+    )
+
+
+def _model_json() -> str:
+    return json.dumps(
+        {
+            "schema_version": "nctforge.biological-model/0.1.0",
+            "id": "nctforge.tests.fixed-weights.v1",
+            "weight_semantics": "fixed_per_component",
+            "input_unit": "gray_per_source_particle",
+            "component_weights": {
+                "boron": 3.8,
+                "nitrogen": 2.5,
+                "hydrogen": 1.0,
+                "photon": 1.0,
+            },
+        }
+    )
+
+
+class DoseBundleTest(unittest.TestCase):
+    def test_load_validate_and_histogram(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = _write(tmp, "dose.json", _physical_bundle_json())
+            bundle = nctforge.load_physical_dose_bundle(path)
+            self.assertEqual(bundle.case_id, "synthetic-case")
+            self.assertEqual(bundle.provenance_id, "test-provenance")
+            self.assertEqual(len(bundle.components), 4)
+            self.assertEqual(bundle.physical_total.values, [1.75e-12, 1.75e-12])
+
+            dvh = nctforge.compute_dvh(
+                bundle, "component:boron", "all", [True, True], 4
+            )
+            self.assertEqual(dvh.unit, "gray_per_source_particle")
+            self.assertEqual(dvh.region_voxel_count, 2)
+            self.assertAlmostEqual(
+                sum(dvh.differential_volume_fraction), 1.0, places=9
+            )
+            self.assertEqual(dvh.cumulative_volume_fraction[0], 1.0)
+
+    def test_rejects_broken_bundle(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            document = json.loads(_physical_bundle_json())
+            document["components"][0]["values"] = [1.0]
+            with self.assertRaises(NctForgeError):
+                nctforge.load_physical_dose_bundle(
+                    _write(tmp, "bad.json", json.dumps(document))
+                )
+
+
+class BiologicalLayerTest(unittest.TestCase):
+    def test_apply_and_histogram_biological_total(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            bundle_path = _write(tmp, "dose.json", _physical_bundle_json())
+            model_path = _write(tmp, "model.json", _model_json())
+            bundle = nctforge.load_physical_dose_bundle(bundle_path)
+            model = nctforge.load_biological_model(model_path)
+            biological = nctforge.apply_model(model, bundle, [])
+            self.assertEqual(biological.unit, "weighted_gray_per_source_particle")
+            self.assertEqual(
+                biological.qualification, "synthetic_research_only_not_clinical"
+            )
+            self.assertEqual(
+                biological.physical_bundle_provenance, "test-provenance"
+            )
+            boron = next(
+                c for c in biological.components if c.component == "boron"
+            )
+            self.assertEqual(boron.values, [3.8e-12, 3.8e-12])
+            # Total sigma is the correlated sum of weighted component sigmas.
+            expected_sigma = 3.8e-14 + 2.5 * 2.0e-15 + 5.0e-16 + 3.0e-15
+            self.assertAlmostEqual(
+                biological.biological_total.absolute_standard_uncertainty[0],
+                expected_sigma,
+            )
+
+            dvh = nctforge.compute_dvh_biological(
+                biological, "biological_total", "all", [True, True], 4
+            )
+            self.assertEqual(dvh.unit, "weighted_gray_per_source_particle")
+
+            out = Path(tmp) / "bio.json"
+            biological.write(out)
+            reloaded = json.loads(out.read_text())
+            self.assertEqual(
+                reloaded["schema_version"],
+                "nctforge.biological-dose-bundle/0.1.0",
+            )
+
+    def test_region_mask_name_must_match(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            bundle = nctforge.load_physical_dose_bundle(
+                _write(tmp, "dose.json", _physical_bundle_json())
+            )
+            model_document = json.loads(_model_json())
+            model_document["region_weights"] = {
+                "core": model_document["component_weights"]
+            }
+            model = nctforge.load_biological_model(
+                _write(tmp, "model.json", json.dumps(model_document))
+            )
+            mask = _write(
+                tmp,
+                "mask.json",
+                json.dumps({"name": "other", "voxels": [True, False]}),
+            )
+            with self.assertRaises(NctForgeError):
+                nctforge.apply_model(model, bundle, [("core", mask)])
+
+
+class EvidenceBundleTest(unittest.TestCase):
+    def test_verify_detects_tampering(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            payload = root / "payload.json"
+            payload.write_text('{"ok": true}')
+            digest = hashlib.sha256(payload.read_bytes()).hexdigest()
+            (root / "artifact-manifest.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": "nctforge.evidence-bundle-manifest/0.1.0",
+                        "case_id": "synthetic-case",
+                        "qualification": "synthetic_research_only",
+                        "artifacts": [
+                            {
+                                "role": "payload",
+                                "path": "payload.json",
+                                "sha256": digest,
+                                "media_type": None,
+                            }
+                        ],
+                    }
+                )
+            )
+            case_id, count = nctforge.verify_evidence_bundle(root)
+            self.assertEqual((case_id, count), ("synthetic-case", 1))
+            payload.write_text('{"ok": false}')
+            with self.assertRaises(NctForgeError):
+                nctforge.verify_evidence_bundle(root)
 
 
 def _write(directory: str, name: str, content: str) -> Path:

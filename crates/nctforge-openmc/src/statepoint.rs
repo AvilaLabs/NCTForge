@@ -422,14 +422,14 @@ pub fn collect_statepoint(
         {
             return Err(OpenMcCollectError::EstimatorMismatch(contract.name.clone()));
         }
-        if let Some(bins) = contract.bins {
-            if tally.mean.len() != bins as usize {
-                return Err(OpenMcCollectError::DoseBinCountMismatch {
-                    tally: contract.name.clone(),
-                    expected: bins as usize,
-                    actual: tally.mean.len(),
-                });
-            }
+        if let Some(bins) = contract.bins
+            && tally.mean.len() != bins as usize
+        {
+            return Err(OpenMcCollectError::DoseBinCountMismatch {
+                tally: contract.name.clone(),
+                expected: bins as usize,
+                actual: tally.mean.len(),
+            });
         }
     }
 

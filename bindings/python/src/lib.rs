@@ -11,15 +11,19 @@ use std::fmt::Display;
 use std::fs;
 use std::path::PathBuf;
 
+use nctforge_bio::{
+    BiologicalDoseBundle, BiologicalModel, RegionMask, apply_biological_model,
+};
+use nctforge_core::PhysicalDoseBundle;
 use nctforge_dicom::{
     BenchmarkReport, VerifiedBenchmarkCase, load_nf_bnct_001, synthetic::generate_nf_bnct_001,
     verify_nf_bnct_001,
 };
-use nctforge_evidence::{CaseManifest, sha256_file};
+use nctforge_evidence::{CaseManifest, EvidenceBundleManifest, sha256_file};
 use nctforge_openmc::OpenMcBackend;
 use nctforge_transport::{
-    BackendDescriptor, ComponentDefinitionProfile, FixedSourceDefinition, MaterialDefinition,
-    NeutronResponseSet, ResponseGenerationMethod, TransportBackend,
+    BackendDescriptor, CompletedRun, ComponentDefinitionProfile, FixedSourceDefinition,
+    MaterialDefinition, NeutronResponseSet, ResponseGenerationMethod, TransportBackend,
 };
 use pyo3::create_exception;
 use pyo3::exceptions::PyException;
@@ -727,6 +731,488 @@ fn load_response_set(path: PathBuf) -> PyResult<PyResponseSet> {
     })
 }
 
+contract_check!(
+    PhysicalDoseBundle,
+    validate,
+    nctforge_core::ValidationError
+);
+contract_check!(BiologicalModel, validate, nctforge_bio::BioError);
+contract_check!(BiologicalDoseBundle, validate, nctforge_bio::BioError);
+
+/// One component's dose values over the case grid.
+#[pyclass(frozen, name = "DoseVolume")]
+struct PyDoseVolume {
+    component: String,
+    unit: String,
+    values: Vec<f64>,
+    absolute_standard_uncertainty: Option<Vec<f64>>,
+}
+
+#[pymethods]
+impl PyDoseVolume {
+    #[getter]
+    fn component(&self) -> &str {
+        &self.component
+    }
+
+    #[getter]
+    fn unit(&self) -> &str {
+        &self.unit
+    }
+
+    /// Per-voxel values in row-major `[column, row, slice]` grid order.
+    #[getter]
+    fn values(&self) -> Vec<f64> {
+        self.values.clone()
+    }
+
+    /// Per-voxel one-sigma absolute uncertainty, when present.
+    #[getter]
+    fn absolute_standard_uncertainty(&self) -> Option<Vec<f64>> {
+        self.absolute_standard_uncertainty.clone()
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "DoseVolume(component={:?}, unit={:?}, voxels={})",
+            self.component,
+            self.unit,
+            self.values.len()
+        )
+    }
+}
+
+fn dose_unit_name(unit: nctforge_core::DoseUnit) -> String {
+    match unit {
+        nctforge_core::DoseUnit::Gray => "gray".into(),
+        nctforge_core::DoseUnit::GrayPerSourceParticle => "gray_per_source_particle".into(),
+    }
+}
+
+/// A validated physical dose bundle produced by statepoint collection or
+/// imported interchange.
+#[pyclass(frozen, name = "PhysicalDoseBundle")]
+struct PyPhysicalDoseBundle {
+    inner: PhysicalDoseBundle,
+}
+
+#[pymethods]
+impl PyPhysicalDoseBundle {
+    #[getter]
+    fn schema_version(&self) -> &str {
+        &self.inner.schema_version
+    }
+
+    #[getter]
+    fn case_id(&self) -> &str {
+        &self.inner.case_id
+    }
+
+    #[getter]
+    fn geometry(&self) -> PyGeometry {
+        PyGeometry {
+            inner: self.inner.geometry.clone(),
+        }
+    }
+
+    #[getter]
+    fn components(&self) -> Vec<PyDoseVolume> {
+        self.inner
+            .components
+            .iter()
+            .map(|volume| PyDoseVolume {
+                component: serde_json::to_value(volume.component)
+                    .and_then(serde_json::from_value::<String>)
+                    .unwrap_or_else(|_| "unknown".into()),
+                unit: dose_unit_name(volume.unit),
+                values: volume.values.clone(),
+                absolute_standard_uncertainty: volume
+                    .absolute_standard_uncertainty
+                    .clone(),
+            })
+            .collect()
+    }
+
+    /// Dedicated physical-total dose volume, kept separate from component sums.
+    #[getter]
+    fn physical_total(&self) -> PyDoseVolume {
+        PyDoseVolume {
+            component: "physical_total".into(),
+            unit: dose_unit_name(self.inner.physical_total.unit),
+            values: self.inner.physical_total.values.clone(),
+            absolute_standard_uncertainty: self
+                .inner
+                .physical_total
+                .absolute_standard_uncertainty
+                .clone(),
+        }
+    }
+
+    #[getter]
+    fn provenance_id(&self) -> &str {
+        &self.inner.provenance_id
+    }
+
+    fn to_json(&self) -> PyResult<String> {
+        serde_json::to_string_pretty(&self.inner).map_err(reject)
+    }
+}
+
+/// Load and validate a `nctforge.physical-dose-bundle/0.2.0` artifact.
+#[pyfunction]
+fn load_physical_dose_bundle(path: PathBuf) -> PyResult<PyPhysicalDoseBundle> {
+    Ok(PyPhysicalDoseBundle {
+        inner: load_contract(path)?,
+    })
+}
+
+/// Collect a completed OpenMC run directory into a validated physical dose
+/// bundle, using the same `OpenMcBackend::collect` path as the CLI.
+#[pyfunction]
+fn collect_run(working_directory: PathBuf) -> PyResult<PyPhysicalDoseBundle> {
+    let completed = CompletedRun {
+        backend_id: "openmc".into(),
+        case_id: String::new(),
+        working_directory: working_directory.display().to_string(),
+        exit_code: 0,
+    };
+    let bundle = OpenMcBackend::default()
+        .collect(&completed)
+        .map_err(reject)?;
+    Ok(PyPhysicalDoseBundle { inner: bundle })
+}
+
+/// A validated biological model contract.
+#[pyclass(frozen, name = "BiologicalModel")]
+struct PyBiologicalModel {
+    inner: BiologicalModel,
+    bytes: Vec<u8>,
+}
+
+#[pymethods]
+impl PyBiologicalModel {
+    #[getter]
+    fn schema_version(&self) -> &str {
+        &self.inner.schema_version
+    }
+
+    #[getter]
+    fn id(&self) -> &str {
+        &self.inner.id
+    }
+
+    fn to_json(&self) -> PyResult<String> {
+        serde_json::to_string_pretty(&self.inner).map_err(reject)
+    }
+}
+
+/// Load and validate a `nctforge.biological-model/0.1.0` artifact.
+#[pyfunction]
+fn load_biological_model(path: PathBuf) -> PyResult<PyBiologicalModel> {
+    let bytes = fs::read(&path).map_err(reject)?;
+    let model: BiologicalModel = serde_json::from_slice(&bytes).map_err(reject)?;
+    model.validate().map_err(reject)?;
+    Ok(PyBiologicalModel {
+        inner: model,
+        bytes,
+    })
+}
+
+/// A validated biological dose bundle; weighted values never alias physical dose.
+#[pyclass(frozen, name = "BiologicalDoseBundle")]
+struct PyBiologicalDoseBundle {
+    inner: BiologicalDoseBundle,
+}
+
+#[pymethods]
+impl PyBiologicalDoseBundle {
+    #[getter]
+    fn schema_version(&self) -> &str {
+        &self.inner.schema_version
+    }
+
+    #[getter]
+    fn case_id(&self) -> &str {
+        &self.inner.case_id
+    }
+
+    /// Weighted unit label, deliberately never `gray`.
+    #[getter]
+    fn unit(&self) -> &str {
+        &self.inner.unit
+    }
+
+    #[getter]
+    fn geometry(&self) -> PyGeometry {
+        PyGeometry {
+            inner: self.inner.geometry.clone(),
+        }
+    }
+
+    #[getter]
+    fn components(&self) -> Vec<PyDoseVolume> {
+        self.inner
+            .components
+            .iter()
+            .map(|volume| PyDoseVolume {
+                component: serde_json::to_value(volume.component)
+                    .and_then(serde_json::from_value::<String>)
+                    .unwrap_or_else(|_| "unknown".into()),
+                unit: volume.unit.clone(),
+                values: volume.values.clone(),
+                absolute_standard_uncertainty: volume
+                    .absolute_standard_uncertainty
+                    .clone(),
+            })
+            .collect()
+    }
+
+    /// Biological-total dose volume with correlated component-sum uncertainty.
+    #[getter]
+    fn biological_total(&self) -> PyDoseVolume {
+        PyDoseVolume {
+            component: "biological_total".into(),
+            unit: self.inner.total.unit.clone(),
+            values: self.inner.total.values.clone(),
+            absolute_standard_uncertainty: self
+                .inner
+                .total
+                .absolute_standard_uncertainty
+                .clone(),
+        }
+    }
+
+    #[getter]
+    fn physical_bundle_provenance(&self) -> &str {
+        &self.inner.physical_bundle_provenance
+    }
+
+    #[getter]
+    fn regions_applied(&self) -> Vec<String> {
+        self.inner.regions_applied.clone()
+    }
+
+    #[getter]
+    fn qualification(&self) -> &str {
+        &self.inner.qualification
+    }
+
+    fn to_json(&self) -> PyResult<String> {
+        serde_json::to_string_pretty(&self.inner).map_err(reject)
+    }
+
+    /// Write the bundle JSON; refuses to overwrite an existing file.
+    fn write(&self, output: PathBuf) -> PyResult<()> {
+        let bytes = serde_json::to_vec_pretty(&self.inner).map_err(reject)?;
+        let mut file = fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&output)
+            .map_err(reject)?;
+        use std::io::Write as _;
+        file.write_all(&bytes)
+            .and_then(|()| file.write_all(b"\n"))
+            .and_then(|()| file.sync_all())
+            .map_err(reject)
+    }
+}
+
+/// Apply a biological model to a physical bundle using the authoritative Rust
+/// path. `region_masks` maps each model region name to a RegionMask JSON file.
+#[pyfunction]
+fn apply_model(
+    model: &PyBiologicalModel,
+    physical: &PyPhysicalDoseBundle,
+    region_masks: Vec<(String, PathBuf)>,
+) -> PyResult<PyBiologicalDoseBundle> {
+    let mut masks = Vec::new();
+    for (name, path) in region_masks {
+        let mask: RegionMask =
+            serde_json::from_slice(&fs::read(&path).map_err(reject)?).map_err(reject)?;
+        if mask.name != name {
+            return Err(reject(format!(
+                "region mask {} is named {:?}, expected {name:?}",
+                path.display(),
+                mask.name
+            )));
+        }
+        masks.push(mask);
+    }
+    let bundle =
+        apply_biological_model(&model.inner, &model.bytes, &physical.inner, &masks)
+            .map_err(reject)?;
+    Ok(PyBiologicalDoseBundle { inner: bundle })
+}
+
+/// A deterministic dose-volume histogram over a named voxel mask.
+#[pyclass(frozen, name = "DoseVolumeHistogram")]
+struct PyDoseVolumeHistogram {
+    inner: nctforge_evidence::DoseVolumeHistogram,
+}
+
+#[pymethods]
+impl PyDoseVolumeHistogram {
+    #[getter]
+    fn schema_version(&self) -> &str {
+        &self.inner.schema_version
+    }
+
+    #[getter]
+    fn region(&self) -> &str {
+        &self.inner.region
+    }
+
+    #[getter]
+    fn quantity(&self) -> &str {
+        &self.inner.quantity
+    }
+
+    #[getter]
+    fn unit(&self) -> &str {
+        &self.inner.unit
+    }
+
+    #[getter]
+    fn dose_edges(&self) -> Vec<f64> {
+        self.inner.dose_edges.clone()
+    }
+
+    #[getter]
+    fn differential_volume_fraction(&self) -> Vec<f64> {
+        self.inner.differential_volume_fraction.clone()
+    }
+
+    /// `V(d)`: fraction of the region receiving at least each edge dose.
+    #[getter]
+    fn cumulative_volume_fraction(&self) -> Vec<f64> {
+        self.inner.cumulative_volume_fraction.clone()
+    }
+
+    #[getter]
+    fn region_voxel_count(&self) -> u64 {
+        self.inner.region_voxel_count
+    }
+
+    #[getter]
+    fn region_volume_mm3(&self) -> f64 {
+        self.inner.region_volume_mm3
+    }
+
+    fn to_json(&self) -> PyResult<String> {
+        serde_json::to_string_pretty(&self.inner).map_err(reject)
+    }
+}
+
+/// Compute a dose-volume histogram for `quantity` over `mask_voxels` in
+/// `bundle`'s grid order. `quantity` is `component:NAME`, `physical_total`,
+/// or `biological_total`.
+#[pyfunction]
+fn compute_dvh(
+    physical: &PyPhysicalDoseBundle,
+    quantity: &str,
+    mask_name: &str,
+    mask_voxels: Vec<bool>,
+    bins: usize,
+) -> PyResult<PyDoseVolumeHistogram> {
+    let bundle = &physical.inner;
+    let (values, unit) = if let Some(name) = quantity.strip_prefix("component:") {
+        let component = bundle
+            .components
+            .iter()
+            .find(|volume| {
+                serde_json::to_value(volume.component)
+                    .map(|v| v == serde_json::Value::String(name.into()))
+                    .unwrap_or(false)
+            })
+            .ok_or_else(|| reject(format!("bundle lacks component {name}")))?;
+        (component.values.as_slice(), dose_unit_name(component.unit))
+    } else if quantity == "physical_total" {
+        (
+            bundle.physical_total.values.as_slice(),
+            dose_unit_name(bundle.physical_total.unit),
+        )
+    } else {
+        return Err(reject(format!("unknown physical quantity {quantity:?}")));
+    };
+    let source = nctforge_core::ContentReference {
+        id: bundle.case_id.clone(),
+        sha256: sha256_hex_of_json(bundle)?,
+    };
+    let voxel_volume: f64 = bundle.geometry.spacing_mm.iter().product();
+    let histogram = nctforge_evidence::DoseVolumeHistogram::compute(
+        &bundle.case_id,
+        mask_name,
+        quantity,
+        source,
+        &unit,
+        values,
+        &mask_voxels,
+        voxel_volume,
+        bins,
+    )
+    .map_err(reject)?;
+    Ok(PyDoseVolumeHistogram { inner: histogram })
+}
+
+/// Same as `compute_dvh` for a biological bundle.
+#[pyfunction]
+fn compute_dvh_biological(
+    bundle: &PyBiologicalDoseBundle,
+    quantity: &str,
+    mask_name: &str,
+    mask_voxels: Vec<bool>,
+    bins: usize,
+) -> PyResult<PyDoseVolumeHistogram> {
+    let inner = &bundle.inner;
+    let (values, unit) = if let Some(name) = quantity.strip_prefix("component:") {
+        let component = inner
+            .components
+            .iter()
+            .find(|volume| {
+                serde_json::to_value(volume.component)
+                    .map(|v| v == serde_json::Value::String(name.into()))
+                    .unwrap_or(false)
+            })
+            .ok_or_else(|| reject(format!("bundle lacks component {name}")))?;
+        (component.values.as_slice(), component.unit.clone())
+    } else if quantity == "biological_total" {
+        (inner.total.values.as_slice(), inner.total.unit.clone())
+    } else {
+        return Err(reject(format!("unknown biological quantity {quantity:?}")));
+    };
+    let source = nctforge_core::ContentReference {
+        id: inner.case_id.clone(),
+        sha256: sha256_hex_of_json(inner)?,
+    };
+    let voxel_volume: f64 = inner.geometry.spacing_mm.iter().product();
+    let histogram = nctforge_evidence::DoseVolumeHistogram::compute(
+        &inner.case_id,
+        mask_name,
+        quantity,
+        source,
+        &unit,
+        values,
+        &mask_voxels,
+        voxel_volume,
+        bins,
+    )
+    .map_err(reject)?;
+    Ok(PyDoseVolumeHistogram { inner: histogram })
+}
+
+fn sha256_hex_of_json<T: serde::Serialize>(value: &T) -> PyResult<String> {
+    let bytes = serde_json::to_vec_pretty(value).map_err(reject)?;
+    Ok(nctforge_evidence::sha256_hex(&bytes))
+}
+
+/// Re-hash every artifact declared by a bundle's manifest; returns the
+/// verified manifest's case id and artifact count.
+#[pyfunction]
+fn verify_evidence_bundle(root: PathBuf) -> PyResult<(String, usize)> {
+    let manifest = EvidenceBundleManifest::load_verified(&root).map_err(reject)?;
+    Ok((manifest.case_id.clone(), manifest.artifacts.len()))
+}
+
 /// NCTForge Python boundary over the authoritative Rust implementation.
 ///
 /// Research software only: not a medical device, not commissioned, and not a
@@ -749,6 +1235,11 @@ fn _nctforge(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyComponentProfile>()?;
     m.add_class::<PyResponseGenerationMethod>()?;
     m.add_class::<PyResponseSet>()?;
+    m.add_class::<PyDoseVolume>()?;
+    m.add_class::<PyPhysicalDoseBundle>()?;
+    m.add_class::<PyBiologicalModel>()?;
+    m.add_class::<PyBiologicalDoseBundle>()?;
+    m.add_class::<PyDoseVolumeHistogram>()?;
     m.add_function(wrap_pyfunction!(backends, m)?)?;
     m.add_function(wrap_pyfunction!(file_sha256, m)?)?;
     m.add_function(wrap_pyfunction!(generate_case, m)?)?;
@@ -760,5 +1251,12 @@ fn _nctforge(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(load_component_profile, m)?)?;
     m.add_function(wrap_pyfunction!(load_response_generation_method, m)?)?;
     m.add_function(wrap_pyfunction!(load_response_set, m)?)?;
+    m.add_function(wrap_pyfunction!(load_physical_dose_bundle, m)?)?;
+    m.add_function(wrap_pyfunction!(collect_run, m)?)?;
+    m.add_function(wrap_pyfunction!(load_biological_model, m)?)?;
+    m.add_function(wrap_pyfunction!(apply_model, m)?)?;
+    m.add_function(wrap_pyfunction!(compute_dvh, m)?)?;
+    m.add_function(wrap_pyfunction!(compute_dvh_biological, m)?)?;
+    m.add_function(wrap_pyfunction!(verify_evidence_bundle, m)?)?;
     Ok(())
 }

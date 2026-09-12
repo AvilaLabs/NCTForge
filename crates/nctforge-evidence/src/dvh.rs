@@ -49,6 +49,7 @@ impl DoseVolumeHistogram {
     /// least one voxel. `bin_count` equal-width bins span `[0, max]` where
     /// `max` is the largest masked value. A zero-dose region concentrates all
     /// volume in the first bin.
+    #[allow(clippy::too_many_arguments)]
     pub fn compute(
         case_id: &str,
         region: &str,

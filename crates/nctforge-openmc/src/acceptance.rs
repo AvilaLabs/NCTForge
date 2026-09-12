@@ -601,14 +601,14 @@ fn load_run(directory: &Path, exit_code: i32) -> Result<RunData, OpenMcAcceptanc
                 contract.name.clone(),
             ));
         }
-        if let Some(bins) = contract.bins {
-            if tally.mean.len() != bins as usize {
-                return Err(OpenMcAcceptanceError::BinMismatch {
-                    tally: contract.name.clone(),
-                    expected: bins as usize,
-                    actual: tally.mean.len(),
-                });
-            }
+        if let Some(bins) = contract.bins
+            && tally.mean.len() != bins as usize
+        {
+            return Err(OpenMcAcceptanceError::BinMismatch {
+                tally: contract.name.clone(),
+                expected: bins as usize,
+                actual: tally.mean.len(),
+            });
         }
     }
     Ok(RunData {
@@ -688,15 +688,15 @@ fn gamma_q(a: f64, x: f64) -> f64 {
 /// Lanczos log-gamma (9-term approximation, standard coefficients).
 fn gamma_ln(z: f64) -> f64 {
     const C: [f64; 9] = [
-        0.99999999999980993,
-        676.5203681218851,
-        -1259.1392167224028,
-        771.32342877765313,
-        -176.61502916214059,
-        12.507343278686905,
-        -0.13857109526572012,
-        9.9843695780195716e-6,
-        1.5056327351493116e-7,
+        0.999_999_999_999_809_9,
+        676.520_368_121_885_1,
+        -1_259.139_216_722_402_8,
+        771.323_428_777_653_1,
+        -176.615_029_162_140_6,
+        12.507_343_278_686_905,
+        -0.138_571_095_265_720_1,
+        9.984_369_578_019_57e-6,
+        1.505_632_735_149_31e-7,
     ];
     if z < 0.5 {
         return (std::f64::consts::PI / (std::f64::consts::PI * z).sin()).ln() - gamma_ln(1.0 - z);

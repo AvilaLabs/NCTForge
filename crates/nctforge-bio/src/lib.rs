@@ -214,13 +214,13 @@ impl BiologicalDoseBundle {
                     volume.component
                 )));
             }
-            if let Some(sigma) = &volume.absolute_standard_uncertainty {
-                if sigma.len() != voxel_count || sigma.iter().any(|v| !v.is_finite() || *v < 0.0) {
-                    return Err(BioError::Invalid(format!(
-                        "component {:?} uncertainty is malformed",
-                        volume.component
-                    )));
-                }
+            if let Some(sigma) = &volume.absolute_standard_uncertainty
+                && (sigma.len() != voxel_count || sigma.iter().any(|v| !v.is_finite() || *v < 0.0))
+            {
+                return Err(BioError::Invalid(format!(
+                    "component {:?} uncertainty is malformed",
+                    volume.component
+                )));
             }
         }
         for required in DoseComponent::REQUIRED {
@@ -267,8 +267,7 @@ pub fn apply_biological_model(
         .map_err(|e| BioError::Invalid(format!("geometry: {e}")))?;
     if physical
         .components
-        .iter()
-        .next()
+        .first()
         .is_some_and(|c| c.unit != model.input_unit)
     {
         return Err(BioError::Invalid(format!(

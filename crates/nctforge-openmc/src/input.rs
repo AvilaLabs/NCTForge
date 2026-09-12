@@ -1390,17 +1390,15 @@ fn tallies_xml(
             let base = ROI_TALLY_ID_BASE + index as u32 * ROI_TALLIES_PER_REGION;
             let mesh_filter = roi.mesh_filter_id;
             let prefix = format!("nctforge.roi.{}", roi.name);
-            for (offset, name, filters, nuclides, scores, estimator) in
-                roi_tally_plan(&prefix, mesh_filter)
-            {
+            for roi_tally in roi_tally_plan(&prefix, mesh_filter) {
                 tally(
                     writer,
-                    base + offset,
-                    &name,
-                    &filters,
-                    &nuclides,
-                    &scores,
-                    estimator,
+                    base + roi_tally.offset,
+                    &roi_tally.name,
+                    &roi_tally.filters,
+                    &roi_tally.nuclides,
+                    &roi_tally.scores,
+                    roi_tally.estimator,
                 )?;
             }
         }
@@ -1408,25 +1406,33 @@ fn tallies_xml(
     })
 }
 
+/// One acceptance tally's placement within a region's tally block.
+struct RoiTally {
+    offset: u32,
+    name: String,
+    filters: Vec<u32>,
+    nuclides: Vec<&'static str>,
+    scores: Vec<&'static str>,
+    estimator: &'static str,
+}
+
 /// The nine single-bin acceptance tallies emitted per ROI region: the three
 /// neutron response components, photon heating, neutron-heating and
 /// coupled-heating audits, the B-10/N-14 reaction-rate audits, and the
 /// energy-integrated neutron fluence.
-fn roi_tally_plan(
-    prefix: &str,
-    mesh_filter: u32,
-) -> [(
-    u32,
-    String,
-    Vec<u32>,
-    Vec<&'static str>,
-    Vec<&'static str>,
-    &'static str,
-); 9] {
+fn roi_tally_plan(prefix: &str, mesh_filter: u32) -> [RoiTally; 9] {
     let neutron = NEUTRON_FILTER_ID;
     let photon = PHOTON_FILTER_ID;
+    let entry = |offset, name: String, filters, nuclides, scores, estimator| RoiTally {
+        offset,
+        name,
+        filters,
+        nuclides,
+        scores,
+        estimator,
+    };
     [
-        (
+        entry(
             0,
             format!("{prefix}.component.boron.response"),
             vec![mesh_filter, neutron, BORON_RESPONSE_FILTER_ID],
@@ -1434,7 +1440,7 @@ fn roi_tally_plan(
             vec!["flux"],
             "tracklength",
         ),
-        (
+        entry(
             1,
             format!("{prefix}.component.nitrogen.response"),
             vec![mesh_filter, neutron, NITROGEN_RESPONSE_FILTER_ID],
@@ -1442,7 +1448,7 @@ fn roi_tally_plan(
             vec!["flux"],
             "tracklength",
         ),
-        (
+        entry(
             2,
             format!("{prefix}.component.hydrogen.response"),
             vec![mesh_filter, neutron, HYDROGEN_RESPONSE_FILTER_ID],
@@ -1450,7 +1456,7 @@ fn roi_tally_plan(
             vec!["flux"],
             "tracklength",
         ),
-        (
+        entry(
             3,
             format!("{prefix}.component.photon.heating"),
             vec![mesh_filter, photon],
@@ -1458,7 +1464,7 @@ fn roi_tally_plan(
             vec!["heating"],
             "collision",
         ),
-        (
+        entry(
             4,
             format!("{prefix}.audit.neutron_heating"),
             vec![mesh_filter, neutron],
@@ -1466,7 +1472,7 @@ fn roi_tally_plan(
             vec!["heating"],
             "tracklength",
         ),
-        (
+        entry(
             5,
             format!("{prefix}.physical_total.coupled_heating"),
             vec![mesh_filter],
@@ -1474,7 +1480,7 @@ fn roi_tally_plan(
             vec!["heating"],
             "collision",
         ),
-        (
+        entry(
             6,
             format!("{prefix}.audit.b10_mt107"),
             vec![mesh_filter, neutron],
@@ -1482,7 +1488,7 @@ fn roi_tally_plan(
             vec!["(n,a)"],
             "tracklength",
         ),
-        (
+        entry(
             7,
             format!("{prefix}.audit.n14_mt103"),
             vec![mesh_filter, neutron],
@@ -1490,7 +1496,7 @@ fn roi_tally_plan(
             vec!["(n,p)"],
             "tracklength",
         ),
-        (
+        entry(
             8,
             format!("{prefix}.diagnostic.neutron_fluence"),
             vec![mesh_filter, neutron],

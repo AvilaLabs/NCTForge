@@ -13,6 +13,7 @@ name = "_nctforge"
 crate-type = ["cdylib"]
 
 [dependencies]
+nctforge-bio = { path = "../../crates/nctforge-bio" }
 nctforge-core = { path = "../../crates/nctforge-core" }
 nctforge-dicom = { path = "../../crates/nctforge-dicom" }
 nctforge-evidence = { path = "../../crates/nctforge-evidence" }

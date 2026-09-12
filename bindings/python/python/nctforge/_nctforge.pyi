@@ -223,3 +223,122 @@ def load_fixed_source(path: str | PathLike[str]) -> FixedSource: ...
 def load_component_profile(path: str | PathLike[str]) -> ComponentProfile: ...
 def load_response_generation_method(path: str | PathLike[str]) -> ResponseGenerationMethod: ...
 def load_response_set(path: str | PathLike[str]) -> ResponseSet: ...
+
+class DoseVolume:
+    """One component's per-voxel dose values in grid order."""
+
+    @property
+    def component(self) -> str: ...
+    @property
+    def unit(self) -> str: ...
+    @property
+    def values(self) -> list[float]: ...
+    @property
+    def absolute_standard_uncertainty(self) -> list[float] | None: ...
+
+class PhysicalDoseBundle:
+    """A validated ``nctforge.physical-dose-bundle/0.2.0`` artifact."""
+
+    @property
+    def schema_version(self) -> str: ...
+    @property
+    def case_id(self) -> str: ...
+    @property
+    def geometry(self) -> Geometry: ...
+    @property
+    def components(self) -> list[DoseVolume]: ...
+    @property
+    def physical_total(self) -> DoseVolume:
+        """Dedicated physical-total volume, separate from component sums."""
+    @property
+    def provenance_id(self) -> str: ...
+    def to_json(self) -> str: ...
+
+class BiologicalModel:
+    """A validated ``nctforge.biological-model/0.1.0`` artifact."""
+
+    @property
+    def schema_version(self) -> str: ...
+    @property
+    def id(self) -> str: ...
+    def to_json(self) -> str: ...
+
+class BiologicalDoseBundle:
+    """A validated biological dose bundle; never aliases physical dose."""
+
+    @property
+    def schema_version(self) -> str: ...
+    @property
+    def case_id(self) -> str: ...
+    @property
+    def unit(self) -> str:
+        """Weighted unit label, deliberately never ``gray``."""
+    @property
+    def geometry(self) -> Geometry: ...
+    @property
+    def components(self) -> list[DoseVolume]: ...
+    @property
+    def biological_total(self) -> DoseVolume:
+        """Weighted total with correlated component-sum uncertainty."""
+    @property
+    def physical_bundle_provenance(self) -> str: ...
+    @property
+    def regions_applied(self) -> list[str]: ...
+    @property
+    def qualification(self) -> str: ...
+    def to_json(self) -> str: ...
+    def write(self, output: str | PathLike[str]) -> None:
+        """Write the bundle JSON; refuses to overwrite an existing file."""
+
+class DoseVolumeHistogram:
+    """A deterministic ``nctforge.dose-volume-histogram/0.1.0`` artifact."""
+
+    @property
+    def schema_version(self) -> str: ...
+    @property
+    def region(self) -> str: ...
+    @property
+    def quantity(self) -> str: ...
+    @property
+    def unit(self) -> str: ...
+    @property
+    def dose_edges(self) -> list[float]: ...
+    @property
+    def differential_volume_fraction(self) -> list[float]: ...
+    @property
+    def cumulative_volume_fraction(self) -> list[float]:
+        """V(d): fraction of the region receiving at least each edge dose."""
+    @property
+    def region_voxel_count(self) -> int: ...
+    @property
+    def region_volume_mm3(self) -> float: ...
+    def to_json(self) -> str: ...
+
+def load_physical_dose_bundle(path: str | PathLike[str]) -> PhysicalDoseBundle: ...
+def collect_run(working_directory: str | PathLike[str]) -> PhysicalDoseBundle:
+    """Collect a completed OpenMC run directory into a dose bundle."""
+def load_biological_model(path: str | PathLike[str]) -> BiologicalModel: ...
+def apply_model(
+    model: BiologicalModel,
+    physical: PhysicalDoseBundle,
+    region_masks: list[tuple[str, str | PathLike[str]]],
+) -> BiologicalDoseBundle:
+    """Apply a biological model; region_masks maps region names to mask JSON."""
+def compute_dvh(
+    physical: PhysicalDoseBundle,
+    quantity: str,
+    mask_name: str,
+    mask_voxels: list[bool],
+    bins: int,
+) -> DoseVolumeHistogram:
+    """Histogram ``component:NAME`` or ``physical_total`` over the mask."""
+def compute_dvh_biological(
+    bundle: BiologicalDoseBundle,
+    quantity: str,
+    mask_name: str,
+    mask_voxels: list[bool],
+    bins: int,
+) -> DoseVolumeHistogram:
+    """Histogram ``component:NAME`` or ``biological_total`` over the mask."""
+def verify_evidence_bundle(root: str | PathLike[str]) -> tuple[str, int]:
+    """Re-hash every manifest artifact; returns (case_id, artifact count)."""
