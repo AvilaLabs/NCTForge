@@ -564,6 +564,24 @@ bundle's grid (nearest-neighbor or trilinear). The affine handling is
 regression-tested against independent `nibabel` output including oblique
 sforms, and `.nii.gz` round-trips are verified in both directions.
 
+`nctforge mask` combines and constructs `RegionMask` volumes for
+limiting-organ construction: subtraction (e.g. organ minus tumor), union,
+and intersection across mask JSONs, plus CT-threshold regions built from a
+DICOM series' rescaled modality (HU) window. All masks must share one voxel
+count, and operations that would select nothing are rejected:
+
+```text
+nctforge mask subtract --input ORGAN.json --minus TUMOR.json \
+  --name ORGAN-MINUS-T --output NEW-MASK.json
+nctforge mask union --inputs A.json --inputs B.json --name U --output M.json
+nctforge mask intersect --inputs A.json --inputs B.json --name I --output M.json
+nctforge mask threshold --ct-dir CT-DIR --min -10 --max 40 \
+  --name SOFT-TISSUE --output NEW-MASK.json
+```
+
+Resulting masks feed `benchmark derive-materials --mask`, `nctforge dvh`,
+and `nctforge bio apply --region-mask`.
+
 `nctforge dvh` computes a deterministic `nctforge.dose-volume-histogram/0.1.0`
 over a named voxel mask for any component or total in a physical or
 biological bundle — equal-width dose bins, differential volume fractions that

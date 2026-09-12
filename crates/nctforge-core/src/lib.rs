@@ -232,6 +232,76 @@ pub struct RegionMask {
     pub voxels: Vec<bool>,
 }
 
+impl RegionMask {
+    /// Number of voxels included in the mask.
+    #[must_use]
+    pub fn included_voxel_count(&self) -> usize {
+        self.voxels.iter().filter(|voxel| **voxel).count()
+    }
+
+    /// `self` minus `other`, under `name`.
+    ///
+    /// Both masks must describe the same voxel count — masks do not carry
+    /// their grid, so the caller binds them to a shared case geometry. The
+    /// result must select at least one voxel.
+    pub fn subtract(
+        &self,
+        other: &RegionMask,
+        name: impl Into<String>,
+    ) -> Result<RegionMask, ValidationError> {
+        self.combine(other, name, |a, b| a && !b)
+    }
+
+    /// Union of `self` and `other`, under `name`.
+    pub fn union(
+        &self,
+        other: &RegionMask,
+        name: impl Into<String>,
+    ) -> Result<RegionMask, ValidationError> {
+        self.combine(other, name, |a, b| a || b)
+    }
+
+    /// Intersection of `self` and `other`, under `name`.
+    pub fn intersection(
+        &self,
+        other: &RegionMask,
+        name: impl Into<String>,
+    ) -> Result<RegionMask, ValidationError> {
+        self.combine(other, name, |a, b| a && b)
+    }
+
+    fn combine(
+        &self,
+        other: &RegionMask,
+        name: impl Into<String>,
+        op: impl Fn(bool, bool) -> bool,
+    ) -> Result<RegionMask, ValidationError> {
+        if self.voxels.len() != other.voxels.len() {
+            return Err(ValidationError::MaskVoxelCountMismatch {
+                name: self.name.clone(),
+                other: other.name.clone(),
+                expected: self.voxels.len(),
+                actual: other.voxels.len(),
+            });
+        }
+        let voxels = self
+            .voxels
+            .iter()
+            .copied()
+            .zip(other.voxels.iter().copied())
+            .map(|(a, b)| op(a, b))
+            .collect::<Vec<_>>();
+        let mask = RegionMask {
+            name: name.into(),
+            voxels,
+        };
+        if mask.included_voxel_count() == 0 {
+            return Err(ValidationError::EmptyMask(mask.name));
+        }
+        Ok(mask)
+    }
+}
+
 /// Schema identifier carried by every `PhysicalDoseBundle`.
 pub const PHYSICAL_DOSE_BUNDLE_SCHEMA: &str = "nctforge.physical-dose-bundle/0.2.0";
 
@@ -426,6 +496,19 @@ pub enum ValidationError {
     InvalidTotalUncertainty,
     #[error("physical-total uncertainty and its method are inconsistent")]
     InconsistentTotalUncertainty,
+    #[error(
+        "mask {name:?} has {actual} voxels but mask {other:?} has {expected}; masks must share one voxel count"
+    )]
+    MaskVoxelCountMismatch {
+        name: String,
+        other: String,
+        expected: usize,
+        actual: usize,
+    },
+    #[error("mask {0:?} selects no voxels")]
+    EmptyMask(String),
+    #[error("threshold window [{minimum}, {maximum}] must be finite with minimum <= maximum")]
+    InvalidThresholdWindow { minimum: f64, maximum: f64 },
 }
 
 #[derive(Debug, Error, PartialEq, Eq)]
@@ -579,6 +662,71 @@ mod tests {
         assert_eq!(
             bundle.validate(),
             Err(ValidationError::InvalidContentReference("response_set"))
+        );
+    }
+
+    fn mask(name: &str, voxels: &[bool]) -> RegionMask {
+        RegionMask {
+            name: name.into(),
+            voxels: voxels.to_vec(),
+        }
+    }
+
+    #[test]
+    fn mask_subtract_removes_shared_voxels() {
+        let organ = mask("ORGAN", &[true, true, true, true]);
+        let tumor = mask("TUMOR", &[false, true, true, false]);
+
+        let limited = organ.subtract(&tumor, "ORGAN-T").unwrap();
+
+        assert_eq!(limited.name, "ORGAN-T");
+        assert_eq!(limited.voxels, vec![true, false, false, true]);
+        assert_eq!(limited.included_voxel_count(), 2);
+    }
+
+    #[test]
+    fn mask_union_and_intersection() {
+        let a = mask("A", &[true, true, false, false]);
+        let b = mask("B", &[false, true, true, false]);
+
+        assert_eq!(
+            a.union(&b, "U").unwrap().voxels,
+            vec![true, true, true, false]
+        );
+        assert_eq!(
+            a.intersection(&b, "I").unwrap().voxels,
+            vec![false, true, false, false]
+        );
+    }
+
+    #[test]
+    fn mask_ops_reject_frame_mismatch() {
+        let a = mask("A", &[true; 4]);
+        let b = mask("B", &[true; 8]);
+
+        assert_eq!(
+            a.union(&b, "U"),
+            Err(ValidationError::MaskVoxelCountMismatch {
+                name: "A".into(),
+                other: "B".into(),
+                expected: 4,
+                actual: 8,
+            })
+        );
+    }
+
+    #[test]
+    fn mask_ops_reject_empty_result() {
+        let a = mask("A", &[true, true, false, false]);
+        let b = mask("B", &[false, false, true, true]);
+
+        assert_eq!(
+            a.intersection(&b, "I"),
+            Err(ValidationError::EmptyMask("I".into()))
+        );
+        assert_eq!(
+            a.subtract(&a.clone(), "E"),
+            Err(ValidationError::EmptyMask("E".into()))
         );
     }
 }

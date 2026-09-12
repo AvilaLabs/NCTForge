@@ -114,6 +114,9 @@ enum Command {
     },
     /// Export or verify a deterministic evidence bundle.
     Evidence(EvidenceArgs),
+    /// Combine or construct RegionMask volumes (subtraction, union,
+    /// intersection, CT-threshold regions) for limiting-organ construction.
+    Mask(MaskArgs),
 }
 
 #[derive(Debug, Args)]
@@ -166,6 +169,74 @@ enum NiftiCommand {
         #[arg(long)]
         interpolation: String,
         /// New output path for the resampled `.nii` file.
+        #[arg(long)]
+        output: PathBuf,
+    },
+}
+
+#[derive(Debug, Args)]
+struct MaskArgs {
+    #[command(subcommand)]
+    command: MaskCommand,
+}
+
+#[derive(Debug, Subcommand)]
+enum MaskCommand {
+    /// Subtract one or more masks from an input mask (e.g. organ minus tumor).
+    Subtract {
+        /// RegionMask JSON to subtract from.
+        #[arg(long)]
+        input: PathBuf,
+        /// RegionMask JSON subtracted from the input; repeatable.
+        #[arg(long, required = true)]
+        minus: Vec<PathBuf>,
+        /// Name recorded in the output mask.
+        #[arg(long)]
+        name: String,
+        /// New output path for the mask JSON.
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Union two or more masks.
+    Union {
+        /// RegionMask JSONs to combine; repeatable, at least two.
+        #[arg(long, required = true, num_args = 1..)]
+        inputs: Vec<PathBuf>,
+        /// Name recorded in the output mask.
+        #[arg(long)]
+        name: String,
+        /// New output path for the mask JSON.
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Intersect two or more masks.
+    Intersect {
+        /// RegionMask JSONs to intersect; repeatable, at least two.
+        #[arg(long, required = true, num_args = 1..)]
+        inputs: Vec<PathBuf>,
+        /// Name recorded in the output mask.
+        #[arg(long)]
+        name: String,
+        /// New output path for the mask JSON.
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Construct a mask from a DICOM CT series whose rescaled modality
+    /// values (HU) fall inside an inclusive window.
+    Threshold {
+        /// Directory containing the CT slice DICOM files.
+        #[arg(long)]
+        ct_dir: PathBuf,
+        /// Inclusive lower bound of the modality-value window.
+        #[arg(long, allow_hyphen_values = true)]
+        min: f64,
+        /// Inclusive upper bound of the modality-value window.
+        #[arg(long, allow_hyphen_values = true)]
+        max: f64,
+        /// Name recorded in the output mask.
+        #[arg(long)]
+        name: String,
+        /// New output path for the mask JSON.
         #[arg(long)]
         output: PathBuf,
     },
@@ -3911,6 +3982,56 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                 println!("artifacts verified: {}", manifest.artifacts.len());
             }
         },
+        Some(Command::Mask(args)) => match args.command {
+            MaskCommand::Subtract {
+                input,
+                minus,
+                name,
+                output,
+            } => {
+                let mut mask = read_region_mask(&input)?;
+                for path in &minus {
+                    mask = mask
+                        .subtract(&read_region_mask(path)?, name.clone())
+                        .map_err(|error| io::Error::other(error.to_string()))?;
+                }
+                write_mask(&mask, &output)?;
+            }
+            MaskCommand::Union {
+                inputs,
+                name,
+                output,
+            } => {
+                let mask = fold_region_masks(&inputs, &name, RegionMask::union)?;
+                write_mask(&mask, &output)?;
+            }
+            MaskCommand::Intersect {
+                inputs,
+                name,
+                output,
+            } => {
+                let mask = fold_region_masks(&inputs, &name, RegionMask::intersection)?;
+                write_mask(&mask, &output)?;
+            }
+            MaskCommand::Threshold {
+                ct_dir,
+                min,
+                max,
+                name,
+                output,
+            } => {
+                let mut slices = fs::read_dir(&ct_dir)?
+                    .map(|entry| entry.map(|entry| entry.path()))
+                    .collect::<std::result::Result<Vec<_>, _>>()?;
+                slices.sort();
+                let ct = nctforge_dicom::import_ct_series(&slices)
+                    .map_err(|error| io::Error::other(error.to_string()))?;
+                let mask = ct
+                    .threshold_mask(name, min, max)
+                    .map_err(|error| io::Error::other(error.to_string()))?;
+                write_mask(&mask, &output)?;
+            }
+        },
         None => {
             println!("NCTForge research scaffold");
             println!("Not commissioned or certified for clinical use.");
@@ -3927,6 +4048,37 @@ fn write_new_json<T: serde::Serialize>(path: &Path, value: &T) -> io::Result<()>
     serde_json::to_writer_pretty(&mut file, value)?;
     file.write_all(b"\n")?;
     file.sync_all()
+}
+
+fn read_region_mask(path: &Path) -> Result<RegionMask, io::Error> {
+    serde_json::from_slice(&fs::read(path)?)
+        .map_err(|error| io::Error::other(format!("{}: {error}", path.display())))
+}
+
+fn write_mask(mask: &RegionMask, output: &Path) -> io::Result<()> {
+    write_new_json(output, mask)?;
+    println!(
+        "mask {} written ({} voxels included)",
+        mask.name,
+        mask.included_voxel_count()
+    );
+    Ok(())
+}
+
+fn fold_region_masks(
+    inputs: &[PathBuf],
+    name: &str,
+    op: fn(&RegionMask, &RegionMask, String) -> Result<RegionMask, nctforge_core::ValidationError>,
+) -> Result<RegionMask, io::Error> {
+    if inputs.len() < 2 {
+        return Err(io::Error::other("at least two --inputs are required"));
+    }
+    let mut mask = read_region_mask(&inputs[0])?;
+    for path in &inputs[1..] {
+        mask = op(&mask, &read_region_mask(path)?, name.to_owned())
+            .map_err(|error| io::Error::other(error.to_string()))?;
+    }
+    Ok(mask)
 }
 
 fn dose_values<'a>(

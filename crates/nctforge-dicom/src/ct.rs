@@ -7,7 +7,7 @@ use dicom_core::Tag;
 use dicom_core::value::{PrimitiveValue, Value};
 use dicom_dictionary_std::{tags, uids};
 use dicom_object::{DefaultDicomObject, open_file};
-use nctforge_core::GridGeometry;
+use nctforge_core::{GridGeometry, RegionMask, ValidationError};
 
 use crate::{DicomError, Result};
 
@@ -37,6 +37,37 @@ impl CtVolume {
     #[must_use]
     pub fn modality_value(&self, stored_pixel: i16) -> f64 {
         f64::from(stored_pixel).mul_add(self.rescale_slope, self.rescale_intercept)
+    }
+
+    /// Construct a `RegionMask` selecting voxels whose rescaled modality
+    /// value falls inside `[minimum, maximum]` (inclusive). For CT this is
+    /// an HU window — e.g. a configurable threshold range for building a
+    /// limiting-organ region. Bounds must be finite with
+    /// `minimum <= maximum`, and the window must select at least one voxel.
+    pub fn threshold_mask(
+        &self,
+        name: impl Into<String>,
+        minimum: f64,
+        maximum: f64,
+    ) -> std::result::Result<RegionMask, ValidationError> {
+        if !minimum.is_finite() || !maximum.is_finite() || minimum > maximum {
+            return Err(ValidationError::InvalidThresholdWindow { minimum, maximum });
+        }
+        let mask = RegionMask {
+            name: name.into(),
+            voxels: self
+                .stored_pixels
+                .iter()
+                .map(|sample| {
+                    let value = self.modality_value(*sample);
+                    value >= minimum && value <= maximum
+                })
+                .collect(),
+        };
+        if mask.included_voxel_count() == 0 {
+            return Err(ValidationError::EmptyMask(mask.name));
+        }
+        Ok(mask)
     }
 
     /// Return the world-coordinate center of one voxel in DICOM LPS mm.
@@ -528,4 +559,54 @@ fn add(left: [f64; 3], right: [f64; 3]) -> [f64; 3] {
 
 fn sub(left: [f64; 3], right: [f64; 3]) -> [f64; 3] {
     [left[0] - right[0], left[1] - right[1], left[2] - right[2]]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn volume(pixels: &[i16]) -> CtVolume {
+        CtVolume {
+            geometry: GridGeometry {
+                shape: [pixels.len() as u32, 1, 1],
+                spacing_mm: [1.0; 3],
+                origin_mm: [0.0; 3],
+                direction: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
+            },
+            frame_of_reference_uid: "1.2.3".into(),
+            study_instance_uid: "1.2.4".into(),
+            series_instance_uid: "1.2.5".into(),
+            slice_sop_instance_uids: vec!["1.2.6".into()],
+            stored_pixels: pixels.to_vec(),
+            rescale_slope: 1.0,
+            rescale_intercept: -1024.0,
+        }
+    }
+
+    #[test]
+    fn threshold_mask_selects_inclusive_window() {
+        let ct = volume(&[923, 1100, 1200, 2000]);
+        let mask = ct.threshold_mask("SOFT", -100.0, 200.0).unwrap();
+
+        assert_eq!(mask.voxels, vec![false, true, true, false]);
+        assert_eq!(mask.included_voxel_count(), 2);
+    }
+
+    #[test]
+    fn threshold_mask_rejects_inverted_or_empty_windows() {
+        let ct = volume(&[1024, 1100]);
+
+        assert!(matches!(
+            ct.threshold_mask("X", 50.0, -50.0),
+            Err(ValidationError::InvalidThresholdWindow { .. })
+        ));
+        assert!(matches!(
+            ct.threshold_mask("X", f64::NAN, 50.0),
+            Err(ValidationError::InvalidThresholdWindow { .. })
+        ));
+        assert!(matches!(
+            ct.threshold_mask("X", 5000.0, 6000.0),
+            Err(ValidationError::EmptyMask(_))
+        ));
+    }
 }

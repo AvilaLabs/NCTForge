@@ -370,6 +370,14 @@ Implementation status:
 - in progress: candidate-reference execution — three frozen-seed 300M-history
   runs are executing under the predeclared acceptance contract; the report
   and reference-status decision follow when the runs complete;
+- complete (OP-02, continued): `benchmark derive-materials --mask NAME=path`
+  binds map keys to external `RegionMask` JSONs (e.g. `nifti to-mask`
+  output) instead of RT Structure Set ROIs, with name/voxel-count checks —
+  segmented NIfTI volumes now drive material assignment end-to-end;
+- complete (OP-12, first slice): mask operations — `nctforge mask`
+  subtract/union/intersect `RegionMask` volumes with shared-frame and
+  non-empty-result checks, and `mask threshold` builds regions from a DICOM
+  CT modality (HU) window for limiting-organ construction;
 - in progress (OP-01): NIfTI imaging I/O — `nctforge-nifti` reads and writes
   NIfTI-1 `.nii`/`.nii.gz` 3-D scalar volumes (`u8`–`f64`), prefers sform
   over qform, converts RAS+ to patient LPS with transform provenance,
