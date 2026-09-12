@@ -1,6 +1,6 @@
 # ADR 0026: O-17 processor energy-balance attribution
 
-- Status: Accepted
+- Status: Accepted; continuation pause superseded by ADR 0031
 - Date: 2026-09-03
 - Decision owners: NCTForge maintainers
 - Scope: NF-BNCT-001 JEFF-4.0 O-17 transported-photon KERMA diagnostics

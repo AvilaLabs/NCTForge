@@ -197,13 +197,38 @@ struct Mf6Reaction {
 /// convention: consecutive points may share the same x, in which case the
 /// function steps to the right-hand value at x (used by evaluations to drop
 /// a cross section to zero at the evaluation's upper energy bound).
-struct ReactionTable {
+pub(crate) struct ReactionTable {
     interpolation: Vec<InterpolationRegion>,
     points: Vec<(f64, f64)>,
 }
 
 impl ReactionTable {
-    fn parse(
+    /// Tabulated x-values (strictly nondecreasing; a repeated x is an ENDF-6
+    /// discontinuity whose right-hand value governs).
+    pub(crate) fn knot_energies(&self) -> impl Iterator<Item = f64> + '_ {
+        self.points.iter().map(|(x, _)| *x)
+    }
+
+    /// Interpolation law of each region in order.
+    pub(crate) fn interpolation_laws(&self) -> impl Iterator<Item = i64> + '_ {
+        self.interpolation.iter().map(|region| region.law)
+    }
+
+    pub(crate) fn is_linear_linear(&self) -> bool {
+        self.interpolation.iter().all(|region| region.law == 2)
+    }
+
+    pub(crate) fn energy_bounds(&self) -> (f64, f64) {
+        (
+            self.points
+                .first()
+                .expect("table has at least two points")
+                .0,
+            self.points.last().expect("table has at least two points").0,
+        )
+    }
+
+    pub(crate) fn parse(
         section: &ParsedSection,
         cursor: &mut usize,
     ) -> Result<(EndfRecord, Self), EndfReactionBalanceError> {
@@ -260,7 +285,7 @@ impl ReactionTable {
     /// Evaluates the function at `x`. A point that shares its x with the next
     /// point (a discontinuity) resolves to the right-hand value; energies
     /// strictly inside a zero-width segment are unreachable.
-    fn evaluate(&self, x: f64) -> Option<f64> {
+    pub(crate) fn evaluate(&self, x: f64) -> Option<f64> {
         if !x.is_finite() || x < self.points.first()?.0 || x > self.points.last()?.0 {
             return None;
         }
@@ -1725,7 +1750,7 @@ fn map_moment(error: EndfPhotonMomentError) -> EndfReactionBalanceError {
     }
 }
 
-fn take_control_pub(
+pub(crate) fn take_control_pub(
     section: &ParsedSection,
     cursor: &mut usize,
 ) -> Result<EndfRecord, EndfReactionBalanceError> {

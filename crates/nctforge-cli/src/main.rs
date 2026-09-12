@@ -5,7 +5,7 @@
 use std::error::Error;
 use std::fs;
 use std::io;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use clap::{Args, Parser, Subcommand};
@@ -36,17 +36,21 @@ use nctforge_njoy::{
     NjoyExecutionReceiptDocument, NjoyInputArtifacts, NjoyInputBundle,
     NjoyLaw7ImplicitResidualComparison, NjoyLaw7ImplicitResidualComparisonDocument,
     NjoyLaw7ImplicitResidualComparisonQualification, NjoyPhotonMomentComparison,
-    NjoyPhotonMomentComparisonDocument, NjoySourceAwareSuitabilityReport,
+    NjoyPhotonMomentComparisonDocument, NjoyResponseSetReviewDocument, NjoyResponseSetReviewReport,
+    NjoyResponseTableGeneration, NjoyResponseTableInputs, NjoySourceAwareSuitabilityReport,
     NjoySourceAwareSuitabilityReportDocument, NjoySuitabilityComparison,
     NjoySuitabilityComparisonDocument, NjoySuitabilityComparisonQualification,
     NjoySuitabilityQualification, NjoySuitabilityReport, NjoySuitabilityReportDocument,
+    load_generation_report, load_response_set,
 };
 use nctforge_openmc::{
     DataAcquisitionClient, DataAcquisitionProfileDocument, DataAcquisitionReceiptDocument,
     EvaluatedNeutronSourceSelectionDocument, EvaluatedSourceQualification, NuclearDataManifest,
     OpenMcBackend, OpenMcNeutronTransportDomain, OpenMcNeutronTransportDomainDocument,
 };
-use nctforge_transport::{MaterialDefinition, TransportBackend};
+use nctforge_transport::{
+    ComponentDefinitionProfile, MaterialDefinition, ResponseGenerationMethod, TransportBackend,
+};
 
 #[derive(Debug, Parser)]
 #[command(
@@ -439,6 +443,86 @@ enum NjoyCommand {
         /// Energy-balance report to validate and regenerate.
         #[arg(long)]
         balance_report: PathBuf,
+    },
+    /// Generate the material neutron response set from production-HEATR PENDF tables.
+    GenerateResponseTables {
+        /// Exact material JSON bound by the response-generation method.
+        #[arg(long)]
+        material: PathBuf,
+        /// Component-definition profile JSON bound by the method.
+        #[arg(long)]
+        component_profile: PathBuf,
+        /// Frozen response-generation method JSON.
+        #[arg(long)]
+        generation_method: PathBuf,
+        /// Processed nuclear-data manifest JSON supplying atomic weight ratios.
+        #[arg(long)]
+        nuclear_data_manifest: PathBuf,
+        /// Derived neutron transport-domain JSON.
+        #[arg(long)]
+        transport_domain: PathBuf,
+        /// Case-scoped evaluated-neutron source-selection manifest.
+        #[arg(long)]
+        selection: PathBuf,
+        /// Verified domain-aware suitability report carrying the findings.
+        #[arg(long)]
+        domain_aware_report: PathBuf,
+        /// External execution receipt used as the trust anchor.
+        #[arg(long)]
+        receipt: PathBuf,
+        /// Complete execution directory bound by the receipt.
+        #[arg(long)]
+        execution_directory: PathBuf,
+        /// New unreviewed response-set JSON path; it must not already exist.
+        #[arg(long)]
+        response_set_output: PathBuf,
+        /// New generation-report JSON path; it must not already exist.
+        #[arg(long)]
+        report_output: PathBuf,
+    },
+    /// Regenerate and verify a response set, then emit the review report and
+    /// the independently reviewed response set that binds it.
+    VerifyResponseTables {
+        /// Exact material JSON bound by the response-generation method.
+        #[arg(long)]
+        material: PathBuf,
+        /// Component-definition profile JSON bound by the method.
+        #[arg(long)]
+        component_profile: PathBuf,
+        /// Frozen response-generation method JSON.
+        #[arg(long)]
+        generation_method: PathBuf,
+        /// Processed nuclear-data manifest JSON supplying atomic weight ratios.
+        #[arg(long)]
+        nuclear_data_manifest: PathBuf,
+        /// Derived neutron transport-domain JSON.
+        #[arg(long)]
+        transport_domain: PathBuf,
+        /// Case-scoped evaluated-neutron source-selection manifest.
+        #[arg(long)]
+        selection: PathBuf,
+        /// Verified domain-aware suitability report carrying the findings.
+        #[arg(long)]
+        domain_aware_report: PathBuf,
+        /// External execution receipt used as the trust anchor.
+        #[arg(long)]
+        receipt: PathBuf,
+        /// Complete execution directory bound by the receipt.
+        #[arg(long)]
+        execution_directory: PathBuf,
+        /// Unreviewed response set to regenerate and validate.
+        #[arg(long)]
+        response_set: PathBuf,
+        /// Generation report to regenerate and validate.
+        #[arg(long)]
+        generation_report: PathBuf,
+        /// New review-report JSON path; it must not already exist.
+        #[arg(long)]
+        review_output: PathBuf,
+        /// New independently reviewed response-set JSON path; it must not
+        /// already exist.
+        #[arg(long)]
+        reviewed_set_output: PathBuf,
     },
     /// Compare independent capture moments with NJOY's photon and recoil print tables.
     CompareCapturePhotonMoments {
@@ -1820,6 +1904,116 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                     reaction_balance_qualification_name(balance.report.qualification)
                 );
             }
+            NjoyCommand::GenerateResponseTables {
+                material,
+                component_profile,
+                generation_method,
+                nuclear_data_manifest,
+                transport_domain,
+                selection,
+                domain_aware_report,
+                receipt,
+                execution_directory,
+                response_set_output,
+                report_output,
+            } => {
+                let artifacts = ResponseTableArtifacts::load(
+                    &material,
+                    &component_profile,
+                    &generation_method,
+                    &nuclear_data_manifest,
+                    &transport_domain,
+                    &selection,
+                    &domain_aware_report,
+                    &receipt,
+                    execution_directory,
+                )?;
+                let inputs = artifacts.inputs();
+                let case_id = &artifacts.execution.receipt.case_id;
+                let generation = NjoyResponseTableGeneration::generate(
+                    &inputs,
+                    &format!("nctforge.{case_id}.neutron-response-set.v1"),
+                    &format!("nctforge.{case_id}.response-table-generation.v1"),
+                )?;
+                let result = generation.write_new(&response_set_output, &report_output)?;
+                println!("generated neutron response set from production-HEATR PENDF tables");
+                println!("response set: {}", result.response_set_path.display());
+                println!("response set SHA-256: {}", result.response_set_sha256);
+                println!("report: {}", result.report_path.display());
+                println!("report SHA-256: {}", result.report_sha256);
+                println!(
+                    "union grid knots: {}",
+                    result.generation.report.union_grid_knot_count
+                );
+                println!(
+                    "carried in-domain kinematic violations: {}",
+                    result
+                        .generation
+                        .report
+                        .carried_findings
+                        .in_domain_kinematic_violation_count
+                );
+                println!("qualification: tables_generated_unreviewed");
+            }
+            NjoyCommand::VerifyResponseTables {
+                material,
+                component_profile,
+                generation_method,
+                nuclear_data_manifest,
+                transport_domain,
+                selection,
+                domain_aware_report,
+                receipt,
+                execution_directory,
+                response_set,
+                generation_report,
+                review_output,
+                reviewed_set_output,
+            } => {
+                let artifacts = ResponseTableArtifacts::load(
+                    &material,
+                    &component_profile,
+                    &generation_method,
+                    &nuclear_data_manifest,
+                    &transport_domain,
+                    &selection,
+                    &domain_aware_report,
+                    &receipt,
+                    execution_directory,
+                )?;
+                let inputs = artifacts.inputs();
+                let (set, set_bytes) = load_response_set(&response_set)?;
+                let (report, report_bytes) = load_generation_report(&generation_report)?;
+                let case_id = &artifacts.execution.receipt.case_id;
+                let (review, reviewed_set) = NjoyResponseSetReviewReport::verify(
+                    &inputs,
+                    &set,
+                    &set_bytes,
+                    &report,
+                    &report_bytes,
+                    &format!("nctforge.{case_id}.response-set-review.v1"),
+                )?;
+                let result = NjoyResponseSetReviewDocument::write_new(
+                    &review,
+                    &reviewed_set,
+                    &review_output,
+                    &reviewed_set_output,
+                )?;
+                println!("verified response set by deterministic regeneration");
+                println!("review: {}", result.review_path.display());
+                println!("review SHA-256: {}", result.document.review_sha256);
+                println!(
+                    "reviewed response set: {}",
+                    result.reviewed_set_path.display()
+                );
+                println!(
+                    "reviewed set SHA-256: {}",
+                    result.document.reviewed_set_sha256
+                );
+                println!(
+                    "qualification: independently_reviewed (in-house deterministic verification)"
+                );
+            }
             NjoyCommand::CompareCapturePhotonMoments {
                 balance_report,
                 receipt,
@@ -2743,6 +2937,88 @@ fn reaction_balance_qualification_name(
         }
         EndfReactionBalanceQualification::SourceRemaindersPartiallyComputable => {
             "source_remainders_partially_computable"
+        }
+    }
+}
+
+/// Owned artifacts backing `NjoyResponseTableInputs`; the borrowed view is
+/// built by `inputs()` once everything is loaded.
+struct ResponseTableArtifacts {
+    material: MaterialDefinition,
+    material_bytes: Vec<u8>,
+    component_profile: ComponentDefinitionProfile,
+    component_profile_bytes: Vec<u8>,
+    method: ResponseGenerationMethod,
+    method_bytes: Vec<u8>,
+    nuclear_data: NuclearDataManifest,
+    nuclear_data_bytes: Vec<u8>,
+    transport_domain: OpenMcNeutronTransportDomain,
+    transport_domain_bytes: Vec<u8>,
+    selection: EvaluatedNeutronSourceSelectionDocument,
+    domain_aware: NjoyDomainAwareSuitabilityReportDocument,
+    execution: NjoyExecutionReceiptDocument,
+    execution_directory: PathBuf,
+}
+
+impl ResponseTableArtifacts {
+    #[allow(clippy::too_many_arguments)]
+    fn load(
+        material: &Path,
+        component_profile: &Path,
+        generation_method: &Path,
+        nuclear_data_manifest: &Path,
+        transport_domain: &Path,
+        selection: &Path,
+        domain_aware_report: &Path,
+        receipt: &Path,
+        execution_directory: PathBuf,
+    ) -> Result<Self, Box<dyn Error>> {
+        let material_bytes = fs::read(material)?;
+        let material: MaterialDefinition = serde_json::from_slice(&material_bytes)?;
+        let component_profile_bytes = fs::read(component_profile)?;
+        let component_profile: ComponentDefinitionProfile =
+            serde_json::from_slice(&component_profile_bytes)?;
+        let method_bytes = fs::read(generation_method)?;
+        let method: ResponseGenerationMethod = serde_json::from_slice(&method_bytes)?;
+        let nuclear_data_bytes = fs::read(nuclear_data_manifest)?;
+        let nuclear_data: NuclearDataManifest = serde_json::from_slice(&nuclear_data_bytes)?;
+        let transport_domain_bytes = fs::read(transport_domain)?;
+        let transport_domain: OpenMcNeutronTransportDomain =
+            serde_json::from_slice(&transport_domain_bytes)?;
+        Ok(Self {
+            material,
+            material_bytes,
+            component_profile,
+            component_profile_bytes,
+            method,
+            method_bytes,
+            nuclear_data,
+            nuclear_data_bytes,
+            transport_domain,
+            transport_domain_bytes,
+            selection: EvaluatedNeutronSourceSelectionDocument::from_path(selection)?,
+            domain_aware: NjoyDomainAwareSuitabilityReportDocument::from_path(domain_aware_report)?,
+            execution: NjoyExecutionReceiptDocument::from_path(receipt)?,
+            execution_directory,
+        })
+    }
+
+    fn inputs(&self) -> NjoyResponseTableInputs<'_> {
+        NjoyResponseTableInputs {
+            material: &self.material,
+            material_bytes: &self.material_bytes,
+            component_profile: &self.component_profile,
+            component_profile_bytes: &self.component_profile_bytes,
+            method: &self.method,
+            method_bytes: &self.method_bytes,
+            nuclear_data: &self.nuclear_data,
+            nuclear_data_bytes: &self.nuclear_data_bytes,
+            transport_domain: &self.transport_domain,
+            transport_domain_bytes: &self.transport_domain_bytes,
+            selection: &self.selection,
+            domain_aware: &self.domain_aware,
+            execution: &self.execution,
+            execution_directory: &self.execution_directory,
         }
     }
 }

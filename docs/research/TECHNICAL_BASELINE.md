@@ -292,8 +292,11 @@ result exists. Cross-code agreement alone remains `cross_code_research_only`.
 - Complete: generate byte-stable OpenMC 0.16 geometry, material, source,
   settings, response, audit, spectrum, and leakage XML directly in Rust; verify
   all content bindings and selected nuclear-data files; reject incomplete
-  response energy coverage; and emit a hashed input manifest. Pending: supply
-  real reviewed response tables and pass a controlled OpenMC smoke execution.
+  response energy coverage; and emit a hashed input manifest. Complete:
+  generate the first component response tables from receipt-bound production
+  HEATR PENDF output and seal them `independently_reviewed` under the ADR 0031
+  in-house deterministic-verification path. Pending: pass a controlled OpenMC
+  smoke execution and import the resulting statepoint.
 - Complete: freeze the NJOY2016.78 MT 407/403 partial-KERMA method and MT 301
   residual classification in ADR 0007, bind each evaluated ENDF material, and
   generate byte-stable production and diagnostic input decks. Complete: execute

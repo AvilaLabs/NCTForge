@@ -3,8 +3,9 @@
 **Specification version:** 0.1.0
 
 **Status:** Geometry, resolved material, and source frozen; first NJOY
-processing and transported-photon suitability evidence rejected; response
-tables and reference results unqualified
+processing and transported-photon suitability evidence rejected and
+dispositioned as explained (ADR 0031); component response tables generated and
+deterministically verified; reference transport results unqualified
 
 **Qualification ceiling:** Synthetic research only
 
@@ -309,6 +310,36 @@ All ten native grids correspond and every curve agrees within the declared
 fallback for O-17 and O-18 and remains
 `comparison_only_not_response_qualification`.
 
+The first generated neutron response set is frozen in
+[`transport/provenance/neutron-response-set.unreviewed.json`](transport/provenance/neutron-response-set.unreviewed.json),
+with SHA-256
+`3517140f5caa1f4596996fd96a86f1d187e126558d834a4243770956e6b607d9`,
+and its generation report in
+[`transport/provenance/njoy2016-78-response-table-generation.json`](transport/provenance/njoy2016-78-response-table-generation.json),
+with SHA-256
+`949505db0efa35208f2e737c7917564cd3e265f89e7d281ebd579c970a25c3a6`.
+`generate-response-tables` extracts the receipt-bound production HEATR PENDF
+sections (MT 301 total, MT 443 kinematic, MT 407 B-10, and MT 403 N-14 partial
+KERMA), folds them onto a 7,526-knot union grid spanning the transport domain,
+and records exact boron + nitrogen + hydrogen closure at every knot. The
+report carries all 72 in-domain kinematic findings and the documented
+energy-accounting imbalances of the rejected nuclides into provenance; none
+are waived.
+
+The in-house deterministic review is frozen in
+[`transport/provenance/njoy2016-78-response-set-review.json`](transport/provenance/njoy2016-78-response-set-review.json),
+with SHA-256
+`977551dd4d9023b44aed7c5c8ff828a86786f2f50245295f53bbb7cbab07f198`.
+`verify-response-tables` regenerates the set and report byte-exactly, checks
+every binding and invariant, and seals
+[`transport/provenance/neutron-response-set.json`](transport/provenance/neutron-response-set.json),
+with SHA-256
+`bfc48efe75f470cd8f1f78c35e4589cba8853655cc9cf9f709f5cece4a8a9afd`,
+as `independently_reviewed` under the ADR 0031 in-house verification path.
+The reviewed set satisfies `validate_for_folding` and may be bound to OpenMC
+input generation. It does not qualify the reference results, which remain
+pending smoke execution, statepoint import, and estimator comparison.
+
 ## Execution profiles
 
 ### Smoke
@@ -479,12 +510,16 @@ and their `input_preparation_only` manifest are also frozen. A controlled
 ten-nuclide execution receipt is now frozen as
 `execution_observed_diagnostics_failed`; it is execution evidence but not a
 response table. The source set is separately
-`transported_photon_kerma_rejected`. The benchmark cannot enter transport
-execution until the four failed nuclides are replaced or resolved through a
-versioned data profile or response treatment, generated KERMA tables pass the
-ADR 0007 gates, and the required independent review is complete. The archive
+`transported_photon_kerma_rejected`. Under ADR 0031 the four rejected nuclides
+are dispositioned as explained — independently reproduced energy-accounting
+imbalances and documented photon-data coverage gaps — and are carried in
+response-set provenance rather than blocking generation. The component
+response tables are generated under the frozen method and sealed
+`independently_reviewed` by deterministic in-house regeneration; the sealed
+set satisfies `validate_for_folding` for OpenMC input generation. Reference
+transport results remain unqualified pending smoke execution, statepoint
+import, and the independent estimator comparison of ADR 0007. The archive
 drift is resolved at the MT 301 response level and the processed OpenMC
-selection is inspected; those findings do not clear the O-17/O-18 photon-data
-blocker.
+selection is inspected.
 Changing any frozen quantity creates a new benchmark specification version and
 cannot silently replace earlier results.

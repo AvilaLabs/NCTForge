@@ -174,13 +174,18 @@ Implementation status:
   the MT=301 excess within 1.7% at every finding energy, with the MT=91
   processor-internal convention and residual per-product `ebar` differences
   preserved as unreviewed evidence (ADR 0030);
-- paused: continue response qualification only after that independent
-  calculation is reviewed; all three published evaluated libraries
-  (ENDF/B-VIII.1, JEFF-4.0, TENDL-2025) are rejected under the controlled
-  chain, C-13 and O-18 still lack transported-photon sources under JEFF-4.0,
-  and N-15 remains independently rejected by its capture-balance gate;
-- pending: generate the first reviewable response tables only after the
-  diagnostic blocker is resolved through a versioned, reviewed data profile;
+- resolved: the O-17 queue is dispositioned as explained — the non-conservation
+  is a documented property of the evaluated File 6 accounting, independently
+  reproduced; the baseline photon-coverage findings are data-coverage findings
+  (ADR 0031); all findings remain carried in provenance, none waived;
+- complete: generate the first response tables under the frozen method —
+  `generate-response-tables` folds receipt-bound production HEATR PENDF
+  sections (MT=301 total, MT=443 kinematic, MT=407 B-10, MT=403 N-14 partial
+  KERMA) onto a 7,526-knot union grid with exact B+N+H closure at every knot,
+  and `verify-response-tables` reproduces both artifacts byte-exactly and
+  seals the set as independently reviewed under the in-house deterministic
+  verification path (ADR 0031); all 72 in-domain kinematic findings are
+  carried into the generation report, none waived;
 - pending: smoke execution, statepoint import, and independent estimator
   comparison.
 

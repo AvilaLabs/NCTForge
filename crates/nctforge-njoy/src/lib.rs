@@ -43,6 +43,7 @@ mod photon_inventory;
 mod photon_moment;
 mod photon_moment_comparison;
 mod reaction_energy_balance;
+mod response_tables;
 mod source_aware;
 mod suitability;
 
@@ -155,6 +156,17 @@ pub use reaction_energy_balance::{
     EndfReactionBalanceReactionStatus, EndfReactionBalanceSample, EndfReactionBalanceSampleStatus,
     EndfReactionEnergyBalanceDocument, EndfReactionEnergyBalanceReport,
     EndfReactionEnergyBalanceResult,
+};
+pub use response_tables::{
+    AVOGADRO_CONSTANT_PER_MOL, CM2_PER_BARN, CarriedFindingSummary, ExtractedTableRecord,
+    ExtractedTableRole, NEUTRON_MASS_U, NEUTRON_RESPONSE_SET_SCHEMA,
+    NJOY_RESPONSE_SET_REVIEW_SCHEMA, NJOY_RESPONSE_TABLE_GENERATION_SCHEMA,
+    NjoyResponseSetCheckStatus, NjoyResponseSetReviewDocument, NjoyResponseSetReviewReport,
+    NjoyResponseSetReviewResult, NjoyResponseSetReviewScope, NjoyResponseSetReviewWriteResult,
+    NjoyResponseTableGeneration, NjoyResponseTableGenerationReport,
+    NjoyResponseTableGenerationResult, NjoyResponseTableInputs, NjoyResponseTableQualification,
+    NuclideTableExtraction, PartialChannelExtraction, ResidualComponentRecord, ResponseTableError,
+    ResponseTableFindingDisposition, load_generation_report, load_response_set,
 };
 pub use source_aware::{
     NJOY_SOURCE_AWARE_SUITABILITY_SCHEMA, NjoyProcessorFindingDisposition,

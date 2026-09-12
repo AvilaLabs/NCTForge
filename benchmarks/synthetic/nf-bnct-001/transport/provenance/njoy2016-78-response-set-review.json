@@ -1,0 +1,27 @@
+{
+  "schema_version": "nctforge.njoy-response-set-review/0.1.0",
+  "id": "nctforge.nf-bnct-001.response-set-review.v1",
+  "scope": "deterministic_regeneration_and_invariant_verification",
+  "result": "verification_passed",
+  "response_set_unreviewed": {
+    "id": "nctforge.nf-bnct-001.neutron-response-set.v1",
+    "sha256": "3517140f5caa1f4596996fd96a86f1d187e126558d834a4243770956e6b607d9"
+  },
+  "generation_report": {
+    "id": "nctforge.nf-bnct-001.response-table-generation.v1",
+    "sha256": "949505db0efa35208f2e737c7917564cd3e265f89e7d281ebd579c970a25c3a6"
+  },
+  "regenerated_response_set_digest_match": true,
+  "regenerated_report_digest_match": true,
+  "response_set_validation": "passed",
+  "closure_check": "passed",
+  "transport_domain_coverage": "passed",
+  "nonnegative_curves": "passed",
+  "carried_in_domain_kinematic_violation_count": 72,
+  "carried_rejecting_finding_count": 3,
+  "finding_disposition": "carried_in_provenance_findings_retained",
+  "caveats": [
+    "this review is a deterministic regeneration by the project toolchain; it is not an external review of the evaluation or of NJOY HEATR physics",
+    "all upstream suitability findings remain carried in provenance; none are waived by this qualification"
+  ]
+}

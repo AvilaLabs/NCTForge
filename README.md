@@ -93,8 +93,11 @@ deterministic OpenMC XML. Its exact evaluated-neutron source files and the
 official processed OpenMC case selection are frozen. All ten generated MT 301
 curves agree pointwise with the official processed tables within `4.9e-7`, but
 the comparison also confirms effective local-photon fallback for O-17 and O-18.
-Reviewed response tables therefore remain blocked; the project does not hide or
-zero those contributions. Material mapping from general DICOM cases, particle
+Those energy-accounting findings are dispositioned as explained and carried in
+provenance (ADR 0031): the first component response tables are generated from
+receipt-bound production HEATR PENDF output with exact B+N+H closure at each
+of 7,526 union-grid knots and sealed `independently_reviewed` by deterministic
+in-house regeneration. Material mapping from general DICOM cases, particle
 execution, statepoint import, biological modeling, and dose calculation are not
 implemented yet. Transport capability flags remain false until their acceptance
 gates pass.
