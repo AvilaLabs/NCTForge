@@ -777,6 +777,150 @@ fn load_fixed_source(path: PathBuf) -> PyResult<PyFixedSource> {
     })
 }
 
+/// A deterministic report of how a source was positioned on a case.
+#[pyclass(frozen, name = "PositionReport")]
+struct PyPositionReport {
+    inner: nctforge_transport::PositionReport,
+}
+
+#[pymethods]
+impl PyPositionReport {
+    #[getter]
+    fn schema_version(&self) -> &str {
+        &self.inner.schema_version
+    }
+
+    #[getter]
+    fn case_id(&self) -> &str {
+        &self.inner.case_id
+    }
+
+    #[getter]
+    fn target_region(&self) -> &str {
+        &self.inner.target_region
+    }
+
+    /// Beam propagation direction, a unit vector in LPS.
+    #[getter]
+    fn beam_direction_lps(&self) -> (f64, f64, f64) {
+        self.inner.beam_direction_lps.into()
+    }
+
+    #[getter]
+    fn target_centroid_lps_mm(&self) -> (f64, f64, f64) {
+        self.inner.target_centroid_lps_mm.into()
+    }
+
+    /// Entry face axis (`x`/`y`/`z`) and side (`low`/`high`).
+    #[getter]
+    fn entry(&self) -> PyResult<(String, String)> {
+        let axis = serde_json::to_value(self.inner.entry_axis)
+            .and_then(serde_json::from_value::<String>)
+            .map_err(reject)?;
+        let side = serde_json::to_value(self.inner.entry_side)
+            .and_then(serde_json::from_value::<String>)
+            .map_err(reject)?;
+        Ok((axis, side))
+    }
+
+    #[getter]
+    fn entry_point_lps_mm(&self) -> (f64, f64, f64) {
+        self.inner.entry_point_lps_mm.into()
+    }
+
+    #[getter]
+    fn source_to_centroid_mm(&self) -> f64 {
+        self.inner.source_to_centroid_mm
+    }
+
+    #[getter]
+    fn aperture_half_widths_cm(&self) -> (f64, f64) {
+        self.inner.aperture_half_widths_cm.into()
+    }
+
+    fn to_json(&self) -> PyResult<String> {
+        serde_json::to_string_pretty(&self.inner).map_err(reject)
+    }
+
+    fn write(&self, output: PathBuf) -> PyResult<()> {
+        write_json_new(&output, &self.inner)
+    }
+}
+
+/// Aim a source so the beam axis passes through a mask's centroid (same path
+/// as `nctforge position aim`). `approach` is `+x|-x|+y|-y|+z|-z` or
+/// `direction_lps` an arbitrary `(dx, dy, dz)`. `case_id` is stamped into the
+/// report. Returns `(positioned_source, report)`.
+#[pyfunction]
+#[pyo3(signature = (source, geometry, mask, case_id, approach=None, direction_lps=None, half_widths_cm=(1.0, 1.0), margin_cm=0.01))]
+fn aim_source(
+    source: &PyFixedSource,
+    geometry: &PyGeometry,
+    mask: PathBuf,
+    case_id: &str,
+    approach: Option<&str>,
+    direction_lps: Option<(f64, f64, f64)>,
+    half_widths_cm: (f64, f64),
+    margin_cm: f64,
+) -> PyResult<(PyFixedSource, PyPositionReport)> {
+    let mask: RegionMask =
+        serde_json::from_slice(&fs::read(&mask).map_err(reject)?).map_err(reject)?;
+    let direction = if let Some(direction) = direction_lps {
+        [direction.0, direction.1, direction.2]
+    } else if let Some(approach) = approach {
+        nctforge_transport::AxisApproach::parse(approach)
+            .map_err(|e| PyValueError::new_err(e.to_string()))?
+            .unit_vector()
+    } else {
+        return Err(PyValueError::new_err(
+            "supply approach (+x|-x|+y|-y|+z|-z) or direction_lps",
+        ));
+    };
+    let (positioned, mut report) = nctforge_transport::aim_source_at_centroid(
+        &source.inner,
+        &geometry.inner,
+        &mask,
+        direction,
+        [half_widths_cm.0, half_widths_cm.1],
+        margin_cm,
+    )
+    .map_err(reject)?;
+    report.case_id = case_id.into();
+    Ok((
+        PyFixedSource { inner: positioned },
+        PyPositionReport { inner: report },
+    ))
+}
+
+/// Rotate a source about a world axis through `center_lps_mm` by a multiple
+/// of 90 degrees (same path as `nctforge position rotate`).
+#[pyfunction]
+fn rotate_source(
+    source: &PyFixedSource,
+    axis: &str,
+    center_lps_mm: (f64, f64, f64),
+    degrees: f64,
+) -> PyResult<PyFixedSource> {
+    let axis = match axis {
+        "x" => nctforge_transport::PlaneAxis::X,
+        "y" => nctforge_transport::PlaneAxis::Y,
+        "z" => nctforge_transport::PlaneAxis::Z,
+        other => {
+            return Err(PyValueError::new_err(format!(
+                "axis must be x|y|z, got {other:?}"
+            )));
+        }
+    };
+    let rotated = nctforge_transport::rotate_source(
+        &source.inner,
+        [center_lps_mm.0, center_lps_mm.1, center_lps_mm.2],
+        axis,
+        degrees,
+    )
+    .map_err(reject)?;
+    Ok(PyFixedSource { inner: rotated })
+}
+
 /// Read and validate a component-definition profile.
 #[pyfunction]
 fn load_component_profile(path: PathBuf) -> PyResult<PyComponentProfile> {
@@ -2690,6 +2834,7 @@ fn _nctforge(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyBedBundle>()?;
     m.add_class::<PyCombinedDoseBundle>()?;
     m.add_class::<PyDoseComparison>()?;
+    m.add_class::<PyPositionReport>()?;
     m.add_function(wrap_pyfunction!(backends, m)?)?;
     m.add_function(wrap_pyfunction!(file_sha256, m)?)?;
     m.add_function(wrap_pyfunction!(generate_case, m)?)?;
@@ -2698,6 +2843,8 @@ fn _nctforge(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(read_manifest, m)?)?;
     m.add_function(wrap_pyfunction!(load_material, m)?)?;
     m.add_function(wrap_pyfunction!(load_fixed_source, m)?)?;
+    m.add_function(wrap_pyfunction!(aim_source, m)?)?;
+    m.add_function(wrap_pyfunction!(rotate_source, m)?)?;
     m.add_function(wrap_pyfunction!(load_component_profile, m)?)?;
     m.add_function(wrap_pyfunction!(load_response_generation_method, m)?)?;
     m.add_function(wrap_pyfunction!(load_response_set, m)?)?;

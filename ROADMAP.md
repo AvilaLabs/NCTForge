@@ -401,7 +401,9 @@ Implementation status:
   mask centroid (axis approaches and oblique directions), reporting the
   entry face/point and source-to-centroid distance; `position rotate`
   applies quarter-turns about a patient axis and rejects
-  non-axis-aligned results. Matched GUI/Python surfaces remain open;
+  non-axis-aligned results. Python parity (`aim_source`,
+  `rotate_source`, `PositionReport`) now matches the CLI; the GUI
+  surface remains open;
 - in progress (OP-01): NIfTI imaging I/O — `nctforge-nifti` reads and writes
   NIfTI-1 `.nii`/`.nii.gz` 3-D scalar volumes (`u8`–`f64`), prefers sform
   over qform, converts RAS+ to patient LPS with transform provenance,

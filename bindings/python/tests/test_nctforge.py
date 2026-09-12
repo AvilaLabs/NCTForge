@@ -248,6 +248,99 @@ class BackendHonestyTest(unittest.TestCase):
         self.assertTrue(openmc.can_import)
 
 
+class PositioningTest(unittest.TestCase):
+    """`aim_source`/`rotate_source` must mirror `nctforge position`."""
+
+    def _geometry(self, tmp: str):
+        bundle = nctforge.load_physical_dose_bundle(
+            _write(tmp, "dose.json", _physical_bundle_json())
+        )
+        return bundle.geometry
+
+    def _mask(self, tmp: str) -> Path:
+        return _write(
+            tmp,
+            "mask.json",
+            json.dumps({"name": "target", "voxels": [True, True]}),
+        )
+
+    def test_aim_positions_source_and_reports(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            geometry = self._geometry(tmp)
+            source = nctforge.load_fixed_source(TRANSPORT_DIR / "source.json")
+            positioned, report = nctforge.aim_source(
+                source,
+                geometry,
+                self._mask(tmp),
+                case_id="synthetic-case",
+                approach="-z",
+                half_widths_cm=(0.4, 0.2),
+                margin_cm=0.1,
+            )
+            self.assertEqual(report.case_id, "synthetic-case")
+            self.assertEqual(report.target_region, "target")
+            self.assertEqual(report.entry, ("z", "high"))
+            self.assertEqual(report.aperture_half_widths_cm, (0.4, 0.2))
+            self.assertAlmostEqual(report.beam_direction_lps[2], -1.0)
+            self.assertAlmostEqual(report.target_centroid_lps_mm[0], 0.0)
+            self.assertAlmostEqual(report.target_centroid_lps_mm[1], -2.5)
+            self.assertAlmostEqual(report.entry_point_lps_mm[2], 0.0)
+            self.assertAlmostEqual(report.source_to_centroid_mm, 1.5)
+            # The positioned source round-trips through contract validation.
+            moved = _write(tmp, "positioned.json", positioned.to_json())
+            self.assertEqual(
+                nctforge.load_fixed_source(moved).to_json(),
+                positioned.to_json(),
+            )
+            with tempfile.TemporaryDirectory() as out:
+                written = Path(out) / "report.json"
+                report.write(written)
+                self.assertEqual(
+                    json.loads(written.read_text())["entry_axis"], "z"
+                )
+
+    def test_aim_requires_an_axis_or_direction(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            source = nctforge.load_fixed_source(TRANSPORT_DIR / "source.json")
+            with self.assertRaises(ValueError):
+                nctforge.aim_source(
+                    source, self._geometry(tmp), self._mask(tmp), "case"
+                )
+            with self.assertRaises(ValueError):
+                nctforge.aim_source(
+                    source,
+                    self._geometry(tmp),
+                    self._mask(tmp),
+                    "case",
+                    approach="diagonal",
+                )
+
+    def test_rotate_source_by_quarter_turn(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            geometry = self._geometry(tmp)
+            source = nctforge.load_fixed_source(TRANSPORT_DIR / "source.json")
+            positioned, _ = nctforge.aim_source(
+                source,
+                geometry,
+                self._mask(tmp),
+                case_id="synthetic-case",
+                approach="-z",
+                half_widths_cm=(0.4, 0.2),
+            )
+            rotated = nctforge.rotate_source(
+                positioned, "x", (0.0, -2.5, -2.5), 90.0
+            )
+            self.assertNotEqual(rotated.to_json(), positioned.to_json())
+            moved = _write(tmp, "rotated.json", rotated.to_json())
+            self.assertEqual(
+                nctforge.load_fixed_source(moved).to_json(), rotated.to_json()
+            )
+            with self.assertRaises(NctForgeError):
+                nctforge.rotate_source(positioned, "x", (0.0, 0.0, 0.0), 45.0)
+            with self.assertRaises(ValueError):
+                nctforge.rotate_source(positioned, "w", (0.0, 0.0, 0.0), 90.0)
+
+
 def _physical_bundle_json() -> str:
     """The same synthetic fixture used by the Rust bio/evidence tests."""
     reference = lambda seed: {"id": seed, "sha256": seed * (64 // len(seed))}
