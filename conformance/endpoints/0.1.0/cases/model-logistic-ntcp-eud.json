@@ -1,0 +1,19 @@
+{
+  "schema_version": "nctforge.endpoint-model/0.1.0",
+  "id": "fixture-logistic-ntcp-eud",
+  "endpoint": "ntcp",
+  "function": {
+    "kind": "logistic",
+    "d50": 1.5,
+    "gamma50": 2.0
+  },
+  "dose_statistic": {
+    "statistic": "eud",
+    "a": -5.0
+  },
+  "validity_domain": "analytic conformance fixture; not a clinical model",
+  "derivation": {
+    "id": "fixture-derivation",
+    "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "schema_version": "nctforge.endpoint-model/0.1.0",
+  "id": "fixture-probit-ntcp",
+  "endpoint": "ntcp",
+  "function": {
+    "kind": "probit",
+    "td50": 2.0,
+    "m": 0.25
+  },
+  "dose_statistic": {
+    "statistic": "max"
+  },
+  "validity_domain": "analytic conformance fixture; not a clinical model",
+  "derivation": {
+    "id": "fixture-derivation",
+    "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+  }
+}

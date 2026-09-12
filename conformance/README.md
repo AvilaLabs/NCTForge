@@ -100,5 +100,26 @@ parameters.
 cargo test -p nctforge-bio --test bio_conformance
 ```
 
+## `endpoints/0.1.0/` — endpoint model scoring
+
+Covers `nctforge.endpoint-model/0.1.0` →
+`nctforge.endpoint-evaluation/0.1.0` scoring plus `combine_utcp`.
+`manifest.json` names a model (or TCP/NTCP model pair for `utcp` cases),
+a self-contained dose input, and a region mask per case; `expected/`
+holds the reference evaluations. Cases cover `logistic`, `probit`
+(Lyman), `voxel_poisson_tcp`, EUD statistics, and both `p_plus` and
+`difference` UTCP combinations.
+
+Reject cases pin the stable tokens `invalid_model`,
+`per_source_particle_unit`, `dose_selection`, and `utcp_mismatch`.
+All model parameters are analytic stand-ins for conformance checking —
+not clinical response models.
+
+```text
+cargo test -p nctforge-bio --test endpoint_conformance
+```
+
+Regeneration uses the same `NCTFORGE_UPDATE_CONFORMANCE=1` convention.
+
 Research only: conformance here means contract fidelity — it does not
 qualify any producer's physics or imply clinical suitability.

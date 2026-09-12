@@ -1,0 +1,18 @@
+{
+  "schema_version": "nctforge.endpoint-model/0.1.0",
+  "id": "fixture-poisson-tcp",
+  "endpoint": "tcp",
+  "function": {
+    "kind": "voxel_poisson_tcp",
+    "clonogen_density_per_mm3": 0.004,
+    "alpha": 0.3,
+    "alpha_beta": 3.0,
+    "fraction_count": 30,
+    "source_particles_per_fraction": 2.0e10
+  },
+  "validity_domain": "analytic conformance fixture; not a clinical model",
+  "derivation": {
+    "id": "fixture-derivation",
+    "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+  }
+}

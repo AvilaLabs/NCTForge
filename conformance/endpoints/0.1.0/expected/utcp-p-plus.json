@@ -1,0 +1,26 @@
+{
+  "schema_version": "nctforge.endpoint-evaluation/0.1.0",
+  "case_id": "endpoint-fixture",
+  "endpoint": "utcp",
+  "region": "whole-region",
+  "quantity": "physical_total",
+  "dose_source": {
+    "id": "endpoint-fixture-dose",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "probability": 0.1369054440498321,
+  "utcp": {
+    "combination": "p_plus",
+    "tcp": 0.15108808290155445,
+    "ntcp": 0.09387000337388249,
+    "tcp_evaluation": {
+      "id": "endpoint-fixture.endpoint-evaluation",
+      "sha256": "d11219c90c9c9da58a432a12439ed22ca2a4cf25e8c4ea1b8ca726a93a01ab30"
+    },
+    "ntcp_evaluation": {
+      "id": "endpoint-fixture.endpoint-evaluation",
+      "sha256": "aaf31d9ca3eddcbbdb5e6da8e7eb686f1621a251ea544490d3d8a9572a884bf2"
+    }
+  },
+  "qualification": "synthetic_research_only_not_clinical"
+}

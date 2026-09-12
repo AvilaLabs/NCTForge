@@ -1,0 +1,23 @@
+{
+  "schema_version": "nctforge.endpoint-evaluation/0.1.0",
+  "case_id": "endpoint-fixture",
+  "endpoint": "ntcp",
+  "region": "whole-region",
+  "quantity": "physical_total",
+  "dose_source": {
+    "id": "endpoint-fixture-dose",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "dose_statistic": {
+    "kind": "eud",
+    "parameter": -5.0,
+    "value": 1.1298175063865157,
+    "unit": "gray"
+  },
+  "model": {
+    "id": "fixture-logistic-ntcp-eud",
+    "sha256": "87eae2ed7f2bfca89fb4e538c9a34bfd648fd09e7cab56ae50888518752b90bc"
+  },
+  "probability": 0.09387000337388249,
+  "qualification": "synthetic_research_only_not_clinical"
+}

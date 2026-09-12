@@ -324,9 +324,12 @@ fn normal_cdf(x: f64) -> f64 {
     const A3: f64 = 1.421413741;
     const A4: f64 = -1.453152027;
     const A5: f64 = 1.061405429;
-    let t = 1.0 / (1.0 + P * x.abs());
-    let erf_abs = 1.0 - (((((A5 * t + A4) * t + A3) * t + A2) * t + A1) * t) * (-x * x).exp();
-    let erf = if x >= 0.0 { erf_abs } else { -erf_abs };
+    // Φ(x) = ½(1 + erf(x/√2)); the Abramowitz–Stegun approximation below
+    // evaluates erf, so the argument must be scaled by 1/√2 first.
+    let z = x / std::f64::consts::SQRT_2;
+    let t = 1.0 / (1.0 + P * z.abs());
+    let erf_abs = 1.0 - (((((A5 * t + A4) * t + A3) * t + A2) * t + A1) * t) * (-z * z).exp();
+    let erf = if z >= 0.0 { erf_abs } else { -erf_abs };
     0.5 * (1.0 + erf)
 }
 
@@ -599,6 +602,22 @@ mod tests {
         .unwrap();
         // Φ(0) = 0.5 within the approximation bound.
         assert!((evaluation.probability - 0.5).abs() < 2e-7);
+
+        // One standard deviation above TD50: dose = td50 + m·td50 gives
+        // z = 1, Φ(1) = 0.8413447.
+        let evaluation = evaluate_endpoint(
+            &model,
+            &bytes,
+            "case",
+            &mask("organ", &[true, true]),
+            "biological_total",
+            "weighted_eqd2",
+            &[65.0, 65.0],
+            125.0,
+            source(),
+        )
+        .unwrap();
+        assert!((evaluation.probability - 0.8413447).abs() < 2e-7);
     }
 
     #[test]

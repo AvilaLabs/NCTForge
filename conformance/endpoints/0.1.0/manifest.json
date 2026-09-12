@@ -1,0 +1,123 @@
+{
+  "suite": "nctforge.endpoint-conformance/0.1.0",
+  "description": "Endpoint-model scoring and UTCP combination fixtures. All parameters are analytic stand-ins for conformance testing — not clinical models. Golden evaluations are byte-fixed: each embeds the SHA-256 of its model document, and UTCP goldens embed the SHA-256 of the pretty-printed source evaluations.",
+  "cases": [
+    {
+      "id": "logistic-tcp-mean",
+      "kind": "evaluate",
+      "model": "cases/model-logistic-tcp.json",
+      "input": "cases/input-gray.json",
+      "mask": "cases/mask-all.json",
+      "expect": "ok",
+      "bundle": "expected/logistic-tcp-mean.json",
+      "description": "Logistic TCP over the mean statistic of a gray-unit dose."
+    },
+    {
+      "id": "probit-ntcp-max",
+      "kind": "evaluate",
+      "model": "cases/model-probit-ntcp.json",
+      "input": "cases/input-gray.json",
+      "mask": "cases/mask-all.json",
+      "expect": "ok",
+      "bundle": "expected/probit-ntcp-max.json",
+      "description": "Lyman probit NTCP over the max statistic."
+    },
+    {
+      "id": "logistic-ntcp-eud",
+      "kind": "evaluate",
+      "model": "cases/model-logistic-ntcp-eud.json",
+      "input": "cases/input-gray.json",
+      "mask": "cases/mask-all.json",
+      "expect": "ok",
+      "bundle": "expected/logistic-ntcp-eud.json",
+      "description": "Logistic NTCP over a parallel-leaning EUD (a = -5)."
+    },
+    {
+      "id": "poisson-tcp",
+      "kind": "evaluate",
+      "model": "cases/model-poisson-tcp.json",
+      "input": "cases/input-per-particle.json",
+      "mask": "cases/mask-all.json",
+      "expect": "ok",
+      "bundle": "expected/poisson-tcp.json",
+      "description": "Voxel-level Poisson TCP over per-source-particle dose."
+    },
+    {
+      "id": "utcp-p-plus",
+      "kind": "utcp",
+      "tcp_model": "cases/model-logistic-tcp.json",
+      "ntcp_model": "cases/model-logistic-ntcp-eud.json",
+      "input": "cases/input-gray.json",
+      "mask": "cases/mask-all.json",
+      "combination": "p_plus",
+      "expect": "ok",
+      "bundle": "expected/utcp-p-plus.json",
+      "description": "Brahme P+ combination over matching TCP and NTCP evaluations."
+    },
+    {
+      "id": "utcp-difference",
+      "kind": "utcp",
+      "tcp_model": "cases/model-logistic-tcp.json",
+      "ntcp_model": "cases/model-logistic-ntcp-eud.json",
+      "input": "cases/input-gray.json",
+      "mask": "cases/mask-all.json",
+      "combination": "difference",
+      "expect": "ok",
+      "bundle": "expected/utcp-difference.json",
+      "description": "Plain TCP-NTCP difference; the record reports it honestly."
+    },
+    {
+      "id": "reject-missing-statistic",
+      "kind": "evaluate",
+      "model": "cases/model-missing-statistic.json",
+      "input": "cases/input-gray.json",
+      "mask": "cases/mask-all.json",
+      "expect": "reject",
+      "error": "invalid_model",
+      "description": "Logistic function without the required dose_statistic."
+    },
+    {
+      "id": "reject-negative-gamma",
+      "kind": "evaluate",
+      "model": "cases/model-negative-gamma.json",
+      "input": "cases/input-gray.json",
+      "mask": "cases/mask-all.json",
+      "expect": "reject",
+      "error": "invalid_model",
+      "description": "Negative gamma50 must fail model validation."
+    },
+    {
+      "id": "reject-poisson-unit",
+      "kind": "evaluate",
+      "model": "cases/model-poisson-tcp.json",
+      "input": "cases/input-gray.json",
+      "mask": "cases/mask-all.json",
+      "expect": "reject",
+      "error": "per_source_particle_unit",
+      "description": "voxel_poisson_tcp requires a per-source-particle dose unit."
+    },
+    {
+      "id": "reject-mask-length",
+      "kind": "evaluate",
+      "model": "cases/model-logistic-tcp.json",
+      "input": "cases/input-gray.json",
+      "mask": "cases/mask-short.json",
+      "expect": "reject",
+      "error": "dose_selection",
+      "description": "Mask length shorter than the dose volume must fail selection."
+    },
+    {
+      "id": "reject-utcp-region-mismatch",
+      "kind": "utcp",
+      "tcp_model": "cases/model-logistic-tcp.json",
+      "ntcp_model": "cases/model-logistic-ntcp-eud.json",
+      "input": "cases/input-gray.json",
+      "mask": "cases/mask-all.json",
+      "ntcp_mask": "cases/mask-partial.json",
+      "combination": "p_plus",
+      "expect": "reject",
+      "error": "utcp_mismatch",
+      "description": "UTCP inputs evaluated over different regions cannot combine."
+    }
+  ]
+}

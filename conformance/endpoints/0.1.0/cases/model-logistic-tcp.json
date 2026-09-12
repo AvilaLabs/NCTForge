@@ -1,0 +1,18 @@
+{
+  "schema_version": "nctforge.endpoint-model/0.1.0",
+  "id": "fixture-logistic-tcp",
+  "endpoint": "tcp",
+  "function": {
+    "kind": "logistic",
+    "d50": 2.0,
+    "gamma50": 1.5
+  },
+  "dose_statistic": {
+    "statistic": "mean"
+  },
+  "validity_domain": "analytic conformance fixture; not a clinical model",
+  "derivation": {
+    "id": "fixture-derivation",
+    "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+  }
+}

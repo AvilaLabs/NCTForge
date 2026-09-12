@@ -1,0 +1,11 @@
+{
+  "case_id": "endpoint-fixture",
+  "quantity": "physical_total",
+  "unit": "gray",
+  "voxel_volume_mm3": 125.0,
+  "values": [1.2, 1.8, 0.9, 2.1],
+  "dose_source": {
+    "id": "endpoint-fixture-dose",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+}

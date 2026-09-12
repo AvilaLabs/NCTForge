@@ -1,0 +1,11 @@
+{
+  "schema_version": "nctforge.endpoint-model/0.1.0",
+  "id": "fixture-missing-statistic",
+  "endpoint": "tcp",
+  "function": {
+    "kind": "logistic",
+    "d50": 2.0,
+    "gamma50": 1.5
+  },
+  "validity_domain": "analytic conformance fixture; not a clinical model"
+}
