@@ -1,0 +1,32 @@
+{
+ "schema_version": "nctforge.exposure-plan/0.1.0",
+ "id": "nctforge.examples.two-field.v1",
+ "case_id": "nf-bnct-001-two-field-demo",
+ "covariance": "independent_exposures",
+ "exposures": [
+  {
+   "name": "lateral",
+   "dose_bundle": {
+    "id": "nctforge.nf-bnct-001.smoke-bundle",
+    "sha256": "544598812277c38687d89a9e2f58b0d4c0c16f849f2aafdf5a6ed78ec98e7f0b",
+    "path": "smoke-dose-bundle.json"
+   },
+   "weight": 1.0,
+   "weight_basis": "delivered_fraction",
+   "duration_s": 300.0,
+   "boron_assumption": "benchmark trace B-10 loading (4e-5 mass fraction)"
+  },
+  {
+   "name": "ap",
+   "dose_bundle": {
+    "id": "nctforge.nf-bnct-001.smoke-bundle",
+    "sha256": "544598812277c38687d89a9e2f58b0d4c0c16f849f2aafdf5a6ed78ec98e7f0b",
+    "path": "smoke-dose-bundle.json"
+   },
+   "weight": 0.5,
+   "weight_basis": "delivered_fraction",
+   "duration_s": 150.0,
+   "boron_assumption": "benchmark trace B-10 loading (4e-5 mass fraction)"
+  }
+ ]
+}

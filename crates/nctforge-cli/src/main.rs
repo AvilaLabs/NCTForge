@@ -10,7 +10,7 @@ use std::process::ExitCode;
 
 use clap::{Args, Parser, Subcommand};
 use nctforge_bio::{BiologicalModel, RegionMask, apply_biological_model};
-use nctforge_core::PhysicalDoseBundle;
+use nctforge_core::{ExposurePlan, PhysicalDoseBundle, accumulate_exposures};
 use nctforge_dicom::synthetic::generate_nf_bnct_001;
 use nctforge_dicom::{load_nf_bnct_001, verify_nf_bnct_001};
 use nctforge_njoy::{
@@ -95,6 +95,17 @@ enum Command {
         #[arg(long, default_value_t = 100)]
         bins: usize,
         /// New output path for the DVH JSON.
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Accumulate weighted exposures (fields/fractions) into one physical
+    /// dose bundle under a declared exposure plan.
+    Accumulate {
+        /// `nctforge.exposure-plan/0.1.0` JSON; bundle paths resolve
+        /// relative to this file's directory.
+        #[arg(long)]
+        plan: PathBuf,
+        /// New output path for the accumulated physical dose bundle.
         #[arg(long)]
         output: PathBuf,
     },
@@ -3593,6 +3604,51 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                 histogram.region, histogram.region_voxel_count
             );
             println!("quantity: {} [{}]", histogram.quantity, histogram.unit);
+        }
+        Some(Command::Accumulate { plan, output }) => {
+            let plan_bytes = fs::read(&plan)?;
+            let plan_sha256 = nctforge_evidence::sha256_hex(&plan_bytes);
+            let exposure_plan: ExposurePlan = serde_json::from_slice(&plan_bytes)?;
+            exposure_plan
+                .validate()
+                .map_err(|error| io::Error::other(format!("exposure plan: {error}")))?;
+            let plan_dir = plan.parent().unwrap_or(Path::new("."));
+            let mut bundles = Vec::with_capacity(exposure_plan.exposures.len());
+            for exposure in &exposure_plan.exposures {
+                let path = plan_dir.join(&exposure.dose_bundle.path);
+                let bytes = fs::read(&path)?;
+                let actual = nctforge_evidence::sha256_hex(&bytes);
+                if actual != exposure.dose_bundle.sha256 {
+                    return Err(io::Error::other(format!(
+                        "exposure {:?} bundle {} sha256 mismatch (plan {}, actual {})",
+                        exposure.name,
+                        path.display(),
+                        exposure.dose_bundle.sha256,
+                        actual
+                    ))
+                    .into());
+                }
+                let bundle: PhysicalDoseBundle =
+                    serde_json::from_slice(&bytes).map_err(|error| {
+                        io::Error::other(format!("exposure {:?} bundle: {error}", exposure.name))
+                    })?;
+                bundles.push(bundle);
+            }
+            let accumulated = accumulate_exposures(&exposure_plan, &plan_sha256, &bundles)
+                .map_err(|error| io::Error::other(format!("accumulation: {error}")))?;
+            let json = serde_json::to_vec_pretty(&accumulated)?;
+            let mut file = fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&output)?;
+            file.write_all(&json)?;
+            file.write_all(b"\n")?;
+            file.sync_all()?;
+            println!("accumulated dose bundle at {}", output.display());
+            println!(
+                "exposures: {} (covariance: independent)",
+                exposure_plan.exposures.len()
+            );
         }
         Some(Command::Evidence(args)) => match args.command {
             EvidenceCommand::Export {

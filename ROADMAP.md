@@ -367,6 +367,13 @@ Implementation status:
 - in progress: candidate-reference execution — three frozen-seed 300M-history
   runs are executing under the predeclared acceptance contract; the report
   and reference-status decision follow when the runs complete;
+- complete (OP-06): weighted exposure/fraction aggregation — the
+  `nctforge.exposure-plan/0.1.0` contract binds each exposure's dose bundle
+  by SHA-256 with an explicit weight, weight basis, duration, and boron
+  assumption; `nctforge accumulate` sums weighted doses with quadrature
+  1-sigma propagation under declared inter-exposure independence, emitting
+  an ordinary physical dose bundle that flows through DVH, biological
+  models, and the GUI;
 - pending: optional GUI slice-overlay of loaded dose on the patient grid.
 
 ## R4 — Transport-neutral reference platform

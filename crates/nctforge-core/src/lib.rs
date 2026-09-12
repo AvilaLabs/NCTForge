@@ -2,10 +2,17 @@
 
 #![forbid(unsafe_code)]
 
+mod exposure;
+
 use std::collections::BTreeSet;
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+
+pub use exposure::{
+    BoundFileReference, EXPOSURE_PLAN_SCHEMA, Exposure, ExposureCovariance, ExposurePlan,
+    ExposurePlanError, WeightBasis, accumulate_exposures,
+};
 
 /// A regular patient-coordinate voxel grid.
 ///

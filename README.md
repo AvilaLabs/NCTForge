@@ -502,6 +502,30 @@ nctforge bio apply \
   --output NEW-BIO-BUNDLE.json
 ```
 
+### Multi-exposure accumulation
+
+`nctforge accumulate` implements weighted irradiation-fraction and
+multi-field aggregation under an `nctforge.exposure-plan/0.1.0` contract.
+Each exposure binds a physical dose bundle by SHA-256 plus an explicit
+delivery weight, weight basis, optional duration, and a boron-assumption
+record. Accumulation sums `weight * dose` and propagates 1-sigma
+uncertainties in quadrature — the only supported covariance model is
+statistical independence between exposures; within each exposure the
+dedicated physical-total estimator already accounts for component
+covariance, so the accumulated total sums exposure totals rather than
+recombining components. Every bundle must share the grid, component
+profile, component set, and dose unit; the output is an ordinary
+`nctforge.physical-dose-bundle/0.2.0` usable by `dvh`, `bio apply`, and the
+GUI:
+
+```text
+nctforge accumulate \
+  --plan examples/exposure/two-field-plan.json \
+  --output accumulated-dose.json
+```
+
+`examples/exposure/` ships a two-field demonstration plan.
+
 `nctforge dvh` computes a deterministic `nctforge.dose-volume-histogram/0.1.0`
 over a named voxel mask for any component or total in a physical or
 biological bundle — equal-width dose bins, differential volume fractions that
