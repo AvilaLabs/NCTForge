@@ -465,6 +465,34 @@ nctforge dvh \
   --bins 100 --output NEW-DVH.json
 ```
 
+### One-command runs and evidence bundles
+
+`openmc run` chains `prepare` (deterministic deck), `execute` (run receipt),
+and `collect` (normalized dose bundle) in one invocation; `--evidence-root`
+additionally exports a `nctforge.evidence-bundle-manifest/0.1.0` directory
+that binds every input, deck file, log, statepoint, and the dose bundle by
+SHA-256 under a declared qualification boundary:
+
+```text
+nctforge openmc run \
+  --case transport/case.json --component-profile transport/component-profile.json \
+  --material transport/material.json --source transport/source.json \
+  --response-set transport/provenance/neutron-response-set.json \
+  --nuclear-data-manifest transport/provenance/openmc-endfb81-processed-data-manifest.json \
+  --execution-profile transport/openmc-smoke-profile.json \
+  --nuclear-data-root DATA-ROOT --openmc /path/to/openmc \
+  --env LD_LIBRARY_PATH=/path/to/libopenmc \
+  --env OPENMC_CROSS_SECTIONS=DATA-ROOT/cross_sections.xml \
+  --working-directory NEW-RUN-DIR --dose-output NEW-DOSE.json \
+  --evidence-root NEW-BUNDLE-DIR
+
+nctforge evidence verify --root BUNDLE-DIR
+```
+
+`evidence export`/`verify` are also available standalone for assembling
+arbitrary hash-bound artifact sets. The exported layout follows the
+evidence-bundle list predeclared in the NF-BNCT-001 specification.
+
 A controlled ENDF/B-VIII.1 + TENDL-2025 mixed-source candidate was then
 executed under selection schema `0.3.0`. The six shared nuclides reproduce the
 baseline exactly, but all four TENDL-2025 substitutions remain rejected with

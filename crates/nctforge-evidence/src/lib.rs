@@ -12,8 +12,13 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use thiserror::Error;
 
+mod bundle;
 mod dvh;
 
+pub use bundle::{
+    BundleInput, EVIDENCE_BUNDLE_MANIFEST_NAME, EVIDENCE_BUNDLE_MANIFEST_SCHEMA,
+    EvidenceBundleManifest, export_evidence_bundle,
+};
 pub use dvh::{DVH_SCHEMA, DoseVolumeHistogram};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

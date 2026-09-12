@@ -98,6 +98,41 @@ enum Command {
         #[arg(long)]
         output: PathBuf,
     },
+    /// Export or verify a deterministic evidence bundle.
+    Evidence(EvidenceArgs),
+}
+
+#[derive(Debug, Args)]
+struct EvidenceArgs {
+    #[command(subcommand)]
+    command: EvidenceCommand,
+}
+
+#[derive(Debug, Subcommand)]
+enum EvidenceCommand {
+    /// Copy artifacts into a new directory and freeze an artifact manifest.
+    Export {
+        /// New bundle directory; it must not already exist.
+        #[arg(long)]
+        root: PathBuf,
+        /// Case identifier recorded in the manifest.
+        #[arg(long)]
+        case_id: String,
+        /// `synthetic_research_only`, `cross_code_research_only`, or
+        /// `experimentally_validated_research_only`.
+        #[arg(long)]
+        qualification: String,
+        /// One `role=SOURCE:DEST` triple per artifact; DEST is the
+        /// bundle-relative path and may not escape the root.
+        #[arg(long = "artifact", required = true)]
+        artifacts: Vec<String>,
+    },
+    /// Re-hash every artifact declared by a bundle's manifest.
+    Verify {
+        /// Bundle directory containing artifact-manifest.json.
+        #[arg(long)]
+        root: PathBuf,
+    },
 }
 
 #[derive(Debug, Args)]
@@ -163,6 +198,54 @@ enum OpenMcCommand {
         /// New output directory for the generated deck; it must not already exist.
         #[arg(long)]
         output: PathBuf,
+    },
+    /// Prepare, execute, and collect a run in one step, optionally exporting
+    /// an evidence bundle over every input and output artifact.
+    Run {
+        /// Transport-case JSON embedding the frozen geometry, material, and source.
+        #[arg(long)]
+        case: PathBuf,
+        /// Component definition profile bound by the response set.
+        #[arg(long)]
+        component_profile: PathBuf,
+        /// Exact material JSON bound by the case and response set.
+        #[arg(long)]
+        material: PathBuf,
+        /// Exact source JSON bound by the case.
+        #[arg(long)]
+        source: PathBuf,
+        /// Reviewed neutron response set.
+        #[arg(long)]
+        response_set: PathBuf,
+        /// Case-scoped OpenMC nuclear-data manifest.
+        #[arg(long)]
+        nuclear_data_manifest: PathBuf,
+        /// Frozen OpenMC execution profile.
+        #[arg(long)]
+        execution_profile: PathBuf,
+        /// Predeclared acceptance contract (required for candidate-reference
+        /// profiles, forbidden otherwise).
+        #[arg(long)]
+        acceptance: Option<PathBuf>,
+        /// Root containing cross_sections.xml and every selected HDF5 file.
+        #[arg(long)]
+        nuclear_data_root: PathBuf,
+        /// OpenMC executable to launch.
+        #[arg(long)]
+        openmc: PathBuf,
+        /// Environment overlay as KEY=VALUE; may repeat (for example
+        /// `LD_LIBRARY_PATH=...` or `OMP_NUM_THREADS=...`).
+        #[arg(long = "env")]
+        environment: Vec<String>,
+        /// New working directory for the run; it must not already exist.
+        #[arg(long)]
+        working_directory: PathBuf,
+        /// New output path for the collected physical dose bundle JSON.
+        #[arg(long)]
+        dose_output: PathBuf,
+        /// New directory for a hash-bound evidence bundle over the run.
+        #[arg(long)]
+        evidence_root: Option<PathBuf>,
     },
     /// Collect a completed run's statepoint into a normalized dose bundle.
     Collect {
@@ -1360,6 +1443,166 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                     "particles per batch: {}",
                     deck.manifest.execution.particles_per_batch
                 );
+            }
+            OpenMcCommand::Run {
+                case,
+                component_profile,
+                material,
+                source,
+                response_set,
+                nuclear_data_manifest,
+                execution_profile,
+                acceptance,
+                nuclear_data_root,
+                openmc,
+                environment,
+                working_directory,
+                dose_output,
+                evidence_root,
+            } => {
+                let case_json = fs::read(&case)?;
+                let case_document: TransportCase = serde_json::from_slice(&case_json)?;
+                let config = nctforge_openmc::OpenMcBackendConfig {
+                    component_profile,
+                    material,
+                    source,
+                    response_set,
+                    nuclear_data_manifest,
+                    execution_profile,
+                    acceptance,
+                    nuclear_data_root,
+                };
+                let mut backend = OpenMcBackend::new(&openmc).configured(config);
+                for pair in &environment {
+                    let (key, value) = pair.split_once('=').ok_or_else(|| {
+                        io::Error::other(format!(
+                            "environment overlay {pair:?} must be written as KEY=VALUE"
+                        ))
+                    })?;
+                    backend = backend.with_env(key, value);
+                }
+                let prepared = backend.prepare(&case_document, &working_directory)?;
+                println!("prepared deck in {}", prepared.working_directory);
+                let completed = backend.execute(&prepared)?;
+                if completed.exit_code != 0 {
+                    return Err(io::Error::other(format!(
+                        "openmc exited with code {}",
+                        completed.exit_code
+                    ))
+                    .into());
+                }
+                println!("execution finished with exit code 0");
+                let bundle = backend.collect(&completed)?;
+                let json = serde_json::to_vec_pretty(&bundle)?;
+                let mut file = fs::OpenOptions::new()
+                    .write(true)
+                    .create_new(true)
+                    .open(&dose_output)?;
+                file.write_all(&json)?;
+                file.write_all(b"\n")?;
+                file.sync_all()?;
+                println!(
+                    "collected physical dose bundle at {}",
+                    dose_output.display()
+                );
+                println!("provenance: {}", bundle.provenance_id);
+
+                if let Some(evidence_root) = evidence_root {
+                    let config = backend
+                        .config()
+                        .expect("backend was configured above")
+                        .clone();
+                    let working = working_directory.clone();
+                    let mut artifacts: Vec<(&str, PathBuf, String)> = vec![
+                        ("case", case.clone(), "case.json".into()),
+                        (
+                            "component_profile",
+                            config.component_profile.clone(),
+                            "component-profile.json".into(),
+                        ),
+                        ("material", config.material.clone(), "material.json".into()),
+                        ("source", config.source.clone(), "source.json".into()),
+                        (
+                            "response_set",
+                            config.response_set.clone(),
+                            "response-tables/response-set.json".into(),
+                        ),
+                        (
+                            "nuclear_data_manifest",
+                            config.nuclear_data_manifest.clone(),
+                            "nuclear-data-manifest.json".into(),
+                        ),
+                        (
+                            "execution_profile",
+                            config.execution_profile.clone(),
+                            "run-settings.json".into(),
+                        ),
+                        (
+                            "input_manifest",
+                            working.join(nctforge_openmc::OPENMC_INPUT_MANIFEST_FILE),
+                            "inputs/nctforge-input-manifest.json".into(),
+                        ),
+                        (
+                            "run_receipt",
+                            working.join(nctforge_openmc::OPENMC_RUN_RECEIPT_FILE),
+                            "nctforge-openmc-run-receipt.json".into(),
+                        ),
+                        (
+                            "dose_bundle",
+                            dose_output.clone(),
+                            "normalized-dose.json".into(),
+                        ),
+                    ];
+                    if let Some(acceptance) = &config.acceptance {
+                        artifacts.push((
+                            "acceptance_contract",
+                            acceptance.clone(),
+                            "nctforge-acceptance-contract.json".into(),
+                        ));
+                    }
+                    for xml in [
+                        "settings.xml",
+                        "materials.xml",
+                        "geometry.xml",
+                        "tallies.xml",
+                    ] {
+                        artifacts.push(("deck", working.join(xml), xml.into()));
+                    }
+                    for entry in fs::read_dir(&working)? {
+                        let path = entry?.path();
+                        let name = path
+                            .file_name()
+                            .and_then(|n| n.to_str())
+                            .unwrap_or_default()
+                            .to_string();
+                        if name.ends_with(".log") {
+                            artifacts.push(("log", path, format!("logs/{name}")));
+                        } else if name.starts_with("statepoint.") && name.ends_with(".h5") {
+                            artifacts.push((
+                                "statepoint",
+                                path,
+                                format!("statepoints-or-native-results/{name}"),
+                            ));
+                        }
+                    }
+                    let inputs: Vec<nctforge_evidence::BundleInput> = artifacts
+                        .into_iter()
+                        .map(|(role, source, dest)| nctforge_evidence::BundleInput {
+                            role: role.into(),
+                            source,
+                            relative_path: dest,
+                            media_type: None,
+                        })
+                        .collect();
+                    let manifest = nctforge_evidence::export_evidence_bundle(
+                        &evidence_root,
+                        &bundle.case_id,
+                        nctforge_evidence::QualificationBoundary::SyntheticResearchOnly,
+                        &inputs,
+                    )?;
+                    println!("evidence bundle exported at {}", evidence_root.display());
+                    println!("artifacts: {}", manifest.artifacts.len());
+                }
             }
             OpenMcCommand::Collect {
                 working_directory,
@@ -3186,6 +3429,65 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
             );
             println!("quantity: {} [{}]", histogram.quantity, histogram.unit);
         }
+        Some(Command::Evidence(args)) => match args.command {
+            EvidenceCommand::Export {
+                root,
+                case_id,
+                qualification,
+                artifacts,
+            } => {
+                let qualification = match qualification.as_str() {
+                    "synthetic_research_only" => {
+                        nctforge_evidence::QualificationBoundary::SyntheticResearchOnly
+                    }
+                    "cross_code_research_only" => {
+                        nctforge_evidence::QualificationBoundary::CrossCodeResearchOnly
+                    }
+                    "experimentally_validated_research_only" => {
+                        nctforge_evidence::QualificationBoundary::ExperimentallyValidatedResearchOnly
+                    }
+                    other => {
+                        return Err(io::Error::other(format!(
+                            "unknown qualification boundary {other:?}"
+                        ))
+                        .into());
+                    }
+                };
+                let mut inputs = Vec::new();
+                for triple in &artifacts {
+                    let (role, rest) = triple.split_once('=').ok_or_else(|| {
+                        io::Error::other(format!(
+                            "artifact {triple:?} must be written as role=SOURCE:DEST"
+                        ))
+                    })?;
+                    let (source, dest) = rest.rsplit_once(':').ok_or_else(|| {
+                        io::Error::other(format!(
+                            "artifact {triple:?} must be written as role=SOURCE:DEST"
+                        ))
+                    })?;
+                    inputs.push(nctforge_evidence::BundleInput {
+                        role: role.into(),
+                        source: PathBuf::from(source),
+                        relative_path: dest.into(),
+                        media_type: Some("application/json".into()),
+                    });
+                }
+                let manifest = nctforge_evidence::export_evidence_bundle(
+                    &root,
+                    &case_id,
+                    qualification,
+                    &inputs,
+                )?;
+                println!("evidence bundle exported at {}", root.display());
+                println!("artifacts: {}", manifest.artifacts.len());
+            }
+            EvidenceCommand::Verify { root } => {
+                let manifest = nctforge_evidence::EvidenceBundleManifest::load_verified(&root)?;
+                println!("evidence bundle verified at {}", root.display());
+                println!("case: {}", manifest.case_id);
+                println!("artifacts verified: {}", manifest.artifacts.len());
+            }
+        },
         None => {
             println!("NCTForge research scaffold");
             println!("Not commissioned or certified for clinical use.");
