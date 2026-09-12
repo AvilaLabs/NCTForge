@@ -6,8 +6,10 @@
 processing and transported-photon suitability evidence rejected and
 dispositioned as explained (ADR 0031); component response tables generated and
 deterministically verified; OpenMC smoke execution complete with the ADR 0007
-estimator comparisons frozen as evidence; reference transport results
-unqualified pending statepoint import into the platform result model
+estimator comparisons frozen as evidence; statepoint import into the platform
+result model implemented and verified on the smoke statepoint; reference
+transport results remain unqualified pending a reference-statistics execution
+under the predeclared acceptance gates
 
 **Qualification ceiling:** Synthetic research only
 
@@ -345,8 +347,9 @@ with SHA-256
 `bfc48efe75f470cd8f1f78c35e4589cba8853655cc9cf9f709f5cece4a8a9afd`,
 as `independently_reviewed` under the ADR 0031 in-house verification path.
 The reviewed set satisfies `validate_for_folding` and may be bound to OpenMC
-input generation. It does not qualify the reference results, which remain
-pending statepoint import into the platform result model.
+input generation. It does not qualify the reference results, which require a
+reference-statistics execution whose statepoint imports into the platform
+result model and meets the predeclared acceptance gates below.
 
 ## Execution profiles
 
@@ -544,9 +547,16 @@ the tally contract, executed response tables are bitwise identical to the
 sealed set, coupled heating closes, and the ADR 0007 estimator comparisons
 (reaction-rate times evaluated mean deposited energy, component sum versus
 dedicated total) agree within their tolerances as correlated diagnostics.
-Reference transport results remain unqualified pending statepoint import into
-the platform result model. The archive
-drift is resolved at the MT 301 response level and the processed OpenMC
-selection is inspected.
+Statepoint import into the platform result model is implemented and verified
+on the smoke statepoint: `openmc collect` binds the run header, recorded
+OpenMC version, and tally contracts to the input manifest, normalizes the
+component tallies into gray per source neutron with per-voxel uncertainties,
+takes the coupled-heating tally as the dedicated physical total, and emits a
+validated `nctforge.physical-dose-bundle/0.2.0` whose provenance binds the
+manifest and statepoint digests. The smoke bundle is execution evidence only;
+reference transport results remain unqualified pending a
+reference-statistics execution under the predeclared acceptance gates. The
+archive drift is resolved at the MT 301 response level and the processed
+OpenMC selection is inspected.
 Changing any frozen quantity creates a new benchmark specification version and
 cannot silently replace earlier results.

@@ -195,7 +195,16 @@ Implementation status:
   uncertainty, component response sum versus the dedicated neutron-heating
   estimator at the 1e-9 relative level, and B-10/N-14 reaction-rate audits
   reproducing the evaluated mean deposited energies within 2e-4;
-- pending: statepoint import into the platform result model.
+- complete: statepoint import into the platform result model — `openmc
+  collect` reads the newest statepoint through a pure-Rust HDF5 path, binds
+  the run header, recorded OpenMC version, and tally contracts to the input
+  manifest, normalizes the component tallies into gray per source neutron
+  with per-voxel 1-sigma uncertainties, takes the coupled-heating tally as
+  the dedicated physical total, and emits a validated
+  `nctforge.physical-dose-bundle/0.2.0` whose provenance id binds the
+  input-manifest and statepoint SHA-256 digests. The smoke bundle is
+  execution evidence only; reference results still require a
+  reference-statistics execution under the predeclared acceptance gates.
 
 ## R3 — End-to-end research alpha
 

@@ -10,6 +10,7 @@ license.workspace = true
 publish.workspace = true
 
 [dependencies]
+hdf5-pure = "=0.44.0"
 md-5.workspace = true
 nctforge-core = { path = "../nctforge-core" }
 nctforge-transport = { path = "../nctforge-transport" }

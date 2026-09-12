@@ -1236,7 +1236,7 @@ fn generated_file(path: &str, media_type: &str, bytes: Vec<u8>) -> GeneratedOpen
     }
 }
 
-fn sha256_hex(bytes: &[u8]) -> String {
+pub(crate) fn sha256_hex(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
 }
 

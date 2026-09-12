@@ -15,6 +15,7 @@ mod data;
 mod domain;
 mod evaluated;
 mod input;
+mod statepoint;
 
 pub use acquisition::{
     ACQUISITION_PROFILE_SCHEMA, ACQUISITION_RECEIPT_SCHEMA, AcquiredData, AcquiredDataArtifact,
@@ -52,6 +53,11 @@ pub use input::{
     OpenMcProfileError, OpenMcRawTallyUnit, OpenMcRunControls, OpenMcRunMode, OpenMcScoringMesh,
     OpenMcTallyContract, OpenMcTallyQuantity, OpenMcTemperatureMethod,
 };
+pub use statepoint::{
+    CollectedDose, OPENMC_INPUT_MANIFEST_FILE, OpenMcCollectError, OpenMcEnergyFunction,
+    OpenMcStatepoint, OpenMcStatepointTally, collect_completed, collect_statepoint,
+    latest_statepoint,
+};
 
 #[derive(Debug, Clone)]
 pub struct OpenMcBackend {
@@ -86,7 +92,7 @@ impl TransportBackend for OpenMcBackend {
             version: None,
             can_prepare: false,
             can_execute: false,
-            can_import: false,
+            can_import: true,
         }
     }
 
@@ -102,8 +108,11 @@ impl TransportBackend for OpenMcBackend {
         Err(OpenMcError::NotImplemented("controlled execution"))
     }
 
-    fn collect(&self, _completed: &CompletedRun) -> Result<PhysicalDoseBundle, Self::BackendError> {
-        Err(OpenMcError::NotImplemented("statepoint collection"))
+    fn collect(&self, completed: &CompletedRun) -> Result<PhysicalDoseBundle, Self::BackendError> {
+        if completed.backend_id != "openmc" {
+            return Err(OpenMcError::BackendMismatch(completed.backend_id.clone()));
+        }
+        Ok(collect_completed(completed)?)
     }
 }
 
@@ -111,6 +120,10 @@ impl TransportBackend for OpenMcBackend {
 pub enum OpenMcError {
     #[error("OpenMC adapter milestone not implemented: {0}")]
     NotImplemented(&'static str),
+    #[error("completed run belongs to backend {0}, not openmc")]
+    BackendMismatch(String),
+    #[error(transparent)]
+    Collect(#[from] OpenMcCollectError),
 }
 
 #[cfg(test)]

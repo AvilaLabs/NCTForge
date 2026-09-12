@@ -4,7 +4,7 @@
 
 use std::error::Error;
 use std::fs;
-use std::io;
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
@@ -50,8 +50,8 @@ use nctforge_openmc::{
     OpenMcNeutronTransportDomainDocument,
 };
 use nctforge_transport::{
-    ComponentDefinitionProfile, MaterialDefinition, ResponseGenerationMethod, TransportBackend,
-    TransportCase,
+    CompletedRun, ComponentDefinitionProfile, MaterialDefinition, ResponseGenerationMethod,
+    TransportBackend, TransportCase,
 };
 
 #[derive(Debug, Parser)]
@@ -134,6 +134,18 @@ enum OpenMcCommand {
         #[arg(long)]
         nuclear_data_root: PathBuf,
         /// New output directory for the generated deck; it must not already exist.
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Collect a completed run's statepoint into a normalized dose bundle.
+    Collect {
+        /// Completed run directory containing the deck manifest and statepoint.
+        #[arg(long)]
+        working_directory: PathBuf,
+        /// Exit code recorded for the run (refuses collection unless zero).
+        #[arg(long, default_value_t = 0)]
+        exit_code: i32,
+        /// New output path for the physical dose bundle JSON.
         #[arg(long)]
         output: PathBuf,
     },
@@ -1279,6 +1291,31 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                     "particles per batch: {}",
                     deck.manifest.execution.particles_per_batch
                 );
+            }
+            OpenMcCommand::Collect {
+                working_directory,
+                exit_code,
+                output,
+            } => {
+                let completed = CompletedRun {
+                    backend_id: "openmc".into(),
+                    case_id: String::new(),
+                    working_directory: working_directory.display().to_string(),
+                    exit_code,
+                };
+                let bundle = OpenMcBackend::default().collect(&completed)?;
+                let json = serde_json::to_vec_pretty(&bundle)?;
+                let mut file = fs::OpenOptions::new()
+                    .write(true)
+                    .create_new(true)
+                    .open(&output)?;
+                file.write_all(&json)?;
+                file.write_all(b"\n")?;
+                file.sync_all()?;
+                println!("collected physical dose bundle at {}", output.display());
+                println!("case: {}", bundle.case_id);
+                println!("components: {}", bundle.components.len());
+                println!("provenance: {}", bundle.provenance_id);
             }
         },
         Some(Command::Njoy(args)) => match args.command {

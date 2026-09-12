@@ -55,8 +55,9 @@ contains:
 - a byte-stable OpenMC 0.16 input-deck generator that verifies content
   bindings and selected nuclear-data files before emitting the complete tally
   ledger;
-- an OpenMC adapter whose capability flags remain intentionally disabled until
-  a real smoke run and statepoint import pass;
+- an OpenMC adapter that now imports a completed run's statepoint into the
+  normalized physical dose bundle while its prepare/execute capability flags
+  remain intentionally disabled;
 - a strict DICOM CT geometry and RT Structure Set import boundary;
 - a deterministic generator and independent verifier for `NF-BNCT-001`;
 - a backend-neutral `case.json` binding geometry, structure truth values, DICOM
@@ -97,10 +98,11 @@ Those energy-accounting findings are dispositioned as explained and carried in
 provenance (ADR 0031): the first component response tables are generated from
 receipt-bound production HEATR PENDF output with exact B+N+H closure at each
 of 7,526 union-grid knots and sealed `independently_reviewed` by deterministic
-in-house regeneration. Material mapping from general DICOM cases, particle
-execution, statepoint import, biological modeling, and dose calculation are not
-implemented yet. Transport capability flags remain false until their acceptance
-gates pass.
+in-house regeneration, and `openmc collect` imports a completed run's
+statepoint into the platform physical dose bundle. Material mapping from
+general DICOM cases, backend-driven particle execution, biological modeling,
+and dose calculation are not implemented yet. Transport capability flags
+beyond import remain false until their acceptance gates pass.
 
 The first implementation target is
 [`NF-BNCT-001`](benchmarks/synthetic/nf-bnct-001/SPECIFICATION.md). Its geometry,
@@ -365,6 +367,29 @@ python3 scripts/compare-openmc-smoke-estimators.py \
   --report-id nctforge.nf-bnct-001.openmc-smoke-estimator-comparison.v1 \
   --output NEW-COMPARISON-REPORT.json
 ```
+
+`openmc collect` then imports the completed run into the platform result
+model. The collector reads the newest `statepoint.N.h5` with a pure-Rust HDF5
+path, refuses a nonzero exit code or an existing output, binds the run header
+(batches, particles per batch, seed, stride, and the statepoint's recorded
+OpenMC version) and every tally contract to the deck's input manifest, and
+normalizes each component tally under its manifest-declared semantics into
+gray per source neutron. The coupled-heating tally — no component, no
+particle filter — supplies the dedicated physical total; particle-filtered
+audit heating stays out of the bundle. The emitted
+`nctforge.physical-dose-bundle/0.2.0` carries per-voxel 1-sigma uncertainties
+and a provenance id binding both the input-manifest and statepoint SHA-256:
+
+```text
+nctforge openmc collect \
+  --working-directory DECK-DIRECTORY \
+  --exit-code 0 \
+  --output NEW-DOSE-BUNDLE.json
+```
+
+The collected smoke bundle is execution evidence only — a five-batch,
+thousand-history run cannot produce reference values, and the bundle makes no
+clinical or qualification claim.
 
 A controlled ENDF/B-VIII.1 + TENDL-2025 mixed-source candidate was then
 executed under selection schema `0.3.0`. The six shared nuclides reproduce the
