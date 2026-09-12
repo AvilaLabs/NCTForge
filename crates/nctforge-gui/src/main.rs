@@ -624,17 +624,14 @@ impl NiftiPanel {
             return;
         };
         let output = self.resample_output.trim();
-        let loaded = match DoseArtifact::load(Path::new(self.bundle_path.trim())) {
-            Ok(loaded) => loaded,
-            Err(error) => {
-                self.error = Some(error);
-                return;
-            }
-        };
-        let geometry = match &loaded.artifact {
-            DoseArtifact::Physical(b) => b.geometry.clone(),
-            DoseArtifact::Biological(b) => b.geometry.clone(),
-        };
+        let geometry =
+            match nctforge_nifti::read_target_geometry(Path::new(self.bundle_path.trim())) {
+                Ok(geometry) => geometry,
+                Err(error) => {
+                    self.error = Some(error.to_string());
+                    return;
+                }
+            };
         let interpolation = if self.resample_nearest {
             nctforge_nifti::Interpolation::Nearest
         } else {
@@ -2129,11 +2126,11 @@ fn show_dose_workspace(ui: &mut egui::Ui, panel: &mut DosePanel, nifti: &mut Nif
             });
         }
         ui.horizontal(|ui| {
-            ui.label("Dose bundle");
+            ui.label("Bundle / case");
             ui.add(
                 egui::TextEdit::singleline(&mut nifti.bundle_path)
                     .desired_width(280.0)
-                    .hint_text("dose-bundle.json (export source / resample target)"),
+                    .hint_text("dose-bundle.json or case.json (resample target)"),
             );
         });
         ui.horizontal(|ui| {
@@ -2959,6 +2956,31 @@ mod tests {
         );
         let resampled = nctforge_nifti::read_nifti_file(Path::new(&panel.resample_output)).unwrap();
         assert_eq!(resampled.values, vec![1.75e-12, 1.75e-12]);
+
+        // A transport case is an equally valid resample target (the
+        // CT-aligned case grid), resolved through the same shared path.
+        let case_path = scratch.path().join("case.json");
+        std::fs::write(
+            &case_path,
+            serde_json::to_vec(&serde_json::json!({
+                "schema_version": "nctforge.transport-case/0.1.0",
+                "geometry": {
+                    "shape": [2, 1, 1],
+                    "spacing_mm": [5.0, 5.0, 5.0],
+                    "origin_mm": [-2.5, -2.5, -2.5],
+                    "direction": [1.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,1.0],
+                },
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        panel.bundle_path = case_path.to_string_lossy().into();
+        panel.resample();
+        assert!(
+            panel.error.is_none(),
+            "case-target resample rejected: {:?}",
+            panel.error
+        );
 
         panel.image = None;
         panel.write_mask();

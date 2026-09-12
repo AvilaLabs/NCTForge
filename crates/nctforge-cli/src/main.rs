@@ -286,12 +286,13 @@ enum NiftiCommand {
         #[arg(long)]
         output: PathBuf,
     },
-    /// Resample a NIfTI volume onto a dose bundle's grid.
+    /// Resample a NIfTI volume onto a transport-case or dose-bundle grid.
     Resample {
         /// `.nii` or gzip-compressed `.nii.gz` file.
         #[arg(long)]
         input: PathBuf,
-        /// Physical dose bundle JSON supplying the target grid.
+        /// Transport case JSON (CT-aligned grid) or dose bundle JSON
+        /// supplying the target grid.
         #[arg(long)]
         target: PathBuf,
         /// `nearest` (masks/labels) or `trilinear` (dose/intensity).
@@ -4420,7 +4421,8 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
             } => {
                 let image = read_nifti_file(&input)
                     .map_err(|error| io::Error::other(format!("nifti: {error}")))?;
-                let bundle: PhysicalDoseBundle = serde_json::from_slice(&fs::read(&target)?)?;
+                let target_geometry = nctforge_nifti::read_target_geometry(&target)
+                    .map_err(|error| io::Error::other(format!("target: {error}")))?;
                 let interpolation = match interpolation.as_str() {
                     "nearest" => nctforge_nifti::Interpolation::Nearest,
                     "trilinear" => nctforge_nifti::Interpolation::Trilinear,
@@ -4432,10 +4434,10 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                     }
                 };
                 let resampled = nctforge_nifti::NiftiImage {
-                    geometry: bundle.geometry.clone(),
+                    geometry: target_geometry.clone(),
                     values: nctforge_nifti::resample_to_grid(
                         &image,
-                        &bundle.geometry,
+                        &target_geometry,
                         interpolation,
                     ),
                     datatype: 64,

@@ -833,11 +833,15 @@ nctforge nifti export-dose \
 nctforge nifti resample \
   --input map.nii.gz --target DOSE-BUNDLE.json \
   --interpolation nearest --output NEW-RESAMPLED.nii.gz
+nctforge nifti resample \
+  --input map.nii.gz --target CASE.json \
+  --interpolation trilinear --output NEW-CASE-ALIGNED.nii.gz
 ```
 
 `export-dose` writes any component or the physical total as a NIfTI image on
 the bundle's grid; `resample` interpolates an external image onto a dose
-bundle's grid (nearest-neighbor or trilinear). The affine handling is
+bundle's grid or a transport case's CT-aligned grid (nearest-neighbor or
+trilinear). The affine handling is
 regression-tested against independent `nibabel` output including oblique
 sforms, and `.nii.gz` round-trips are verified in both directions.
 

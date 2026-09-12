@@ -225,6 +225,36 @@ pub fn resample_to_grid(
     out
 }
 
+/// Resolve a resample target grid from a transport case
+/// (`nctforge.transport-case/*` — the CT-aligned grid) or a dose bundle
+/// (`nctforge.physical-dose-bundle/*`, `nctforge.biological-dose-bundle/*`).
+/// Both contracts carry `geometry` as a `GridGeometry`; unknown schemas
+/// are refused rather than guessed.
+pub fn read_target_geometry(path: &Path) -> Result<GridGeometry, NiftiError> {
+    let bytes = std::fs::read(path)?;
+    let document: serde_json::Value =
+        serde_json::from_slice(&bytes).map_err(|e| NiftiError::InvalidTarget(format!("{e}")))?;
+    let schema = document
+        .get("schema_version")
+        .and_then(|v| v.as_str())
+        .unwrap_or_default();
+    let supported = schema.starts_with("nctforge.transport-case/")
+        || schema.starts_with("nctforge.physical-dose-bundle/")
+        || schema.starts_with("nctforge.biological-dose-bundle/");
+    if !supported {
+        return Err(NiftiError::InvalidTarget(format!(
+            "unsupported target schema {schema:?}; expected a transport case or dose bundle"
+        )));
+    }
+    serde_json::from_value(
+        document
+            .get("geometry")
+            .cloned()
+            .ok_or_else(|| NiftiError::InvalidTarget("target carries no geometry".into()))?,
+    )
+    .map_err(|e| NiftiError::InvalidTarget(format!("geometry: {e}")))
+}
+
 /// Convert a scalar volume into a `RegionMask`: nonzero voxels are
 /// included. Voxel coordinates must align with the target grid — resample
 /// with `Interpolation::Nearest` first when the geometries differ.
@@ -524,6 +554,8 @@ pub enum NiftiError {
     NoSpatialTransform,
     #[error("header parse failed")]
     Header,
+    #[error("invalid resample target: {0}")]
+    InvalidTarget(String),
 }
 
 #[cfg(test)]
@@ -678,6 +710,49 @@ mod tests {
         let compressed = encoder.finish().unwrap();
         let decoded = read_nifti(&compressed).unwrap();
         assert_eq!(decoded.values, values);
+    }
+
+    #[test]
+    fn target_geometry_accepts_cases_and_bundles_and_rejects_others() {
+        let scratch = tempfile::tempdir().unwrap();
+        let geometry_json = serde_json::json!({
+            "shape": [4, 3, 2],
+            "spacing_mm": [2.0, 3.0, 4.0],
+            "origin_mm": [-3.0, -4.5, -4.0],
+            "direction": [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
+        });
+        let case = scratch.path().join("case.json");
+        std::fs::write(
+            &case,
+            serde_json::to_vec(&serde_json::json!({
+                "schema_version": "nctforge.transport-case/0.1.0",
+                "geometry": geometry_json,
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        let resolved = read_target_geometry(&case).unwrap();
+        assert_eq!(resolved.shape, [4, 3, 2]);
+        assert_eq!(resolved.spacing_mm, [2.0, 3.0, 4.0]);
+
+        let bundle = scratch.path().join("bundle.json");
+        std::fs::write(
+            &bundle,
+            serde_json::to_vec(&serde_json::json!({
+                "schema_version": "nctforge.physical-dose-bundle/0.2.0",
+                "geometry": geometry_json,
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(read_target_geometry(&bundle).unwrap(), resolved);
+
+        let bad = scratch.path().join("bad.json");
+        std::fs::write(&bad, b"{\"schema_version\": \"other/9.9\"}").unwrap();
+        assert!(matches!(
+            read_target_geometry(&bad),
+            Err(NiftiError::InvalidTarget(_))
+        ));
     }
 
     /// OP-01 grid-resolution convergence evidence: resampling a smooth

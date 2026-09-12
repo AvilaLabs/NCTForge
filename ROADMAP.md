@@ -426,8 +426,11 @@ Implementation status:
   bundle grid. Grid-resolution convergence evidence is pinned by an
   analytic test: a smooth field sampled at 2.0/1.0/0.5 mm and resampled
   onto a fixed incommensurate target must show interior L∞ error ratios
-  below the predeclared 0.35 second-order bound per halving. Remaining
-  parity work: CT-aligned mesh conversion;
+  below the predeclared 0.35 second-order bound per halving. CT-aligned
+  mesh conversion is covered: `nifti resample --target case.json` (and
+  the GUI panel) map external volumes onto the transport case's
+  CT-aligned `GridGeometry` through the shared `read_target_geometry`
+  path, which also accepts dose bundles and refuses unknown schemas;
 - complete (OP-06): weighted exposure/fraction aggregation — the
   `nctforge.exposure-plan/0.1.0` contract binds each exposure's dose bundle
   by SHA-256 with an explicit weight, weight basis, duration, and boron
