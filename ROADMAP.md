@@ -428,6 +428,16 @@ Implementation status:
   utcp` combining TCP+NTCP under `p_plus`/`difference` after matching
   case/region/quantity/source checks. Python exposes the same functions;
   GUI overlays and published reference fixtures remain open;
+- complete (OP-11, first slice): plan tables and diagnostics — the
+  `nctforge-plan` crate round-trips `nctforge.exposure-plan/0.1.0` through
+  CSV (`# key:` metadata) and XLSX (`plan`+`exposures` sheets), reporting
+  every malformed row with its row number and hashing bundles on import
+  when `sha256` cells are blank; `nctforge plan import|export|validate`,
+  `ExposurePlan::validate_diagnostics`, and
+  `nctforge_plan::accumulate_plan_file` serve CLI, Python
+  (`load_exposure_plan`, `exposure_plan_diagnostics`,
+  `accumulate_exposures`, `plan_table_read`, `plan_table_write`), and the
+  GUI Plan workspace identically;
 - pending: optional GUI slice-overlay of loaded dose on the patient grid.
 
 ## R4 — Transport-neutral reference platform

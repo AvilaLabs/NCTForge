@@ -525,6 +525,87 @@ class MetricsAndEndpointTest(unittest.TestCase):
                 nctforge.combine_utcp(tcp, tcp, "p_plus")
 
 
+class ExposurePlanTest(unittest.TestCase):
+    def test_table_round_trip_and_accumulate(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            bundle_path = _write(tmp, "dose.json", _physical_bundle_json())
+            digest = nctforge.file_sha256(bundle_path)
+            exposure = {
+                "name": "field-a",
+                "dose_bundle": {
+                    "id": "dose",
+                    "sha256": digest,
+                    "path": "dose.json",
+                },
+                "weight": 1.5,
+                "weight_basis": "delivered_fraction",
+                "duration_s": 600.0,
+                "boron_assumption": "10 ppm B-10",
+            }
+            plan = {
+                "schema_version": "nctforge.exposure-plan/0.1.0",
+                "id": "nctforge.test.plan.v1",
+                "case_id": "accumulated-case",
+                "covariance": "independent_exposures",
+                "exposures": [exposure],
+            }
+            plan_path = _write(tmp, "plan.json", json.dumps(plan))
+            loaded = nctforge.load_exposure_plan(plan_path)
+            self.assertEqual(loaded.id, "nctforge.test.plan.v1")
+            self.assertEqual(loaded.exposures[0].weight_basis, "delivered_fraction")
+            self.assertEqual(loaded.validate_diagnostics(), [])
+
+            # Accumulation through Python returns the same bundle the CLI
+            # `accumulate` command writes (1.5x dose on the fixture).
+            accumulated = nctforge.accumulate_exposures(plan_path)
+            self.assertEqual(accumulated.case_id, "accumulated-case")
+            self.assertAlmostEqual(
+                accumulated.physical_total.values[0], 1.75e-12 * 1.5, places=18
+            )
+
+            # Table export -> import round-trips through both surfaces.
+            csv_path = Path(tmp) / "schedule.csv"
+            xlsx_path = Path(tmp) / "schedule.xlsx"
+            nctforge.plan_table_write(plan_path, csv_path)
+            nctforge.plan_table_write(plan_path, xlsx_path)
+            from_csv = Path(tmp) / "from-csv.json"
+            from_xlsx = Path(tmp) / "from-xlsx.json"
+            nctforge.plan_table_read(csv_path, from_csv)
+            nctforge.plan_table_read(xlsx_path, from_xlsx)
+            self.assertEqual(
+                json.loads(from_csv.read_text()), json.loads(plan_path.read_text())
+            )
+            self.assertEqual(
+                json.loads(from_xlsx.read_text()), json.loads(plan_path.read_text())
+            )
+
+    def test_diagnostics_report_every_issue(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            plan = {
+                "schema_version": "nctforge.exposure-plan/0.1.0",
+                "id": "  ",
+                "case_id": "case",
+                "covariance": "independent_exposures",
+                "exposures": [
+                    {
+                        "name": "a",
+                        "dose_bundle": {"id": "x", "sha256": "bad", "path": "x"},
+                        "weight": -1.0,
+                        "weight_basis": "manual",
+                        "duration_s": None,
+                        "boron_assumption": None,
+                    }
+                ],
+            }
+            path = _write(tmp, "bad.json", json.dumps(plan))
+            issues = nctforge.exposure_plan_diagnostics(path)
+            # empty id, negative weight, malformed sha256 — all reported.
+            self.assertEqual(len(issues), 3)
+            # The strict loader still refuses the same document.
+            with self.assertRaises(NctForgeError):
+                nctforge.load_exposure_plan(path)
+
+
 class EvidenceBundleTest(unittest.TestCase):
     def test_verify_detects_tampering(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

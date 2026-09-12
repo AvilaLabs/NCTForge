@@ -22,6 +22,7 @@ nctforge-core = { path = "../nctforge-core" }
 nctforge-dicom = { path = "../nctforge-dicom" }
 nctforge-evidence = { path = "../nctforge-evidence" }
 nctforge-openmc = { path = "../nctforge-openmc" }
+nctforge-plan = { path = "../nctforge-plan" }
 nctforge-transport = { path = "../nctforge-transport" }
 nctforge-view = { path = "../nctforge-view" }
 serde_json.workspace = true

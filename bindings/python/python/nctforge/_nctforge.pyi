@@ -254,6 +254,43 @@ class PhysicalDoseBundle:
     def provenance_id(self) -> str: ...
     def to_json(self) -> str: ...
 
+class Exposure:
+    """One weighted exposure bound to a dose-bundle file."""
+
+    @property
+    def name(self) -> str: ...
+    @property
+    def dose_bundle_path(self) -> str: ...
+    @property
+    def dose_bundle_id(self) -> str: ...
+    @property
+    def dose_bundle_sha256(self) -> str: ...
+    @property
+    def weight(self) -> float: ...
+    @property
+    def weight_basis(self) -> str: ...
+    @property
+    def duration_s(self) -> float | None: ...
+    @property
+    def boron_assumption(self) -> str | None: ...
+
+class ExposurePlan:
+    """A validated ``nctforge.exposure-plan/0.1.0`` weighted-exposure plan."""
+
+    @property
+    def schema_version(self) -> str: ...
+    @property
+    def id(self) -> str: ...
+    @property
+    def case_id(self) -> str: ...
+    @property
+    def covariance(self) -> str: ...
+    @property
+    def exposures(self) -> list[Exposure]: ...
+    def validate_diagnostics(self) -> list[str]:
+        """Every detectable plan issue, not just the first."""
+    def to_json(self) -> str: ...
+
 class BiologicalModel:
     """A validated ``nctforge.biological-model/0.2.0`` artifact."""
 
@@ -480,3 +517,24 @@ def combine_utcp(
     """Combine TCP and NTCP evaluations; ``p_plus`` or ``difference``."""
 def verify_evidence_bundle(root: str | PathLike[str]) -> tuple[str, int]:
     """Re-hash every manifest artifact; returns (case_id, artifact count)."""
+def load_exposure_plan(path: str | PathLike[str]) -> ExposurePlan:
+    """Load and validate a ``nctforge.exposure-plan/0.1.0`` document."""
+def exposure_plan_diagnostics(path: str | PathLike[str]) -> list[str]:
+    """Inspect a possibly-malformed plan file and return every detectable
+    issue (the counterpart of ``nctforge plan validate``)."""
+def accumulate_exposures(plan_path: str | PathLike[str]) -> PhysicalDoseBundle:
+    """Run a saved exposure plan end to end — verify bound bundle hashes,
+    then accumulate the weighted exposures (same path as ``nctforge
+    accumulate``)."""
+def plan_table_read(
+    table: str | PathLike[str],
+    output: str | PathLike[str],
+    id: str | None = None,
+    case_id: str | None = None,
+    bundles_dir: str | PathLike[str] | None = None,
+) -> None:
+    """Import a ``.csv``/``.xlsx`` exposure table into an exposure-plan JSON
+    file at ``output`` (same path as ``nctforge plan import``)."""
+def plan_table_write(plan: str | PathLike[str], output: str | PathLike[str]) -> None:
+    """Export an exposure-plan JSON file to a ``.csv`` or ``.xlsx`` exposure
+    table (same path as ``nctforge plan export``)."""

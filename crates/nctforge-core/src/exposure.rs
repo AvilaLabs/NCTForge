@@ -96,6 +96,61 @@ pub struct ExposurePlan {
 }
 
 impl ExposurePlan {
+    /// Collect every detectable problem with the plan rather than stopping
+    /// at the first, for user-facing diagnostics on malformed plans.
+    /// Semantic errors that need cross-field context (duplicate exposure
+    /// names) are reported alongside field-level errors.
+    pub fn validate_diagnostics(&self) -> Vec<ExposurePlanError> {
+        let mut issues = Vec::new();
+        if self.schema_version != EXPOSURE_PLAN_SCHEMA {
+            issues.push(ExposurePlanError::UnsupportedSchema(
+                self.schema_version.clone(),
+            ));
+            return issues;
+        }
+        for (label, value) in [("id", self.id.as_str()), ("case_id", self.case_id.as_str())] {
+            if value.trim().is_empty() {
+                issues.push(ExposurePlanError::EmptyIdentifier(label));
+            }
+        }
+        if self.exposures.is_empty() {
+            issues.push(ExposurePlanError::NoExposures);
+            return issues;
+        }
+        let mut names = BTreeSet::new();
+        for exposure in &self.exposures {
+            if exposure.name.trim().is_empty() {
+                issues.push(ExposurePlanError::EmptyIdentifier("exposure.name"));
+            } else if !names.insert(exposure.name.as_str()) {
+                issues.push(ExposurePlanError::DuplicateExposure(exposure.name.clone()));
+            }
+            if !exposure.weight.is_finite() || exposure.weight < 0.0 {
+                issues.push(ExposurePlanError::InvalidWeight(exposure.name.clone()));
+            }
+            if let Some(duration) = exposure.duration_s
+                && (!duration.is_finite() || duration <= 0.0)
+            {
+                issues.push(ExposurePlanError::InvalidDuration(exposure.name.clone()));
+            }
+            let reference = &exposure.dose_bundle;
+            if reference.id.trim().is_empty() || reference.path.trim().is_empty() {
+                issues.push(ExposurePlanError::EmptyIdentifier("exposure.dose_bundle"));
+            }
+            if (ContentReference {
+                id: reference.id.clone(),
+                sha256: reference.sha256.clone(),
+            })
+            .validate()
+            .is_err()
+            {
+                issues.push(ExposurePlanError::InvalidBundleReference(
+                    exposure.name.clone(),
+                ));
+            }
+        }
+        issues
+    }
+
     pub fn validate(&self) -> Result<(), ExposurePlanError> {
         if self.schema_version != EXPOSURE_PLAN_SCHEMA {
             return Err(ExposurePlanError::UnsupportedSchema(
@@ -480,5 +535,33 @@ mod tests {
             bad_schema.validate(),
             Err(ExposurePlanError::UnsupportedSchema(_))
         ));
+    }
+
+    #[test]
+    fn diagnostics_collect_every_issue() {
+        let mut broken = plan(&[1.0, -2.0]);
+        broken.id = "  ".into();
+        broken.exposures[0].name = String::new();
+        broken.exposures[0].dose_bundle.sha256 = "short".into();
+        let issues = broken.validate_diagnostics();
+        // empty id, empty exposure name, bad weight on field-1, bad ref on field-0
+        assert_eq!(issues.len(), 4);
+        assert!(issues.iter().any(|i| matches!(
+            i,
+            ExposurePlanError::EmptyIdentifier(label) if *label == "id"
+        )));
+        assert!(
+            issues
+                .iter()
+                .any(|i| matches!(i, ExposurePlanError::InvalidWeight(name) if name == "field-1"))
+        );
+        assert!(
+            issues
+                .iter()
+                .any(|i| matches!(i, ExposurePlanError::InvalidBundleReference(_)))
+        );
+        // validate() still reports the first problem only.
+        assert!(broken.validate().is_err());
+        assert!(plan(&[1.0]).validate_diagnostics().is_empty());
     }
 }

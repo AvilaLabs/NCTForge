@@ -550,6 +550,28 @@ nctforge accumulate \
 
 `examples/exposure/` ships a two-field demonstration plan.
 
+### Exposure-plan tables and diagnostics
+
+The `nctforge plan` family bridges spreadsheet workflows and the JSON
+contract. `plan import` converts a `.csv` or `.xlsx` exposure table into a
+validated plan (reporting every malformed row with its row number; blank
+`dose_bundle_sha256` cells are filled by hashing files under
+`--bundles-dir`), `plan export` writes the table back, and `plan validate`
+lists every detectable issue in a plan document:
+
+```text
+nctforge plan import --table schedule.xlsx --output plan.json
+nctforge plan export --plan plan.json --output schedule.csv
+nctforge plan validate --plan plan.json
+```
+
+CSV tables carry `# format:`/`# id:`/`# case_id:`/`# covariance:` metadata
+lines above the header row; XLSX workbooks carry a `plan` key/value sheet
+plus an `exposures` sheet. The same Rust code serves the Python surface
+(`load_exposure_plan`, `exposure_plan_diagnostics`, `accumulate_exposures`,
+`plan_table_read`, `plan_table_write`) and the GUI's Plan workspace, which
+displays the exposure table alongside every detected issue.
+
 ### Dose-volume metrics and endpoint response models
 
 `nctforge metrics` computes exact dose-volume readings over a region mask

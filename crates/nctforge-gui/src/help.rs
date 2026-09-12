@@ -9,6 +9,7 @@ pub(crate) enum HelpWorkspace {
     Overview,
     Geometry,
     Transport,
+    Plan,
     Dose,
     Evidence,
 }
@@ -470,6 +471,10 @@ fn workspace_help(workspace: HelpWorkspace) -> (&'static str, &'static str) {
         HelpWorkspace::Transport => (
             "Transport",
             "Follow the ordered gate chain and backend capability flags. Unavailable actions are intentionally disabled.",
+        ),
+        HelpWorkspace::Plan => (
+            "Exposure plan",
+            "Load a structured exposure plan, inspect every detected issue, and round-trip the schedule through CSV/XLSX tables. Accumulation runs through the CLI or Python.",
         ),
         HelpWorkspace::Dose => (
             "Dose components",

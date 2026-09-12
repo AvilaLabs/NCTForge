@@ -56,15 +56,17 @@ enum WorkspaceTab {
     Overview,
     Geometry,
     Transport,
+    Plan,
     Dose,
     Evidence,
 }
 
 impl WorkspaceTab {
-    const ALL: [Self; 5] = [
+    const ALL: [Self; 6] = [
         Self::Overview,
         Self::Geometry,
         Self::Transport,
+        Self::Plan,
         Self::Dose,
         Self::Evidence,
     ];
@@ -74,6 +76,7 @@ impl WorkspaceTab {
             Self::Overview => "Overview",
             Self::Geometry => "Geometry",
             Self::Transport => "Transport",
+            Self::Plan => "Plan",
             Self::Dose => "Dose components",
             Self::Evidence => "Evidence",
         }
@@ -84,8 +87,9 @@ impl WorkspaceTab {
             Self::Overview => "01",
             Self::Geometry => "02",
             Self::Transport => "03",
-            Self::Dose => "04",
-            Self::Evidence => "05",
+            Self::Plan => "04",
+            Self::Dose => "05",
+            Self::Evidence => "06",
         }
     }
 }
@@ -96,6 +100,7 @@ impl From<WorkspaceTab> for HelpWorkspace {
             WorkspaceTab::Overview => Self::Overview,
             WorkspaceTab::Geometry => Self::Geometry,
             WorkspaceTab::Transport => Self::Transport,
+            WorkspaceTab::Plan => Self::Plan,
             WorkspaceTab::Dose => Self::Dose,
             WorkspaceTab::Evidence => Self::Evidence,
         }
@@ -108,6 +113,7 @@ impl From<HelpWorkspace> for WorkspaceTab {
             HelpWorkspace::Overview => Self::Overview,
             HelpWorkspace::Geometry => Self::Geometry,
             HelpWorkspace::Transport => Self::Transport,
+            HelpWorkspace::Plan => Self::Plan,
             HelpWorkspace::Dose => Self::Dose,
             HelpWorkspace::Evidence => Self::Evidence,
         }
@@ -428,6 +434,62 @@ impl EvidencePanel {
     }
 }
 
+/// UI state for the plan workspace's exposure-plan panel.
+#[derive(Default)]
+struct PlanPanel {
+    plan_path: String,
+    plan: Option<nctforge_core::ExposurePlan>,
+    issues: Vec<String>,
+    error: Option<String>,
+    export_path: String,
+    export_status: Option<String>,
+}
+
+impl PlanPanel {
+    fn load(&mut self) {
+        self.plan = None;
+        self.issues.clear();
+        self.error = None;
+        self.export_status = None;
+        match std::fs::read(Path::new(self.plan_path.trim()))
+            .map_err(|e| e.to_string())
+            .and_then(|bytes| {
+                serde_json::from_slice::<nctforge_core::ExposurePlan>(&bytes)
+                    .map_err(|e| e.to_string())
+            }) {
+            Ok(plan) => {
+                self.issues = plan
+                    .validate_diagnostics()
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect();
+                self.plan = Some(plan);
+            }
+            Err(error) => self.error = Some(error),
+        }
+    }
+
+    fn export_table(&mut self) {
+        self.export_status = None;
+        let Some(plan) = &self.plan else {
+            self.export_status = Some("Load a plan first.".into());
+            return;
+        };
+        match nctforge_plan::write_table(Path::new(self.export_path.trim()), plan) {
+            Ok(()) => self.export_status = Some(format!("wrote {}", self.export_path.trim())),
+            Err(error) => self.export_status = Some(error.to_string()),
+        }
+    }
+}
+
+/// Per-workspace panels shared between the app and the workbench render.
+#[derive(Default)]
+struct WorkbenchPanels {
+    dose: DosePanel,
+    evidence: EvidencePanel,
+    plan: PlanPanel,
+}
+
 struct NctForgeApp {
     case_path: String,
     load_error: Option<String>,
@@ -436,8 +498,7 @@ struct NctForgeApp {
     workspace: WorkspaceTab,
     brand_logo: Option<egui::TextureHandle>,
     help: GuidedHelp,
-    dose_panel: DosePanel,
-    evidence_panel: EvidencePanel,
+    panels: WorkbenchPanels,
 }
 
 impl NctForgeApp {
@@ -457,8 +518,7 @@ impl NctForgeApp {
             },
             brand_logo: brand::load_logo_texture(context).ok(),
             help: GuidedHelp::default(),
-            dose_panel: DosePanel::default(),
-            evidence_panel: EvidencePanel::default(),
+            panels: WorkbenchPanels::default(),
         };
         if has_initial_case {
             app.load_case();
@@ -525,8 +585,7 @@ impl eframe::App for NctForgeApp {
             &mut self.workspace,
             self.case.as_mut(),
             &mut self.display,
-            &mut self.dose_panel,
-            &mut self.evidence_panel,
+            &mut self.panels,
             &mut tour_targets,
         );
         self.help
@@ -663,8 +722,7 @@ fn show_workbench(
     workspace: &mut WorkspaceTab,
     case: Option<&mut ViewerCase>,
     display: &mut DisplaySettings,
-    dose_panel: &mut DosePanel,
-    evidence_panel: &mut EvidencePanel,
+    panels: &mut WorkbenchPanels,
     tour_targets: &mut TourTargets,
 ) {
     let navigation = egui::Panel::left("nctforge-workspace-navigation")
@@ -721,10 +779,14 @@ fn show_workbench(
                     WorkspaceTab::Transport => {
                         show_transport_workspace(ui, case.as_deref(), tour_targets)
                     }
-                    WorkspaceTab::Dose => show_dose_workspace(ui, dose_panel),
-                    WorkspaceTab::Evidence => {
-                        show_evidence_workspace(ui, case.as_deref(), evidence_panel, tour_targets)
-                    }
+                    WorkspaceTab::Plan => show_plan_workspace(ui, &mut panels.plan),
+                    WorkspaceTab::Dose => show_dose_workspace(ui, &mut panels.dose),
+                    WorkspaceTab::Evidence => show_evidence_workspace(
+                        ui,
+                        case.as_deref(),
+                        &mut panels.evidence,
+                        tour_targets,
+                    ),
                 });
         });
 }
@@ -1056,6 +1118,131 @@ fn capability_label(ui: &mut egui::Ui, name: &str, enabled: bool) {
             ui.strong(name);
             ui.colored_label(state.color(), value);
         });
+    });
+}
+
+fn show_plan_workspace(ui: &mut egui::Ui, panel: &mut PlanPanel) {
+    show_workspace_heading(
+        ui,
+        "Exposure plan",
+        "Structured multi-exposure schedules; every detected issue is reported, not just the first.",
+    );
+
+    egui::Frame::group(ui.style()).show(ui, |ui| {
+        ui.horizontal(|ui| {
+            ui.label(egui::RichText::new("PLAN").small().strong());
+            ui.add(
+                egui::TextEdit::singleline(&mut panel.plan_path)
+                    .desired_width(520.0)
+                    .hint_text("/path/to/exposure-plan.json"),
+            );
+            if ui.button("Load + diagnose").clicked() {
+                panel.load();
+            }
+        });
+        if let Some(error) = &panel.error {
+            ui.colored_label(
+                egui::Color32::LIGHT_RED,
+                format!("Plan file rejected: {error}"),
+            );
+        }
+    });
+
+    let Some(plan) = &panel.plan else {
+        ui.add_space(12.0);
+        egui::Frame::new()
+            .fill(egui::Color32::from_rgb(41, 32, 22))
+            .corner_radius(8)
+            .inner_margin(egui::Margin::same(14))
+            .show(ui, |ui| {
+                status_badge(ui, GateState::Pending, "NO PLAN LOADED");
+                ui.label(
+                    "Load an nctforge.exposure-plan JSON document to inspect its exposures \
+                     and validation issues. Tables authored in CSV or XLSX convert through \
+                     `nctforge plan import`; saved scenarios rerun through \
+                     `nctforge accumulate`.",
+                );
+            });
+        return;
+    };
+
+    ui.add_space(10.0);
+    egui::Frame::new()
+        .fill(egui::Color32::from_rgb(22, 30, 41))
+        .corner_radius(8)
+        .inner_margin(egui::Margin::same(14))
+        .show(ui, |ui| {
+            ui.horizontal(|ui| {
+                ui.vertical(|ui| {
+                    ui.heading(&plan.id);
+                    ui.monospace(format!("case: {}", plan.case_id));
+                });
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if panel.issues.is_empty() {
+                        status_badge(ui, GateState::Verified, "VALID");
+                    } else {
+                        status_badge(
+                            ui,
+                            GateState::Blocked,
+                            &format!("{} ISSUE(S)", panel.issues.len()),
+                        );
+                    }
+                });
+            });
+            if !panel.issues.is_empty() {
+                ui.add_space(6.0);
+                for issue in &panel.issues {
+                    ui.colored_label(egui::Color32::LIGHT_RED, format!("• {issue}"));
+                }
+            }
+            ui.add_space(8.0);
+            egui::Grid::new("plan-exposures")
+                .striped(true)
+                .show(ui, |ui| {
+                    for header in [
+                        "name",
+                        "bundle path",
+                        "weight",
+                        "basis",
+                        "duration s",
+                        "boron",
+                    ] {
+                        ui.strong(header);
+                    }
+                    ui.end_row();
+                    for exposure in &plan.exposures {
+                        ui.monospace(&exposure.name);
+                        ui.monospace(&exposure.dose_bundle.path);
+                        ui.monospace(exposure.weight.to_string());
+                        ui.label(format!("{:?}", exposure.weight_basis));
+                        ui.monospace(
+                            exposure
+                                .duration_s
+                                .map(|d| d.to_string())
+                                .unwrap_or_else(|| "—".into()),
+                        );
+                        ui.label(exposure.boron_assumption.as_deref().unwrap_or("—"));
+                        ui.end_row();
+                    }
+                });
+        });
+
+    ui.add_space(10.0);
+    egui::Frame::group(ui.style()).show(ui, |ui| {
+        ui.horizontal(|ui| {
+            ui.label(egui::RichText::new("TABLE EXPORT").small().strong());
+            ui.add(
+                egui::TextEdit::singleline(&mut panel.export_path)
+                    .desired_width(420.0)
+                    .hint_text("/path/to/schedule.csv or .xlsx"),
+            );
+            if ui.button("Export table").clicked() {
+                panel.export_table();
+            }
+        });
+        if let Some(status) = &panel.export_status {
+            ui.label(status);
+        }
     });
 }
 
@@ -1727,7 +1914,7 @@ mod tests {
     #[test]
     fn workspace_navigation_has_stable_unique_labels() {
         let labels = WorkspaceTab::ALL.map(WorkspaceTab::label);
-        assert_eq!(labels.len(), 5);
+        assert_eq!(labels.len(), 6);
         assert!(labels.iter().all(|label| !label.is_empty()));
         for (index, left) in labels.iter().enumerate() {
             assert!(!labels[index + 1..].contains(left));
@@ -1853,8 +2040,7 @@ mod tests {
                     &mut workspace,
                     None,
                     &mut display,
-                    &mut DosePanel::default(),
-                    &mut EvidencePanel::default(),
+                    &mut WorkbenchPanels::default(),
                     &mut tour_targets,
                 );
             });

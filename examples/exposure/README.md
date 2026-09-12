@@ -29,5 +29,21 @@ and the recorded covariance assumption. When exposures bind different
 response sets (for example differing boron loading per field), the output's
 `response_set` reference points at the plan artifact, which enumerates them.
 
+## Spreadsheet interchange
+
+`nctforge plan` round-trips the schedule between the JSON contract and
+`.csv`/`.xlsx` exposure tables. `schedule.csv` ships the same two-field
+schedule in table form:
+
+```text
+nctforge plan import --table schedule.csv --output reimported.json
+nctforge plan export --plan two-field-plan.json --output editable.xlsx
+nctforge plan validate --plan two-field-plan.json
+```
+
+Blank `dose_bundle_sha256` cells are filled by hashing the referenced files
+under `--bundles-dir`; `plan validate` lists every detected issue rather
+than stopping at the first.
+
 Research only: weights and boron notes are illustrative, not a treatment
 plan.

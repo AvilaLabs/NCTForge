@@ -10,7 +10,7 @@ use std::process::ExitCode;
 
 use clap::{Args, Parser, Subcommand};
 use nctforge_bio::{BiologicalModel, RegionMask, apply_biological_model};
-use nctforge_core::{ExposurePlan, PhysicalDoseBundle, accumulate_exposures};
+use nctforge_core::{ExposurePlan, PhysicalDoseBundle};
 use nctforge_dicom::synthetic::generate_nf_bnct_001;
 use nctforge_dicom::{load_nf_bnct_001, verify_nf_bnct_001};
 use nctforge_nifti::read_nifti_file;
@@ -117,6 +117,9 @@ enum Command {
     /// Combine or construct RegionMask volumes (subtraction, union,
     /// intersection, CT-threshold regions) for limiting-organ construction.
     Mask(MaskArgs),
+    /// Import, validate, and export structured exposure plans
+    /// (CSV/XLSX table interchange for `nctforge.exposure-plan/0.1.0`).
+    Plan(PlanArgs),
     /// Aim a fixed source at a region centroid or rotate a source about a
     /// patient axis (research positioning helpers).
     Position(PositionArgs),
@@ -404,6 +407,51 @@ enum MaskCommand {
         /// New output path for the mask JSON.
         #[arg(long)]
         output: PathBuf,
+    },
+}
+
+#[derive(Debug, Args)]
+struct PlanArgs {
+    #[command(subcommand)]
+    command: PlanCommand,
+}
+
+#[derive(Debug, Subcommand)]
+enum PlanCommand {
+    /// Import a `.csv` or `.xlsx` exposure table into an
+    /// `nctforge.exposure-plan/0.1.0` JSON plan.
+    Import {
+        /// Exposure table (`name,dose_bundle_path,...,weight_basis` columns).
+        #[arg(long)]
+        table: PathBuf,
+        /// Plan identifier; overrides table `# id:`/`plan` sheet metadata.
+        #[arg(long)]
+        id: Option<String>,
+        /// Accumulated case identifier; overrides table metadata.
+        #[arg(long)]
+        case_id: Option<String>,
+        /// Directory used to hash bundle files whose `dose_bundle_sha256`
+        /// cell is blank.
+        #[arg(long)]
+        bundles_dir: Option<PathBuf>,
+        /// New output path for the plan JSON.
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Export an exposure plan to a `.csv` or `.xlsx` exposure table.
+    Export {
+        /// `nctforge.exposure-plan/0.1.0` JSON.
+        #[arg(long)]
+        plan: PathBuf,
+        /// New output table path (`.csv` or `.xlsx`).
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Validate an exposure plan and report every detected issue.
+    Validate {
+        /// `nctforge.exposure-plan/0.1.0` JSON.
+        #[arg(long)]
+        plan: PathBuf,
     },
 }
 
@@ -4044,35 +4092,7 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
             }
         },
         Some(Command::Accumulate { plan, output }) => {
-            let plan_bytes = fs::read(&plan)?;
-            let plan_sha256 = nctforge_evidence::sha256_hex(&plan_bytes);
-            let exposure_plan: ExposurePlan = serde_json::from_slice(&plan_bytes)?;
-            exposure_plan
-                .validate()
-                .map_err(|error| io::Error::other(format!("exposure plan: {error}")))?;
-            let plan_dir = plan.parent().unwrap_or(Path::new("."));
-            let mut bundles = Vec::with_capacity(exposure_plan.exposures.len());
-            for exposure in &exposure_plan.exposures {
-                let path = plan_dir.join(&exposure.dose_bundle.path);
-                let bytes = fs::read(&path)?;
-                let actual = nctforge_evidence::sha256_hex(&bytes);
-                if actual != exposure.dose_bundle.sha256 {
-                    return Err(io::Error::other(format!(
-                        "exposure {:?} bundle {} sha256 mismatch (plan {}, actual {})",
-                        exposure.name,
-                        path.display(),
-                        exposure.dose_bundle.sha256,
-                        actual
-                    ))
-                    .into());
-                }
-                let bundle: PhysicalDoseBundle =
-                    serde_json::from_slice(&bytes).map_err(|error| {
-                        io::Error::other(format!("exposure {:?} bundle: {error}", exposure.name))
-                    })?;
-                bundles.push(bundle);
-            }
-            let accumulated = accumulate_exposures(&exposure_plan, &plan_sha256, &bundles)
+            let accumulated = nctforge_plan::accumulate_plan_file(&plan)
                 .map_err(|error| io::Error::other(format!("accumulation: {error}")))?;
             let json = serde_json::to_vec_pretty(&accumulated)?;
             let mut file = fs::OpenOptions::new()
@@ -4083,11 +4103,57 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
             file.write_all(b"\n")?;
             file.sync_all()?;
             println!("accumulated dose bundle at {}", output.display());
-            println!(
-                "exposures: {} (covariance: independent)",
-                exposure_plan.exposures.len()
-            );
         }
+        Some(Command::Plan(args)) => match args.command {
+            PlanCommand::Import {
+                table,
+                id,
+                case_id,
+                bundles_dir,
+                output,
+            } => {
+                let options = nctforge_plan::TableImportOptions {
+                    id,
+                    case_id,
+                    bundles_dir,
+                };
+                let plan = nctforge_plan::read_table(&table, &options)
+                    .map_err(|error| io::Error::other(format!("plan table: {error}")))?;
+                write_new_json(&output, &plan)?;
+                println!("exposure plan at {}", output.display());
+                println!(
+                    "plan {} for case {}: {} exposures",
+                    plan.id,
+                    plan.case_id,
+                    plan.exposures.len()
+                );
+            }
+            PlanCommand::Export { plan, output } => {
+                let plan: ExposurePlan = serde_json::from_slice(&fs::read(&plan)?)?;
+                plan.validate()
+                    .map_err(|error| io::Error::other(format!("exposure plan: {error}")))?;
+                nctforge_plan::write_table(&output, &plan)
+                    .map_err(|error| io::Error::other(format!("plan table: {error}")))?;
+                println!("exposure table at {}", output.display());
+            }
+            PlanCommand::Validate { plan } => {
+                let plan: ExposurePlan = serde_json::from_slice(&fs::read(&plan)?)?;
+                let issues = plan.validate_diagnostics();
+                if issues.is_empty() {
+                    println!(
+                        "plan {} is valid: {} exposures",
+                        plan.id,
+                        plan.exposures.len()
+                    );
+                } else {
+                    eprintln!("plan {} has {} issue(s):", plan.id, issues.len());
+                    for issue in &issues {
+                        eprintln!("  - {issue}");
+                    }
+                    return Err(io::Error::other("exposure plan validation failed").into());
+                }
+            }
+        },
         Some(Command::Evidence(args)) => match args.command {
             EvidenceCommand::Export {
                 root,

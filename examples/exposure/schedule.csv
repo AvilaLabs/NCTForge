@@ -1,0 +1,7 @@
+# format: nctforge.exposure-plan-table/1
+# id: nctforge.examples.two-field.v1
+# case_id: nf-bnct-001-two-field-demo
+# covariance: independent_exposures
+name,dose_bundle_path,dose_bundle_id,dose_bundle_sha256,weight,weight_basis,duration_s,boron_assumption
+lateral,smoke-dose-bundle.json,nctforge.nf-bnct-001.smoke-bundle,544598812277c38687d89a9e2f58b0d4c0c16f849f2aafdf5a6ed78ec98e7f0b,1,delivered_fraction,300,benchmark trace B-10 loading (4e-5 mass fraction)
+ap,smoke-dose-bundle.json,nctforge.nf-bnct-001.smoke-bundle,544598812277c38687d89a9e2f58b0d4c0c16f849f2aafdf5a6ed78ec98e7f0b,0.5,delivered_fraction,150,benchmark trace B-10 loading (4e-5 mass fraction)

@@ -94,6 +94,11 @@ contract_check!(
     nctforge_transport::ResponseSetError
 );
 contract_check!(CaseManifest, validate, nctforge_evidence::ManifestError);
+contract_check!(
+    nctforge_core::ExposurePlan,
+    validate,
+    nctforge_core::ExposurePlanError
+);
 
 /// Transport-backend descriptor with its current capability flags.
 ///
@@ -783,6 +788,16 @@ impl PyDoseVolume {
     }
 }
 
+/// Serialize a snake_case-tagged enum to its token (`delivered_fraction`,
+/// `independent_exposures`, ...). Falls back to an empty string on
+/// non-string representations, which cannot happen for these enums.
+fn snake_token(value: &impl serde::Serialize) -> String {
+    serde_json::to_value(value)
+        .ok()
+        .and_then(|v| v.as_str().map(str::to_owned))
+        .unwrap_or_default()
+}
+
 fn dose_unit_name(unit: nctforge_core::DoseUnit) -> String {
     match unit {
         nctforge_core::DoseUnit::Gray => "gray".into(),
@@ -881,6 +896,178 @@ fn collect_run(working_directory: PathBuf) -> PyResult<PyPhysicalDoseBundle> {
         .collect(&completed)
         .map_err(reject)?;
     Ok(PyPhysicalDoseBundle { inner: bundle })
+}
+
+#[pyclass(frozen, name = "Exposure")]
+struct PyExposure {
+    inner: nctforge_core::Exposure,
+}
+
+#[pymethods]
+impl PyExposure {
+    #[getter]
+    fn name(&self) -> &str {
+        &self.inner.name
+    }
+
+    #[getter]
+    fn dose_bundle_path(&self) -> &str {
+        &self.inner.dose_bundle.path
+    }
+
+    #[getter]
+    fn dose_bundle_id(&self) -> &str {
+        &self.inner.dose_bundle.id
+    }
+
+    #[getter]
+    fn dose_bundle_sha256(&self) -> &str {
+        &self.inner.dose_bundle.sha256
+    }
+
+    #[getter]
+    fn weight(&self) -> f64 {
+        self.inner.weight
+    }
+
+    #[getter]
+    fn weight_basis(&self) -> String {
+        snake_token(&self.inner.weight_basis)
+    }
+
+    #[getter]
+    fn duration_s(&self) -> Option<f64> {
+        self.inner.duration_s
+    }
+
+    #[getter]
+    fn boron_assumption(&self) -> Option<&str> {
+        self.inner.boron_assumption.as_deref()
+    }
+}
+
+/// A validated `nctforge.exposure-plan/0.1.0` weighted-exposure plan.
+#[pyclass(frozen, name = "ExposurePlan")]
+struct PyExposurePlan {
+    inner: nctforge_core::ExposurePlan,
+}
+
+#[pymethods]
+impl PyExposurePlan {
+    #[getter]
+    fn schema_version(&self) -> &str {
+        &self.inner.schema_version
+    }
+
+    #[getter]
+    fn id(&self) -> &str {
+        &self.inner.id
+    }
+
+    #[getter]
+    fn case_id(&self) -> &str {
+        &self.inner.case_id
+    }
+
+    #[getter]
+    fn covariance(&self) -> String {
+        snake_token(&self.inner.covariance)
+    }
+
+    #[getter]
+    fn exposures(&self) -> Vec<PyExposure> {
+        self.inner
+            .exposures
+            .iter()
+            .map(|exposure| PyExposure {
+                inner: exposure.clone(),
+            })
+            .collect()
+    }
+
+    /// Every detectable plan issue, not just the first.
+    fn validate_diagnostics(&self) -> Vec<String> {
+        self.inner
+            .validate_diagnostics()
+            .iter()
+            .map(ToString::to_string)
+            .collect()
+    }
+
+    fn to_json(&self) -> PyResult<String> {
+        serde_json::to_string_pretty(&self.inner).map_err(reject)
+    }
+}
+
+/// Load a `nctforge.exposure-plan/0.1.0` document.
+#[pyfunction]
+fn load_exposure_plan(path: PathBuf) -> PyResult<PyExposurePlan> {
+    Ok(PyExposurePlan {
+        inner: load_contract(path)?,
+    })
+}
+
+/// Inspect a possibly-malformed plan file and return every detectable
+/// issue — the Python counterpart of `nctforge plan validate`. Unlike
+/// `load_exposure_plan`, this reports on the raw document without rejecting
+/// it, so diagnostics are reachable for broken plans.
+#[pyfunction]
+fn exposure_plan_diagnostics(path: PathBuf) -> PyResult<Vec<String>> {
+    let bytes = fs::read(&path).map_err(reject)?;
+    let plan: nctforge_core::ExposurePlan =
+        serde_json::from_slice(&bytes).map_err(reject)?;
+    Ok(plan
+        .validate_diagnostics()
+        .iter()
+        .map(ToString::to_string)
+        .collect())
+}
+
+/// Run a saved exposure plan end to end — verify each bound bundle's
+/// recorded hash, then accumulate the weighted exposures — using the same
+/// Rust path as `nctforge accumulate`.
+#[pyfunction]
+fn accumulate_exposures(plan_path: PathBuf) -> PyResult<PyPhysicalDoseBundle> {
+    Ok(PyPhysicalDoseBundle {
+        inner: nctforge_plan::accumulate_plan_file(&plan_path).map_err(reject)?,
+    })
+}
+
+/// Import a `.csv`/`.xlsx` exposure table into an exposure-plan JSON file
+/// at `output` (same path as `nctforge plan import`).
+#[pyfunction]
+#[pyo3(signature = (table, output, id=None, case_id=None, bundles_dir=None))]
+fn plan_table_read(
+    table: PathBuf,
+    output: PathBuf,
+    id: Option<String>,
+    case_id: Option<String>,
+    bundles_dir: Option<PathBuf>,
+) -> PyResult<()> {
+    let options = nctforge_plan::TableImportOptions {
+        id,
+        case_id,
+        bundles_dir,
+    };
+    let plan = nctforge_plan::read_table(&table, &options).map_err(reject)?;
+    let bytes = serde_json::to_vec_pretty(&plan).map_err(reject)?;
+    std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&output)
+        .and_then(|mut file| {
+            use std::io::Write;
+            file.write_all(&bytes).and_then(|()| file.write_all(b"\n"))
+        })
+        .map_err(reject)
+}
+
+/// Export an exposure-plan JSON file to a `.csv` or `.xlsx` exposure table
+/// (same path as `nctforge plan export`).
+#[pyfunction]
+fn plan_table_write(plan: PathBuf, output: PathBuf) -> PyResult<()> {
+    let plan: nctforge_core::ExposurePlan = load_contract(plan)?;
+    nctforge_plan::write_table(&output, &plan).map_err(reject)
 }
 
 /// A validated biological model contract.
@@ -1797,6 +1984,8 @@ fn _nctforge(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyEndpointModel>()?;
     m.add_class::<PyAppliedDoseStatistic>()?;
     m.add_class::<PyEndpointEvaluation>()?;
+    m.add_class::<PyExposure>()?;
+    m.add_class::<PyExposurePlan>()?;
     m.add_function(wrap_pyfunction!(backends, m)?)?;
     m.add_function(wrap_pyfunction!(file_sha256, m)?)?;
     m.add_function(wrap_pyfunction!(generate_case, m)?)?;
@@ -1822,5 +2011,10 @@ fn _nctforge(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(evaluate_endpoint_biological, m)?)?;
     m.add_function(wrap_pyfunction!(combine_utcp, m)?)?;
     m.add_function(wrap_pyfunction!(verify_evidence_bundle, m)?)?;
+    m.add_function(wrap_pyfunction!(load_exposure_plan, m)?)?;
+    m.add_function(wrap_pyfunction!(exposure_plan_diagnostics, m)?)?;
+    m.add_function(wrap_pyfunction!(accumulate_exposures, m)?)?;
+    m.add_function(wrap_pyfunction!(plan_table_read, m)?)?;
+    m.add_function(wrap_pyfunction!(plan_table_write, m)?)?;
     Ok(())
 }
