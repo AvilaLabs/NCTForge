@@ -2,7 +2,7 @@
 
 **Adopted:** 2026-08-31
 
-**Status:** R1 complete; R2 response qualification paused at its external-evidence gate
+**Status:** R1 complete; R2 response generation and smoke execution implemented; reference acceptance remains open. R3/R4 capability parity requirements expanded on 2026-09-12.
 
 **Style:** Evidence-gated, not feature-count or calendar driven
 
@@ -11,6 +11,119 @@
 Establish an open, transport-neutral BNCT research and independent-verification
 platform that makes geometry, component dosimetry, biological interpretation,
 uncertainty, and provenance comparable between codes and institutions.
+
+
+## OpenPINT capability parity and demonstrated superiority
+
+**Adopted:** 2026-09-12, at the project owner's direction.
+
+NCTForge's completion target is a full BNCT research workbench that matches
+every verified OpenPINT research capability and demonstrates advantages in
+accuracy, usability, performance, interoperability, and reproducibility.
+Independent verification is an integrated capability, not a reason to omit
+research planning or analysis functions. A remaining OpenPINT advantage is a
+tracked gap to close, not an accepted permanent product boundary.
+
+This is a development objective, not a claim of present superiority.
+OpenPINT's age or adoption does not establish its technical quality. Completion
+requires evidence from implemented workflows and comparable benchmarks.
+
+### Audited baseline and source evidence
+
+The initial comparison is against OpenPINT commit
+[`7d035fbfc1b764cab0b112e45acee39e6b909efb`](https://github.com/ipostuma/OpenPINT/tree/7d035fbfc1b764cab0b112e45acee39e6b909efb),
+reviewed on 2026-09-12. Its README and relevant implementation surfaces were
+inspected; OpenPINT was not executed during this roadmap review. Thus
+"present" below means visible implementation, not independently validated
+scientific correctness or usability.
+
+Source paths at that revision:
+
+- [README and workflow inventory](https://github.com/ipostuma/OpenPINT/blob/7d035fbfc1b764cab0b112e45acee39e6b909efb/README.md)
+- [Treatment evaluation and combined treatments](https://github.com/ipostuma/OpenPINT/blob/7d035fbfc1b764cab0b112e45acee39e6b909efb/OpenPINT/treatment.py)
+- [Biological model functions](https://github.com/ipostuma/OpenPINT/blob/7d035fbfc1b764cab0b112e45acee39e6b909efb/OpenPINT/dose/Model_db/models.py)
+- [Component import, uncertainty, and fraction aggregation](https://github.com/ipostuma/OpenPINT/blob/7d035fbfc1b764cab0b112e45acee39e6b909efb/OpenPINT/dose/bnct.py)
+- [Patient positioning](https://github.com/ipostuma/OpenPINT/blob/7d035fbfc1b764cab0b112e45acee39e6b909efb/OpenPINT/mcgenerator/patient_positioning.py)
+- [MCNP deck generation](https://github.com/ipostuma/OpenPINT/blob/7d035fbfc1b764cab0b112e45acee39e6b909efb/OpenPINT/mcgenerator/mcnp.py)
+
+The prior R3/R4 wording did not guarantee this breadth. In particular,
+NCTForge's fixed-component biological weights do not establish parity with
+photon-isoeffective models, fractionation, TCP/NTCP, or combined-treatment
+analysis. An abstract backend interface does not establish working MCNP/PHITS
+support. Each row below is required and remains open until its evidence passes.
+
+### Required capability matrix
+
+| ID / milestone | OpenPINT baseline | Required NCTForge deliverable | Acceptance evidence |
+| --- | --- | --- | --- |
+| OP-01 / R3 | NIfTI dose and mask workflows; CT-aligned mesh conversion | NIfTI import/export alongside DICOM; explicit LPS/RAS, affine, units, masks, interpolation and resampling semantics | Synthetic oblique, translated and anisotropic cases; landmark and volume checks; component round-trips; grid-resolution convergence with tolerances declared before execution |
+| OP-02 / R3 | Synthetic patient masks, bounding boxes, material lattice generation | General heterogeneous synthetic anatomy and segmented-volume material/density mapping, including explicit tissue boron inputs | Multi-material head and cylindrical cases; analytic region volumes and densities; ambiguous mappings rejected; reproducible decks |
+| OP-03 / R3 | Patient rotation, tumor-centroid and skin-entry positioning helpers | Interactive and scriptable research positioning, beam-entry geometry and source-to-anatomy transforms | Independent transform/landmark calculations, round-trips and out-of-volume rejection; matched GUI/CLI/Python outputs |
+| OP-04 / R4 | MCNP and PHITS mesh readers; component uncertainty handling | Working MCNP and PHITS import adapters with explicit version/format support, component meaning, normalization and available statistical uncertainty | Independently created parser fixtures plus authorized real-engine examples; preservation of dose and uncertainty; no silent substitution of missing information |
+| OP-05 / R4 | MCNP material/lattice and transform deck generation | MCNP input export for supported research geometry and sources, alongside native OpenMC preparation/execution | Generated decks executed by an authorized MCNP user; matched-case geometry and dose comparisons; transport programs remain external dependencies |
+| OP-06 / R3 | Weighted irradiation-fraction aggregation | Multiple fields/exposures and fractions with explicit duration, source strength, boron assumptions and physical accumulation semantics | Hand-computable unequal-weight cases; dose-rate versus dose checks; alignment checks; covariance assumptions recorded; biological evaluation respects schedules rather than blindly summing weighted maps |
+| OP-07 / R3 | Organ-limited irradiation time using physical, weighted and isoeffective endpoints | Research scenario evaluation under explicit maximum/mean organ limits, reporting the limiting structure/voxel and assumptions | Analytic scaling cases, multiple competing limits, zero-rate and infeasible cases, and independent checks for nonlinear biological endpoints |
+| OP-08 / R3 | Weighted dose, photon-isoeffective tumor/healthy-tissue models and fractionation | Source-attributed model registry extending fixed weights to these model families, with explicit parameters, units, validity domains and fraction schedules | Independent equation-based fixtures and published reference cases for each model; parameter sensitivity; physical and biological results kept distinct |
+| OP-09 / R3 | TCP, NTCP and UTCP functions; treatment metrics and DVHs | Tumor-control and normal-tissue-complication research estimates, combined endpoint where justified, standard dose-volume metrics and overlays | Probability bounds and limiting cases, analytic DVHs, explicit tissue/model provenance; distinguish low-level function availability from a working end-to-end workflow |
+| OP-10 / R4 | Hadron-dose resampling, BED conversion and BNCT/hadron combination | Imported external photon/hadron dose, fraction-aware BED analysis and scientifically specified combined-treatment research evaluation | Analytic BED fixtures; co-registration checks; explicit compatible endpoint/model assumptions; incompatible biological quantities cannot be silently added |
+| OP-11 / R3 | Structured plan configuration, Excel input and CLI/Python workflows | Validated research plan schema, CSV/XLSX interchange and complete GUI/CLI/Python paths for the covered tasks | Clean-install end-to-end examples; identical numerical results across surfaces; useful diagnostics for malformed plans; persistence and rerun of saved scenarios |
+| OP-12 / R3 | Mask subtraction and limiting-organ construction | Region subtraction, exclusion masks and configurable CT-threshold region construction | Exact synthetic mask tests, frame checks, empty/overlapping region handling and recorded threshold choices; full segmentation remains a separate feature |
+
+### Delivery sequence and completion gates
+
+1. Finish the R2 physical benchmark and restore passing CI. Retain the
+   predeclared scientific acceptance gates.
+2. Complete OP-01/02/06 first so heterogeneous cases, interchange and exposure
+   semantics are sound. Build OP-03/07/08/09/11/12 into the R3 research alpha.
+   Simple fixed weights and DVH plumbing alone do not close these tasks.
+3. Complete OP-04/05/10 in R4 and publish a reproducible cross-code case suite.
+   One external importer alone no longer satisfies the full R4 target.
+4. Carry all parity evidence into R5 external validation. An earlier alpha may
+   ship with explicit gaps, but the full research platform is not complete
+   while a verified baseline capability remains uncovered.
+5. Refresh the pinned OpenPINT capability inventory at each release candidate.
+   New implemented capabilities or measured advantages become named roadmap
+   tasks. Track upstream plans separately from demonstrated functions.
+
+For each OP task, maintain an evidence record containing implementation status,
+NCTForge and comparator revisions, test inputs, expected outputs or independent
+reference, acceptance tolerances, actual results, limitations and artifact
+locations. Record unsupported and untested workflows as open.
+
+### Demonstrating that the complete workbench is better
+
+Freeze a comparison protocol before collecting results. Include homogeneous
+and heterogeneous phantoms, oblique geometry, boundary-sensitive DVHs, multiple
+exposures, biological model evaluation, and imported MCNP/PHITS outputs.
+Use independently generated synthetic data and published methods.
+
+- **Accuracy:** compare against analytic, independent numerical and available
+  measured references. Agreement with OpenPINT alone is not truth. Report
+  component/region error, statistical uncertainty, grid convergence and model
+  assumptions; any material disadvantage gets a corrective roadmap task.
+- **Performance:** compare identical analysis workloads on declared hardware;
+  report wall time and peak memory. Separate NCTForge processing overhead from
+  transport-engine time. Compare transport at equivalent precision, not merely
+  equal particle histories. Rust alone is not evidence of greater speed.
+- **Usability:** measure clean installation, time to first result, completion
+  time, manual steps and errors for the same research tasks with external users.
+  A GUI screenshot does not establish better usability.
+- **Interoperability:** demonstrate actual DICOM and NIfTI round-trips, MCNP and
+  PHITS imports, OpenMC execution and MCNP deck export on frozen cases.
+- **Reproducibility:** recreate results from saved plans/evidence on a clean
+  environment, retain model/data versions, and reject altered or incompatible
+  artifacts.
+
+The release comparison must show coverage of every OP row and report each
+dimension honestly. The objective is parity or better across these dimensions
+and measurable advantages beyond parity. Every measured regression remains a
+tracked improvement task; no aggregate score may hide a material deficit.
+
+Implement independently from scientific publications and public format
+specifications with attribution. Do not copy OpenPINT implementation code.
+The existing research-use and Avify Dose IP boundaries continue to apply.
+Conventional scenario evaluation and the named parity tasks do not authorize
+patent-sensitive optimization or clinical deployment.
 
 ## R0 — Architecture and risk register
 
@@ -219,7 +332,8 @@ Exit evidence:
   without duplicating scientific logic;
 - physical and biological layers can be inspected separately;
 - deterministic manifest binds inputs and outputs;
-- independent verifier rejects modified artifacts.
+- independent verifier rejects modified artifacts;
+- all R3 tasks in the OpenPINT capability matrix pass their acceptance evidence.
 
 ## R4 — Transport-neutral reference platform
 
@@ -232,7 +346,9 @@ Exit evidence:
 - OpenMC and one independent transport path compared on frozen cases;
 - public conformance suite and versioned reference outputs;
 - Python API supports external biological-model experiments without duplicating
-  production evaluation logic.
+  production evaluation logic;
+- all R4 tasks in the OpenPINT capability matrix pass, including both MCNP and
+  PHITS import, MCNP deck export, and external-dose research analysis.
 
 ## Cross-cutting distribution
 
