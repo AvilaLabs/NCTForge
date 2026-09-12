@@ -496,10 +496,25 @@ Implementation status:
   pipeline's declared step before `import mcnp` re-ingests the meshtal.
   Source planes outside the grid are rejected. Execution against real MCNP
   remains the open acceptance gate;
+- complete (first slice): OP-10 external-dose/BED combined analysis —
+  `nctforge.external-dose/0.1.0` imports one absolute-dose course with
+  declared fractionation (uniform or explicit, hash-bound provenance);
+  `nctforge bio bed` converts it to a BED/EQD2 field under declared
+  (optionally per-region) α/β with first-order sigma propagation; `nctforge
+  bio combine` adds an external `eqd2` field to a photon-isoeffective
+  `weighted_eqd2` bundle — the only admitted combination — under a required
+  operator-stated additivity assumption, with strict trilinear
+  co-registration (`--resample trilinear`) when grids differ and rejection
+  of every incompatible-quantity or uncovered-target path. The
+  `nctforge.combined-dose/0.1.0` record binds both input content hashes,
+  both provenance chains, and the declared assumption. CLI/Python parity
+  (`import_external_dose`, `bed_from_external_dose`,
+  `combine_biological_doses`) with analytic BED fixtures in unit and parity
+  tests; `examples/interchange/photon-course-60gy.json` ships a synthetic
+  60 Gy/30-fx demonstration course;
 - pending: committed real-engine parser fixtures per producing system for
   OP-04;
-- pending: OP-10 external-dose/BED combined analysis and the cross-code
-  frozen-case comparison.
+- pending: the cross-code frozen-case comparison.
 
 ## Cross-cutting distribution
 

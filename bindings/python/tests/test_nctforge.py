@@ -704,6 +704,108 @@ h: x n n y n y(all),hh0l n
 """
 
 
+class ExternalDoseTest(unittest.TestCase):
+    """OP-10: external-dose import, BED conversion, and combined evaluation."""
+
+    def _external_doc(self, shape: list[int] | None = None) -> dict:
+        geometry = json.loads(
+            (REPO_ROOT / "examples" / "interchange" / "phits-synthetic-dose.json")
+            .read_text()
+        )["geometry"]
+        if shape is not None:
+            geometry = dict(geometry, shape=shape)
+        voxels = 1
+        for dim in geometry["shape"]:
+            voxels *= dim
+        return {
+            "schema_version": "nctforge.external-dose/0.1.0",
+            "case_id": "nf-bnct-001-phits-synthetic",
+            "geometry": geometry,
+            "producer": {
+                "system": "photon-course-sim",
+                "version": "research-1",
+                "normalization": "absolute gray",
+            },
+            "quantity": "physical",
+            "values": [60.0] * voxels,
+            "absolute_standard_uncertainty": [0.6] * voxels,
+            "fractionation": {"kind": "uniform", "count": 30},
+        }
+
+    def _bnct_eqd2_bundle(self) -> nctforge.BiologicalDoseBundle:
+        physical = nctforge.import_component_dose(
+            REPO_ROOT / "examples" / "interchange" / "phits-synthetic-dose.json"
+        )
+        model = nctforge.load_biological_model(
+            REPO_ROOT
+            / "examples"
+            / "biological"
+            / "photon-isoeffective-lq-model-v1.json"
+        )
+        return nctforge.apply_model(
+            model,
+            physical,
+            [("core", REPO_ROOT / "examples" / "biological" / "core-region-mask.json")],
+        )
+
+    def test_import_external_dose(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = _write(tmp, "ext.json", json.dumps(self._external_doc()))
+            bundle = nctforge.import_external_dose(path)
+            self.assertEqual(bundle.case_id, "nf-bnct-001-phits-synthetic")
+            self.assertEqual(bundle.quantity, "physical")
+            self.assertEqual(bundle.fractions, 30)
+            self.assertIn("external-dose:photon-course-sim:sha256:", bundle.provenance_id)
+
+    def test_bed_and_combine(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = _write(tmp, "ext.json", json.dumps(self._external_doc()))
+            dose = nctforge.import_external_dose(path)
+            # 60 Gy in 30 fx at r=3: d=2, BED=30·2·(1+2/3)=100, EQD2=100/(5/3)=60.
+            eqd2 = nctforge.bed_from_external_dose(dose, alpha_beta=3.0)
+            self.assertEqual(eqd2.quantity, "eqd2")
+            self.assertAlmostEqual(eqd2.values[0], 60.0, places=9)
+            bed = nctforge.bed_from_external_dose(dose, alpha_beta=3.0, quantity="bed")
+            self.assertAlmostEqual(bed.values[0], 100.0, places=9)
+
+            combined = nctforge.combine_biological_doses(
+                self._bnct_eqd2_bundle(),
+                eqd2,
+                assumption="full-repair additive EQD2; independent courses",
+            )
+            self.assertEqual(combined.quantity, "eqd2")
+            self.assertEqual(len(combined.inputs), 2)
+            roles = {role for role, _, _, _ in combined.inputs}
+            self.assertEqual(roles, {"bnct_biological", "external_course"})
+            self.assertIn("full-repair", combined.additivity_assumption)
+            self.assertIsNone(combined.external_resampling)
+
+    def test_combine_rejects_incompatible_quantity(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = _write(tmp, "ext.json", json.dumps(self._external_doc()))
+            dose = nctforge.import_external_dose(path)
+            bed = nctforge.bed_from_external_dose(dose, alpha_beta=3.0, quantity="bed")
+            with self.assertRaises(NctForgeError):
+                nctforge.combine_biological_doses(
+                    self._bnct_eqd2_bundle(), bed, assumption="x"
+                )
+            # Empty assumption is never accepted.
+            eqd2 = nctforge.bed_from_external_dose(dose, alpha_beta=3.0)
+            with self.assertRaises(NctForgeError):
+                nctforge.combine_biological_doses(self._bnct_eqd2_bundle(), eqd2)
+
+    def test_combine_rejects_uncovered_grid_without_resample(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            doc = self._external_doc(shape=[80, 80, 80])
+            path = _write(tmp, "ext-big.json", json.dumps(doc))
+            dose = nctforge.import_external_dose(path)
+            eqd2 = nctforge.bed_from_external_dose(dose, alpha_beta=3.0)
+            with self.assertRaises(NctForgeError):
+                nctforge.combine_biological_doses(
+                    self._bnct_eqd2_bundle(), eqd2, assumption="x"
+                )
+
+
 class ExternalAdapterTest(unittest.TestCase):
     def test_mcnp_meshtal_import(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

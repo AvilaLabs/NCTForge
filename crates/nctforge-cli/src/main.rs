@@ -2,6 +2,7 @@
 
 #![forbid(unsafe_code)]
 
+use std::collections::BTreeMap;
 use std::error::Error;
 use std::fs;
 use std::io::{self, Write};
@@ -9,8 +10,11 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use clap::{Args, Parser, Subcommand};
-use nctforge_bio::{BiologicalModel, RegionMask, apply_biological_model};
-use nctforge_core::{ExposurePlan, PhysicalDoseBundle};
+use nctforge_bio::{
+    BedQuantity, BiologicalModel, RegionMask, apply_biological_model, bed_from_external,
+    combine_biological_doses,
+};
+use nctforge_core::{ExposurePlan, PhysicalDoseBundle, ResampleMethod};
 use nctforge_dicom::synthetic::generate_nf_bnct_001;
 use nctforge_dicom::{load_nf_bnct_001, verify_nf_bnct_001};
 use nctforge_nifti::read_nifti_file;
@@ -530,6 +534,16 @@ enum ImportCommand {
         #[arg(long)]
         output: PathBuf,
     },
+    /// Import a `nctforge.external-dose/0.1.0` document (single absolute-dose
+    /// field with declared fractionation, e.g. a photon/hadron course).
+    Dose {
+        /// External-dose document produced by an external pipeline.
+        #[arg(long)]
+        file: PathBuf,
+        /// New output path for the external dose bundle.
+        #[arg(long)]
+        output: PathBuf,
+    },
 }
 
 #[derive(Debug, Args)]
@@ -815,6 +829,47 @@ enum BioCommand {
         #[arg(long = "region-mask")]
         region_masks: Vec<String>,
         /// New output path for the biological dose bundle JSON.
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Convert an imported external dose bundle to a BED or EQD2 field.
+    Bed {
+        /// External dose bundle produced by `import dose`.
+        #[arg(long)]
+        dose: PathBuf,
+        /// α/β ratio in Gy applied to unmasked voxels.
+        #[arg(long)]
+        alpha_beta: f64,
+        /// Region α/β override as `name=Gy`; repeatable. Each named region
+        /// requires a matching `--region-mask name=path`.
+        #[arg(long = "region-alpha-beta")]
+        region_alpha_beta: Vec<String>,
+        /// Region mask as `name=path` pairs.
+        #[arg(long = "region-mask")]
+        region_masks: Vec<String>,
+        /// Output quantity: `bed` or `eqd2` (default `eqd2`).
+        #[arg(long, default_value = "eqd2")]
+        quantity: String,
+        /// New output path for the BED bundle JSON.
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Add an external EQD2 course to a photon-isoeffective BNCT EQD2 bundle.
+    Combine {
+        /// Biological dose bundle (photon-isoeffective, `weighted_eqd2`).
+        #[arg(long)]
+        primary: PathBuf,
+        /// External BED bundle (`eqd2` quantity) produced by `bio bed`.
+        #[arg(long)]
+        external: PathBuf,
+        /// Co-registration method when grids differ: `trilinear`.
+        #[arg(long)]
+        resample: Option<String>,
+        /// Operator-declared additivity assumption recorded in the output
+        /// (required; for example "full-repair additive EQD2").
+        #[arg(long)]
+        assumption: String,
+        /// New output path for the combined-dose JSON.
         #[arg(long)]
         output: PathBuf,
     },
@@ -4047,6 +4102,105 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                 println!("regions applied: {}", bundle.regions_applied.join(","));
                 println!("qualification: {}", bundle.qualification);
             }
+            BioCommand::Bed {
+                dose,
+                alpha_beta,
+                region_alpha_beta,
+                region_masks,
+                quantity,
+                output,
+            } => {
+                let dose_bundle: nctforge_core::ExternalDoseBundle =
+                    serde_json::from_slice(&fs::read(&dose)?)?;
+                let masks = load_named_masks(&region_masks)?;
+                let mut overrides = BTreeMap::new();
+                for pair in &region_alpha_beta {
+                    let (name, value) = pair.split_once('=').ok_or_else(|| {
+                        io::Error::other(format!(
+                            "region alpha/beta {pair:?} must be written as name=Gy"
+                        ))
+                    })?;
+                    overrides.insert(
+                        name.to_string(),
+                        value.parse::<f64>().map_err(|error| {
+                            io::Error::other(format!("region alpha/beta {pair:?}: {error}"))
+                        })?,
+                    );
+                }
+                let quantity = match quantity.as_str() {
+                    "bed" => BedQuantity::Bed,
+                    "eqd2" => BedQuantity::Eqd2,
+                    other => {
+                        return Err(io::Error::other(format!(
+                            "quantity {other:?} must be bed or eqd2"
+                        ))
+                        .into());
+                    }
+                };
+                let bundle =
+                    bed_from_external(&dose_bundle, alpha_beta, &overrides, &masks, quantity)?;
+                write_new_json(&output, &bundle)?;
+                println!(
+                    "{} field at {}",
+                    serde_json::to_string(&bundle.quantity)?,
+                    output.display()
+                );
+                println!("basis: {}", serde_json::to_string(&bundle.quantity_basis)?);
+                println!(
+                    "fractions: {}  alpha/beta: {} Gy",
+                    bundle.fractions, bundle.alpha_beta
+                );
+                println!("external provenance: {}", bundle.external_dose_provenance);
+            }
+            BioCommand::Combine {
+                primary,
+                external,
+                resample,
+                assumption,
+                output,
+            } => {
+                let primary_bytes = fs::read(&primary)?;
+                let primary_bundle: nctforge_bio::BiologicalDoseBundle =
+                    serde_json::from_slice(&primary_bytes)?;
+                let external_bytes = fs::read(&external)?;
+                let external_bundle: nctforge_bio::BedBundle =
+                    serde_json::from_slice(&external_bytes)?;
+                let resample = match resample.as_deref() {
+                    None => None,
+                    Some("trilinear") => Some(ResampleMethod::Trilinear),
+                    Some(other) => {
+                        return Err(io::Error::other(format!(
+                            "resample method {other:?} is not supported (available: trilinear)"
+                        ))
+                        .into());
+                    }
+                };
+                let combined = combine_biological_doses(
+                    &primary_bundle,
+                    &external_bundle,
+                    nctforge_core::ContentReference {
+                        id: primary.display().to_string(),
+                        sha256: nctforge_evidence::sha256_hex(&primary_bytes),
+                    },
+                    nctforge_core::ContentReference {
+                        id: external.display().to_string(),
+                        sha256: nctforge_evidence::sha256_hex(&external_bytes),
+                    },
+                    resample,
+                    &assumption,
+                )?;
+                write_new_json(&output, &combined)?;
+                println!("combined dose evaluation at {}", output.display());
+                println!("quantity: {}", combined.quantity);
+                for input in &combined.inputs {
+                    println!("{}: {}", input.role, input.provenance_id);
+                }
+                if let Some(method) = &combined.external_resampling {
+                    println!("external resampling: {}", serde_json::to_string(method)?);
+                }
+                println!("assumption: {}", combined.additivity_assumption);
+                println!("qualification: {}", combined.qualification);
+            }
         },
         Some(Command::Dvh {
             dose,
@@ -4306,6 +4460,22 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                     document.producer.version,
                     document.producer.normalization
                 );
+            }
+            ImportCommand::Dose { file, output } => {
+                let bytes = fs::read(&file)?;
+                let document: nctforge_core::ExternalDoseDocument = serde_json::from_slice(&bytes)?;
+                let sha256 = nctforge_evidence::sha256_hex(&bytes);
+                let bundle = nctforge_core::import_external_dose(&document, &sha256)
+                    .map_err(|error| io::Error::other(format!("external-dose import: {error}")))?;
+                write_new_json(&output, &bundle)?;
+                println!("external dose bundle at {}", output.display());
+                println!(
+                    "producer: {} {} ({})",
+                    document.producer.system,
+                    document.producer.version,
+                    document.producer.normalization
+                );
+                println!("fractions: {}", bundle.fraction_count());
             }
         },
         Some(Command::Export(args)) => match args.command {
@@ -4888,6 +5058,25 @@ fn write_new_json<T: serde::Serialize>(path: &Path, value: &T) -> io::Result<()>
     serde_json::to_writer_pretty(&mut file, value)?;
     file.write_all(b"\n")?;
     file.sync_all()
+}
+
+fn load_named_masks(pairs: &[String]) -> Result<Vec<RegionMask>, io::Error> {
+    pairs
+        .iter()
+        .map(|pair| {
+            let (name, path) = pair.split_once('=').ok_or_else(|| {
+                io::Error::other(format!("region mask {pair:?} must be written as name=path"))
+            })?;
+            let mask: RegionMask = read_region_mask(Path::new(path))?;
+            if mask.name != name {
+                return Err(io::Error::other(format!(
+                    "region mask {path} is named {:?}, expected {name:?}",
+                    mask.name
+                )));
+            }
+            Ok(mask)
+        })
+        .collect()
 }
 
 fn read_region_mask(path: &Path) -> Result<RegionMask, io::Error> {

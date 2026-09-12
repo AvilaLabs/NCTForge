@@ -27,7 +27,9 @@ gate; statepoint collection; DVH and dose-volume metrics; biological-model
 application and TCP/NTCP/UTCP endpoint evaluation; exposure-plan table
 import/export and weighted accumulation; and external component-dose import
 (`import_component_dose`, `import_mcnp_meshtal`, `import_phits`) plus MCNP
-deck export (`export_mcnp_deck`). Every load
+deck export (`export_mcnp_deck`); and external-dose/BED combined analysis
+(`import_external_dose`, `bed_from_external_dose`,
+`combine_biological_doses`). Every load
 runs the same Rust `validate()` as the CLI, every rejection raises
 `NctForgeError`, and adapter provenance binds the generated interchange
 document's SHA-256 exactly as the CLI does. Transport actions stay

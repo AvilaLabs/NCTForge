@@ -7,16 +7,16 @@
 //! contracts used by the CLI and GUI so Python users observe identical
 //! acceptance, rejection, serialization, and content-identity behavior.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt::Display;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use nctforge_bio::{
     AppliedFractionation, BiologicalDoseBundle, BiologicalModel, RegionMask,
     apply_biological_model,
 };
-use nctforge_core::PhysicalDoseBundle;
+use nctforge_core::{ContentReference, PhysicalDoseBundle, ResampleMethod};
 use nctforge_dicom::{
     BenchmarkReport, VerifiedBenchmarkCase, load_nf_bnct_001, synthetic::generate_nf_bnct_001,
     verify_nf_bnct_001,
@@ -42,6 +42,51 @@ create_exception!(
 
 fn reject(error: impl Display) -> PyErr {
     NctForgeError::new_err(error.to_string())
+}
+
+/// Write `contract` as pretty JSON, refusing to overwrite an existing file.
+fn write_json_new(output: &Path, contract: &impl serde::Serialize) -> PyResult<()> {
+    let bytes = serde_json::to_vec_pretty(contract).map_err(reject)?;
+    let mut file = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(output)
+        .map_err(reject)?;
+    use std::io::Write as _;
+    file.write_all(&bytes)
+        .and_then(|()| file.write_all(b"\n"))
+        .and_then(|()| file.sync_all())
+        .map_err(reject)
+}
+
+/// SHA-256 of a contract's canonical serialization — binds the exact
+/// artifact content consumed, matching `write`/`to_json` output.
+fn content_reference(id: &str, contract: &impl serde::Serialize) -> PyResult<ContentReference> {
+    let bytes = serde_json::to_vec(contract).map_err(reject)?;
+    use sha2::Digest;
+    Ok(ContentReference {
+        id: id.into(),
+        sha256: format!("{:x}", sha2::Sha256::digest(&bytes)),
+    })
+}
+
+/// Load `(name, path)` region-mask pairs with name agreement enforced.
+fn load_named_masks(pairs: Vec<(String, PathBuf)>) -> PyResult<Vec<RegionMask>> {
+    pairs
+        .into_iter()
+        .map(|(name, path)| {
+            let mask: RegionMask =
+                serde_json::from_slice(&fs::read(&path).map_err(reject)?).map_err(reject)?;
+            if mask.name != name {
+                return Err(reject(format!(
+                    "region mask {} is named {:?}, expected {name:?}",
+                    path.display(),
+                    mask.name
+                )));
+            }
+            Ok(mask)
+        })
+        .collect()
 }
 
 fn load_contract<T>(path: PathBuf) -> PyResult<T>
@@ -101,6 +146,23 @@ contract_check!(
     validate,
     nctforge_core::ExposurePlanError
 );
+
+/// Schema-token check for artifact types whose validation ran at import.
+impl ContractCheck for nctforge_core::ExternalDoseBundle {
+    fn check(&self) -> Result<(), String> {
+        (self.schema_version == nctforge_core::EXTERNAL_DOSE_SCHEMA)
+            .then_some(())
+            .ok_or_else(|| format!("unsupported schema_version {:?}", self.schema_version))
+    }
+}
+
+impl ContractCheck for nctforge_bio::BedBundle {
+    fn check(&self) -> Result<(), String> {
+        (self.schema_version == nctforge_bio::BED_BUNDLE_SCHEMA)
+            .then_some(())
+            .ok_or_else(|| format!("unsupported schema_version {:?}", self.schema_version))
+    }
+}
 
 /// Transport-backend descriptor with its current capability flags.
 ///
@@ -1254,6 +1316,332 @@ fn export_mcnp_deck(
     Ok(deck)
 }
 
+/// A validated external-dose bundle (`nctforge.external-dose/0.1.0`).
+#[pyclass(frozen, name = "ExternalDoseBundle")]
+struct PyExternalDoseBundle {
+    inner: nctforge_core::ExternalDoseBundle,
+}
+
+#[pymethods]
+impl PyExternalDoseBundle {
+    #[getter]
+    fn schema_version(&self) -> &str {
+        &self.inner.schema_version
+    }
+
+    #[getter]
+    fn case_id(&self) -> &str {
+        &self.inner.case_id
+    }
+
+    /// `physical` or `rbe_weighted` — the declared basis of the dose field.
+    #[getter]
+    fn quantity(&self) -> PyResult<String> {
+        serde_json::to_value(self.inner.quantity)
+            .and_then(serde_json::from_value::<String>)
+            .map_err(reject)
+    }
+
+    /// Declared fraction count of the external course.
+    #[getter]
+    fn fractions(&self) -> usize {
+        self.inner.fraction_count()
+    }
+
+    #[getter]
+    fn values(&self) -> Vec<f64> {
+        self.inner.values.clone()
+    }
+
+    #[getter]
+    fn absolute_standard_uncertainty(&self) -> Option<Vec<f64>> {
+        self.inner.absolute_standard_uncertainty.clone()
+    }
+
+    #[getter]
+    fn geometry(&self) -> PyGeometry {
+        PyGeometry {
+            inner: self.inner.geometry.clone(),
+        }
+    }
+
+    #[getter]
+    fn provenance_id(&self) -> &str {
+        &self.inner.provenance_id
+    }
+
+    fn to_json(&self) -> PyResult<String> {
+        serde_json::to_string_pretty(&self.inner).map_err(reject)
+    }
+
+    fn write(&self, output: PathBuf) -> PyResult<()> {
+        write_json_new(&output, &self.inner)
+    }
+}
+
+/// Import a `nctforge.external-dose/0.1.0` document into a provenance-bound
+/// bundle (same path as `nctforge import dose`).
+#[pyfunction]
+fn import_external_dose(file: PathBuf) -> PyResult<PyExternalDoseBundle> {
+    let bytes = fs::read(&file).map_err(reject)?;
+    let document: nctforge_core::ExternalDoseDocument =
+        serde_json::from_slice(&bytes).map_err(reject)?;
+    use sha2::Digest;
+    let sha256 = format!("{:x}", sha2::Sha256::digest(&bytes));
+    Ok(PyExternalDoseBundle {
+        inner: nctforge_core::import_external_dose(&document, &sha256).map_err(reject)?,
+    })
+}
+
+/// Load an already-imported external dose bundle (e.g. one written by
+/// `nctforge import dose`).
+#[pyfunction]
+fn load_external_dose_bundle(path: PathBuf) -> PyResult<PyExternalDoseBundle> {
+    Ok(PyExternalDoseBundle {
+        inner: load_contract(path)?,
+    })
+}
+
+/// A BED or EQD2 field derived from an external dose course.
+#[pyclass(frozen, name = "BedBundle")]
+struct PyBedBundle {
+    inner: nctforge_bio::BedBundle,
+}
+
+#[pymethods]
+impl PyBedBundle {
+    #[getter]
+    fn schema_version(&self) -> &str {
+        &self.inner.schema_version
+    }
+
+    #[getter]
+    fn case_id(&self) -> &str {
+        &self.inner.case_id
+    }
+
+    /// `bed` or `eqd2` — the biological quantity this field expresses.
+    #[getter]
+    fn quantity(&self) -> PyResult<String> {
+        serde_json::to_value(self.inner.quantity)
+            .and_then(serde_json::from_value::<String>)
+            .map_err(reject)
+    }
+
+    /// `physical` or `rbe_weighted` — basis of the source dose.
+    #[getter]
+    fn quantity_basis(&self) -> PyResult<String> {
+        serde_json::to_value(self.inner.quantity_basis)
+            .and_then(serde_json::from_value::<String>)
+            .map_err(reject)
+    }
+
+    #[getter]
+    fn alpha_beta(&self) -> f64 {
+        self.inner.alpha_beta
+    }
+
+    #[getter]
+    fn fractions(&self) -> usize {
+        self.inner.fractions
+    }
+
+    #[getter]
+    fn values(&self) -> Vec<f64> {
+        self.inner.values.clone()
+    }
+
+    #[getter]
+    fn absolute_standard_uncertainty(&self) -> Option<Vec<f64>> {
+        self.inner.absolute_standard_uncertainty.clone()
+    }
+
+    #[getter]
+    fn geometry(&self) -> PyGeometry {
+        PyGeometry {
+            inner: self.inner.geometry.clone(),
+        }
+    }
+
+    #[getter]
+    fn external_dose_provenance(&self) -> &str {
+        &self.inner.external_dose_provenance
+    }
+
+    fn to_json(&self) -> PyResult<String> {
+        serde_json::to_string_pretty(&self.inner).map_err(reject)
+    }
+
+    fn write(&self, output: PathBuf) -> PyResult<()> {
+        write_json_new(&output, &self.inner)
+    }
+}
+
+/// Load an external BED/EQD2 bundle (e.g. one written by `nctforge bio bed`).
+#[pyfunction]
+fn load_bed_bundle(path: PathBuf) -> PyResult<PyBedBundle> {
+    Ok(PyBedBundle {
+        inner: load_contract(path)?,
+    })
+}
+
+/// Convert an external dose course to a BED or EQD2 field (same path as
+/// `nctforge bio bed`). `region_alpha_beta` maps region names to α/β ratios;
+/// each region needs a matching `(name, mask_path)` entry in `region_masks`.
+/// `quantity` is `"bed"` or `"eqd2"` (default).
+#[pyfunction]
+#[pyo3(signature = (dose, alpha_beta, region_alpha_beta=None, region_masks=None, quantity="eqd2"))]
+fn bed_from_external_dose(
+    dose: &PyExternalDoseBundle,
+    alpha_beta: f64,
+    region_alpha_beta: Option<HashMap<String, f64>>,
+    region_masks: Option<Vec<(String, PathBuf)>>,
+    quantity: &str,
+) -> PyResult<PyBedBundle> {
+    let masks = load_named_masks(region_masks.unwrap_or_default())?;
+    let overrides: BTreeMap<String, f64> =
+        region_alpha_beta.unwrap_or_default().into_iter().collect();
+    let quantity = match quantity {
+        "bed" => nctforge_bio::BedQuantity::Bed,
+        "eqd2" => nctforge_bio::BedQuantity::Eqd2,
+        other => {
+            return Err(PyValueError::new_err(format!(
+                "quantity {other:?} must be bed or eqd2"
+            )));
+        }
+    };
+    Ok(PyBedBundle {
+        inner: nctforge_bio::bed_from_external(
+            &dose.inner,
+            alpha_beta,
+            &overrides,
+            &masks,
+            quantity,
+        )
+        .map_err(reject)?,
+    })
+}
+
+/// A combined BNCT + external-course biological evaluation (`eqd2`).
+#[pyclass(frozen, name = "CombinedDoseBundle")]
+struct PyCombinedDoseBundle {
+    inner: nctforge_bio::CombinedDoseBundle,
+}
+
+#[pymethods]
+impl PyCombinedDoseBundle {
+    #[getter]
+    fn schema_version(&self) -> &str {
+        &self.inner.schema_version
+    }
+
+    #[getter]
+    fn case_id(&self) -> &str {
+        &self.inner.case_id
+    }
+
+    /// Combined quantity label; currently `eqd2`.
+    #[getter]
+    fn quantity(&self) -> &str {
+        &self.inner.quantity
+    }
+
+    #[getter]
+    fn values(&self) -> Vec<f64> {
+        self.inner.values.clone()
+    }
+
+    #[getter]
+    fn absolute_standard_uncertainty(&self) -> Option<Vec<f64>> {
+        self.inner.absolute_standard_uncertainty.clone()
+    }
+
+    /// `(role, id, sha256, provenance_id)` for each consumed input.
+    #[getter]
+    fn inputs(&self) -> Vec<(String, String, String, String)> {
+        self.inner
+            .inputs
+            .iter()
+            .map(|input| {
+                (
+                    input.role.clone(),
+                    input.content.id.clone(),
+                    input.content.sha256.clone(),
+                    input.provenance_id.clone(),
+                )
+            })
+            .collect()
+    }
+
+    /// `trilinear` when the external field was resampled, else `None`.
+    #[getter]
+    fn external_resampling(&self) -> Option<String> {
+        self.inner.external_resampling.map(|_| "trilinear".into())
+    }
+
+    /// `physical` or `rbe_weighted` — basis of the external course.
+    #[getter]
+    fn external_quantity_basis(&self) -> PyResult<String> {
+        serde_json::to_value(self.inner.external_quantity_basis)
+            .and_then(serde_json::from_value::<String>)
+            .map_err(reject)
+    }
+
+    /// The operator-declared additivity assumption.
+    #[getter]
+    fn additivity_assumption(&self) -> &str {
+        &self.inner.additivity_assumption
+    }
+
+    #[getter]
+    fn qualification(&self) -> &str {
+        &self.inner.qualification
+    }
+
+    fn to_json(&self) -> PyResult<String> {
+        serde_json::to_string_pretty(&self.inner).map_err(reject)
+    }
+
+    fn write(&self, output: PathBuf) -> PyResult<()> {
+        write_json_new(&output, &self.inner)
+    }
+}
+
+/// Add an external EQD2 course to a photon-isoeffective BNCT EQD2 bundle
+/// (same path as `nctforge bio combine`). `resample` is `None` or
+/// `"trilinear"`; `assumption` is a required operator statement recorded in
+/// the output. Input content references bind the canonical serialization of
+/// the artifacts consumed.
+#[pyfunction]
+#[pyo3(signature = (primary, external, resample=None, assumption=""))]
+fn combine_biological_doses(
+    primary: &PyBiologicalDoseBundle,
+    external: &PyBedBundle,
+    resample: Option<&str>,
+    assumption: &str,
+) -> PyResult<PyCombinedDoseBundle> {
+    let resample = match resample {
+        None => None,
+        Some("trilinear") => Some(ResampleMethod::Trilinear),
+        Some(other) => {
+            return Err(PyValueError::new_err(format!(
+                "resample method {other:?} is not supported (available: trilinear)"
+            )));
+        }
+    };
+    Ok(PyCombinedDoseBundle {
+        inner: nctforge_bio::combine_biological_doses(
+            &primary.inner,
+            &external.inner,
+            content_reference("biological-dose-bundle", &primary.inner)?,
+            content_reference("bed-bundle", &external.inner)?,
+            resample,
+            assumption,
+        )
+        .map_err(reject)?,
+    })
+}
+
 /// A validated biological model contract.
 #[pyclass(frozen, name = "BiologicalModel")]
 struct PyBiologicalModel {
@@ -2170,6 +2558,9 @@ fn _nctforge(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyEndpointEvaluation>()?;
     m.add_class::<PyExposure>()?;
     m.add_class::<PyExposurePlan>()?;
+    m.add_class::<PyExternalDoseBundle>()?;
+    m.add_class::<PyBedBundle>()?;
+    m.add_class::<PyCombinedDoseBundle>()?;
     m.add_function(wrap_pyfunction!(backends, m)?)?;
     m.add_function(wrap_pyfunction!(file_sha256, m)?)?;
     m.add_function(wrap_pyfunction!(generate_case, m)?)?;
@@ -2204,5 +2595,10 @@ fn _nctforge(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(import_mcnp_meshtal, m)?)?;
     m.add_function(wrap_pyfunction!(import_phits, m)?)?;
     m.add_function(wrap_pyfunction!(export_mcnp_deck, m)?)?;
+    m.add_function(wrap_pyfunction!(import_external_dose, m)?)?;
+    m.add_function(wrap_pyfunction!(load_external_dose_bundle, m)?)?;
+    m.add_function(wrap_pyfunction!(bed_from_external_dose, m)?)?;
+    m.add_function(wrap_pyfunction!(load_bed_bundle, m)?)?;
+    m.add_function(wrap_pyfunction!(combine_biological_doses, m)?)?;
     Ok(())
 }

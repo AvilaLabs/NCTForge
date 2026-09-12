@@ -578,3 +578,107 @@ def export_mcnp_deck(
     ``"80c"``) is the operator's declared cross-section library suffix;
     omitting it emits bare ZAIDs resolved by xsdir defaults. Returns the deck
     text."""
+def import_external_dose(file: str | PathLike[str]) -> "ExternalDoseBundle":
+    """Import a ``nctforge.external-dose/0.1.0`` document into a
+    provenance-bound external dose bundle (same path as ``nctforge import
+    dose``)."""
+def load_external_dose_bundle(path: str | PathLike[str]) -> "ExternalDoseBundle":
+    """Load an already-imported external dose bundle."""
+def load_bed_bundle(path: str | PathLike[str]) -> "BedBundle":
+    """Load an external BED/EQD2 bundle written by ``nctforge bio bed``."""
+def bed_from_external_dose(
+    dose: "ExternalDoseBundle",
+    alpha_beta: float,
+    region_alpha_beta: dict[str, float] | None = None,
+    region_masks: list[tuple[str, str | PathLike[str]]] | None = None,
+    quantity: str = "eqd2",
+) -> "BedBundle":
+    """Convert an external dose course to a BED or EQD2 field (same path as
+    ``nctforge bio bed``)."""
+def combine_biological_doses(
+    primary: BiologicalDoseBundle,
+    external: "BedBundle",
+    resample: str | None = None,
+    assumption: str = "",
+) -> "CombinedDoseBundle":
+    """Add an external EQD2 course to a photon-isoeffective BNCT EQD2 bundle
+    (same path as ``nctforge bio combine``). ``assumption`` is a required
+    operator statement recorded in the output."""
+
+class ExternalDoseBundle:
+    """A validated external-dose bundle (``nctforge.external-dose/0.1.0``)."""
+
+    @property
+    def schema_version(self) -> str: ...
+    @property
+    def case_id(self) -> str: ...
+    @property
+    def quantity(self) -> str:
+        """``physical`` or ``rbe_weighted``."""
+    @property
+    def fractions(self) -> int: ...
+    @property
+    def values(self) -> list[float]: ...
+    @property
+    def absolute_standard_uncertainty(self) -> list[float] | None: ...
+    @property
+    def geometry(self) -> Geometry: ...
+    @property
+    def provenance_id(self) -> str: ...
+    def to_json(self) -> str: ...
+    def write(self, output: str | PathLike[str]) -> None: ...
+
+class BedBundle:
+    """A BED or EQD2 field derived from an external dose course."""
+
+    @property
+    def schema_version(self) -> str: ...
+    @property
+    def case_id(self) -> str: ...
+    @property
+    def quantity(self) -> str:
+        """``bed`` or ``eqd2``."""
+    @property
+    def quantity_basis(self) -> str:
+        """``physical`` or ``rbe_weighted`` basis of the source dose."""
+    @property
+    def alpha_beta(self) -> float: ...
+    @property
+    def fractions(self) -> int: ...
+    @property
+    def values(self) -> list[float]: ...
+    @property
+    def absolute_standard_uncertainty(self) -> list[float] | None: ...
+    @property
+    def geometry(self) -> Geometry: ...
+    @property
+    def external_dose_provenance(self) -> str: ...
+    def to_json(self) -> str: ...
+    def write(self, output: str | PathLike[str]) -> None: ...
+
+class CombinedDoseBundle:
+    """A combined BNCT + external-course biological evaluation (``eqd2``)."""
+
+    @property
+    def schema_version(self) -> str: ...
+    @property
+    def case_id(self) -> str: ...
+    @property
+    def quantity(self) -> str: ...
+    @property
+    def values(self) -> list[float]: ...
+    @property
+    def absolute_standard_uncertainty(self) -> list[float] | None: ...
+    @property
+    def inputs(self) -> list[tuple[str, str, str, str]]:
+        """``(role, id, sha256, provenance_id)`` for each consumed input."""
+    @property
+    def external_resampling(self) -> str | None: ...
+    @property
+    def external_quantity_basis(self) -> str: ...
+    @property
+    def additivity_assumption(self) -> str: ...
+    @property
+    def qualification(self) -> str: ...
+    def to_json(self) -> str: ...
+    def write(self, output: str | PathLike[str]) -> None: ...

@@ -647,6 +647,51 @@ re-ingests the meshtal. A source plane outside the grid is rejected rather
 than silently scoring zeros. Python parity is `export_mcnp_deck`. Deck
 execution against real MCNP remains an open acceptance gate.
 
+### External-dose and combined-treatment evaluation
+
+`nctforge import dose` ingests a `nctforge.external-dose/0.1.0` document —
+one absolute absorbed-dose field (gray) plus the fractionation the course
+was delivered in — the shape a photon or hadron course contributes to a
+combined-treatment research evaluation:
+
+```text
+nctforge import dose \
+  --file examples/interchange/photon-course-60gy.json \
+  --output external-course.json
+```
+
+Fractionation is declared, never guessed: `{"kind": "uniform", "count": N}`
+splits the total into equal per-fraction doses; `{"kind": "explicit",
+"doses": [...]}` carries per-fraction dose arrays that must sum to the
+declared total. The imported bundle's provenance binds the document hash
+(`external-dose:<system>:sha256:<hash>`).
+
+`nctforge bio bed` converts the course to a BED or EQD2 field under a
+declared α/β (`BED = Σ_f d_f·(1 + d_f/r)`, `EQD2 = BED/(1 + 2/r)`), with
+optional per-region α/β overrides driven by the same named-mask mechanism
+as `bio apply`. `nctforge bio combine` then adds an external `eqd2` field
+to a photon-isoeffective BNCT `weighted_eqd2` bundle — the only compatible
+combination; a `bed` field, a non-fractionated primary, a mismatched case,
+a differing grid without a declared `--resample trilinear`, or a missing
+additivity assumption all reject rather than silently adding incompatible
+quantities. The combined record (`nctforge.combined-dose/0.1.0`) binds both
+input content hashes and provenance chains, records any resampling applied
+and the operator's additivity assumption verbatim, and combines
+independent-course sigmas in quadrature:
+
+```text
+nctforge bio bed --dose external-course.json --alpha-beta 3.0 \
+  --output external-eqd2.json
+nctforge bio combine \
+  --primary biological-eqd2.json --external external-eqd2.json \
+  --assumption "full-repair additive EQD2; independent courses" \
+  --output combined-eqd2.json
+```
+
+Python parity is `import_external_dose`, `bed_from_external_dose`, and
+`combine_biological_doses`. This is a research evaluation aid only — the
+record states no clinical, equivalence, or commissioning claim.
+
 ### Exposure-plan tables and diagnostics
 
 The `nctforge plan` family bridges spreadsheet workflows and the JSON

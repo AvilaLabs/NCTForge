@@ -17,6 +17,7 @@
 
 #![forbid(unsafe_code)]
 
+mod bed;
 mod endpoint;
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -26,6 +27,10 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use thiserror::Error;
 
+pub use bed::{
+    BED_BUNDLE_SCHEMA, BedBundle, BedQuantity, COMBINED_DOSE_SCHEMA, CombinedDoseBundle,
+    CombinedDoseInput, bed_from_external, combine_biological_doses,
+};
 pub use endpoint::{
     AppliedDoseStatistic, DoseStatistic, ENDPOINT_EVALUATION_SCHEMA, ENDPOINT_MODEL_SCHEMA,
     EndpointEvaluation, EndpointFunction, EndpointKind, EndpointModel, EvaluatedEndpoint,

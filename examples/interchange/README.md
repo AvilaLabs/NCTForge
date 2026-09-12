@@ -41,3 +41,41 @@ exactly like an OpenMC-collected bundle.
 
 Research only: imported results carry the same qualification boundaries as
 any NCTForge dose — no clinical or commissioning claim is implied.
+
+## External-dose interchange (single-dose course)
+
+`photon-course-60gy.json` is a `nctforge.external-dose/0.1.0` document: one
+absolute absorbed-dose field plus the fractionation it was delivered in —
+the shape a photon or hadron course contributes to a combined-treatment
+research evaluation. This fixture is **synthetic** (60 Gy uniform over the
+NF-BNCT-001 grid, 30 fractions) and stands in for a real external course.
+
+```text
+nctforge import dose \
+  --file examples/interchange/photon-course-60gy.json \
+  --output external-course.json
+```
+
+The imported bundle converts to a biological quantity and combines with a
+photon-isoeffective BNCT result:
+
+```text
+# BED or EQD2 (default eqd2); region α/β overrides take matching masks.
+nctforge bio bed --dose external-course.json --alpha-beta 3.0 \
+  --output external-eqd2.json
+
+# Adds the external EQD2 field to a weighted_eqd2 biological bundle —
+# the only compatible combination; everything else is rejected.
+nctforge bio combine \
+  --primary biological-eqd2.json --external external-eqd2.json \
+  --assumption "full-repair additive EQD2; independent courses" \
+  --output combined-eqd2.json
+```
+
+When the external course sits on a different (axis-aligned) grid,
+`--resample trilinear` on `bio combine` co-registers it onto the primary
+grid by trilinear interpolation at voxel centers; a target outside the
+external extent rejects rather than silently scoring zero. The combined
+record is `nctforge.combined-dose/0.1.0` with both input content hashes,
+both provenance chains, the resampling declaration, and the declared
+additivity assumption — no clinical or equivalence claim.

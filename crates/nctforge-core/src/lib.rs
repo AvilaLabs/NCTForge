@@ -3,6 +3,7 @@
 #![forbid(unsafe_code)]
 
 mod exposure;
+mod external_dose;
 mod interchange;
 mod stats;
 
@@ -14,6 +15,11 @@ use thiserror::Error;
 pub use exposure::{
     BoundFileReference, EXPOSURE_PLAN_SCHEMA, Exposure, ExposureCovariance, ExposurePlan,
     ExposurePlanError, WeightBasis, accumulate_exposures,
+};
+pub use external_dose::{
+    EXTERNAL_DOSE_SCHEMA, ExternalDoseBundle, ExternalDoseDocument, ExternalDoseError,
+    ExternalDoseQuantity, ExternalFractionation, ResampleError, ResampleMethod,
+    import_external_dose, resample_trilinear,
 };
 pub use interchange::{
     COMPONENT_DOSE_INTERCHANGE_SCHEMA, ComponentDoseInterchange, ExternalProducer, ExternalTotal,
