@@ -393,6 +393,49 @@ class BiologicalLayerTest(unittest.TestCase):
             with self.assertRaises(NctForgeError):
                 nctforge.apply_model(model, bundle, [("core", mask)])
 
+    def test_make_biological_model_external_experiment(self) -> None:
+        """An externally-authored model dict validates and applies in-place."""
+        with tempfile.TemporaryDirectory() as tmp:
+            bundle = nctforge.load_physical_dose_bundle(
+                _write(tmp, "dose.json", _physical_bundle_json())
+            )
+            model = nctforge.make_biological_model(
+                {
+                    "schema_version": "nctforge.biological-model/0.2.0",
+                    "id": "experiment.custom-weights",
+                    "weight_semantics": "fixed_per_component",
+                    "input_unit": "gray_per_source_particle",
+                    "component_weights": {
+                        "boron": 5.0,
+                        "nitrogen": 1.0,
+                        "hydrogen": 1.0,
+                        "photon": 1.0,
+                    },
+                }
+            )
+            self.assertEqual(model.id, "experiment.custom-weights")
+            biological = nctforge.apply_model(model, bundle, [])
+            boron = next(
+                c for c in biological.components if c.component == "boron"
+            )
+            self.assertEqual(boron.values, [5.0e-12, 5.0e-12])
+            # A model failing the shared validate() rejects identically.
+            with self.assertRaises(NctForgeError):
+                nctforge.make_biological_model(
+                    {
+                        "schema_version": "nctforge.biological-model/0.2.0",
+                        "id": "experiment.bad",
+                        "weight_semantics": "photon_isoeffective",
+                        "input_unit": "gray_per_source_particle",
+                        "component_weights": {
+                            "boron": 5.0,
+                            "nitrogen": 1.0,
+                            "hydrogen": 1.0,
+                            "photon": 2.0,  # isoeffective requires exactly 1.0
+                        },
+                    }
+                )
+
     def test_photon_isoeffective_fractionated_total(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             bundle = nctforge.load_physical_dose_bundle(
@@ -804,6 +847,39 @@ class ExternalDoseTest(unittest.TestCase):
                 nctforge.combine_biological_doses(
                     self._bnct_eqd2_bundle(), eqd2, assumption="x"
                 )
+
+
+class DoseComparisonTest(unittest.TestCase):
+    def test_compare_identical_and_reject_mismatched_case(self) -> None:
+        bundle = nctforge.import_component_dose(
+            REPO_ROOT / "examples" / "interchange" / "phits-synthetic-dose.json"
+        )
+        cmp = nctforge.compare_dose_bundles(bundle, bundle)
+        self.assertEqual(cmp.schema_version, "nctforge.dose-comparison/0.1.0")
+        self.assertEqual(cmp.voxel_count, 64000)
+        self.assertEqual(len(cmp.quantities), 5)
+        for (_, _, max_abs, _, _, max_norm, within) in cmp.quantities:
+            self.assertEqual(max_abs, 0.0)
+            self.assertEqual(max_norm, 0.0)
+            # component_sum imports carry no total sigma — total reports None.
+        roles = {role for role, _, _, _ in cmp.inputs}
+        self.assertEqual(roles, {"reference", "candidate"})
+        # A different case_id can never be compared on this path.
+        with tempfile.TemporaryDirectory() as tmp:
+            doc = json.loads(
+                (
+                    REPO_ROOT
+                    / "examples"
+                    / "interchange"
+                    / "phits-synthetic-dose.json"
+                ).read_text()
+            )
+            doc["case_id"] = "other-case"
+            other = nctforge.import_component_dose(
+                _write(tmp, "other.json", json.dumps(doc))
+            )
+            with self.assertRaises(NctForgeError):
+                nctforge.compare_dose_bundles(bundle, other)
 
 
 class ExternalAdapterTest(unittest.TestCase):

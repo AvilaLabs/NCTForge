@@ -514,7 +514,18 @@ Implementation status:
   60 Gy/30-fx demonstration course;
 - pending: committed real-engine parser fixtures per producing system for
   OP-04;
-- pending: the cross-code frozen-case comparison.
+- complete (infrastructure slice): cross-code frozen-case comparison —
+  `nctforge compare` and Python `compare_dose_bundles` measure voxelwise
+  agreement between two physical dose bundles on the same case (equal
+  `case_id`, equivalent grid, same components/unit — all enforced) and emit
+  `nctforge.dose-comparison/0.1.0`: per-component and total max/mean/RMS
+  absolute difference, normalized difference anchored to the reference
+  maximum, and a combined-sigma coverage fraction when both sides state
+  uncertainties, with both content hashes and provenance chains bound into
+  the record;
+- pending: a real OpenMC-vs-independent-code comparison on a frozen case —
+  the comparison record exists; it still needs an actual MCNP/PHITS-produced
+  candidate bundle (the real-engine acceptance gate).
 
 ## Cross-cutting distribution
 

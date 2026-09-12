@@ -449,6 +449,10 @@ def load_physical_dose_bundle(path: str | PathLike[str]) -> PhysicalDoseBundle: 
 def collect_run(working_directory: str | PathLike[str]) -> PhysicalDoseBundle:
     """Collect a completed OpenMC run directory into a dose bundle."""
 def load_biological_model(path: str | PathLike[str]) -> BiologicalModel: ...
+def make_biological_model(document: dict | str) -> BiologicalModel:
+    """Validate a ``nctforge.biological-model/0.2.0`` document authored in
+    Python (dict or JSON string) into a model object — the
+    external-experiment path with validation identical to the file path."""
 def apply_model(
     model: BiologicalModel,
     physical: PhysicalDoseBundle,
@@ -682,3 +686,33 @@ class CombinedDoseBundle:
     def qualification(self) -> str: ...
     def to_json(self) -> str: ...
     def write(self, output: str | PathLike[str]) -> None: ...
+
+class DoseComparison:
+    """A cross-code dose-comparison record (``nctforge.dose-comparison/0.1.0``)."""
+
+    @property
+    def schema_version(self) -> str: ...
+    @property
+    def case_id(self) -> str: ...
+    @property
+    def sigma_level(self) -> float: ...
+    @property
+    def voxel_count(self) -> int: ...
+    @property
+    def inputs(self) -> list[tuple[str, str, str, str]]:
+        """``(role, id, sha256, provenance_id)`` for each compared input."""
+    @property
+    def quantities(self) -> list[tuple[str, str, float, float, float, float, float | None]]:
+        """``(quantity, unit, max_abs, mean_abs, rms, max_normalized,
+        within_sigma_fraction)`` per component plus ``physical_total``."""
+    @property
+    def qualification(self) -> str: ...
+    def to_json(self) -> str: ...
+    def write(self, output: str | PathLike[str]) -> None: ...
+def compare_dose_bundles(
+    reference: PhysicalDoseBundle,
+    candidate: PhysicalDoseBundle,
+    sigma_level: float = 2.0,
+) -> DoseComparison:
+    """Compare two physical dose bundles on the same frozen case (same path
+    as ``nctforge compare``)."""

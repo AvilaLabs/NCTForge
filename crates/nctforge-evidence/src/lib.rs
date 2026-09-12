@@ -13,6 +13,7 @@ use sha2::{Digest, Sha256};
 use thiserror::Error;
 
 mod bundle;
+mod compare;
 mod dvh;
 mod limits;
 mod metrics;
@@ -20,6 +21,10 @@ mod metrics;
 pub use bundle::{
     BundleInput, EVIDENCE_BUNDLE_MANIFEST_NAME, EVIDENCE_BUNDLE_MANIFEST_SCHEMA,
     EvidenceBundleManifest, export_evidence_bundle,
+};
+pub use compare::{
+    ComparisonInput, DOSE_COMPARISON_SCHEMA, DoseComparison, QuantityAgreement,
+    compare_dose_bundles,
 };
 pub use dvh::{DVH_SCHEMA, DoseVolumeHistogram};
 pub use limits::{

@@ -1642,6 +1642,109 @@ fn combine_biological_doses(
     })
 }
 
+/// A cross-code dose-comparison record (`nctforge.dose-comparison/0.1.0`).
+#[pyclass(frozen, name = "DoseComparison")]
+struct PyDoseComparison {
+    inner: nctforge_evidence::DoseComparison,
+}
+
+#[pymethods]
+impl PyDoseComparison {
+    #[getter]
+    fn schema_version(&self) -> &str {
+        &self.inner.schema_version
+    }
+
+    #[getter]
+    fn case_id(&self) -> &str {
+        &self.inner.case_id
+    }
+
+    #[getter]
+    fn sigma_level(&self) -> f64 {
+        self.inner.sigma_level
+    }
+
+    #[getter]
+    fn voxel_count(&self) -> u64 {
+        self.inner.voxel_count
+    }
+
+    /// `(role, id, sha256, provenance_id)` for each compared input.
+    #[getter]
+    fn inputs(&self) -> Vec<(String, String, String, String)> {
+        self.inner
+            .inputs
+            .iter()
+            .map(|input| {
+                (
+                    input.role.clone(),
+                    input.content.id.clone(),
+                    input.content.sha256.clone(),
+                    input.provenance_id.clone(),
+                )
+            })
+            .collect()
+    }
+
+    /// `(quantity, unit, max_abs, mean_abs, rms, max_normalized,
+    /// within_sigma_fraction)` per component plus `physical_total`.
+    #[getter]
+    fn quantities(&self) -> Vec<(String, String, f64, f64, f64, f64, Option<f64>)> {
+        self.inner
+            .quantities
+            .iter()
+            .map(|q| {
+                (
+                    q.quantity.clone(),
+                    q.unit.clone(),
+                    q.max_abs_difference,
+                    q.mean_abs_difference,
+                    q.rms_difference,
+                    q.max_normalized_difference,
+                    q.within_sigma_fraction,
+                )
+            })
+            .collect()
+    }
+
+    #[getter]
+    fn qualification(&self) -> &str {
+        &self.inner.qualification
+    }
+
+    fn to_json(&self) -> PyResult<String> {
+        serde_json::to_string_pretty(&self.inner).map_err(reject)
+    }
+
+    fn write(&self, output: PathBuf) -> PyResult<()> {
+        write_json_new(&output, &self.inner)
+    }
+}
+
+/// Compare two physical dose bundles on the same frozen case (same path as
+/// `nctforge compare`). Records voxelwise agreement per component and total
+/// under both inputs' content hashes — a research record, never an
+/// equivalence claim.
+#[pyfunction]
+#[pyo3(signature = (reference, candidate, sigma_level=2.0))]
+fn compare_dose_bundles(
+    reference: &PyPhysicalDoseBundle,
+    candidate: &PyPhysicalDoseBundle,
+    sigma_level: f64,
+) -> PyResult<PyDoseComparison> {
+    Ok(PyDoseComparison {
+        inner: nctforge_evidence::compare_dose_bundles(
+            &reference.inner,
+            &candidate.inner,
+            content_reference("reference", &reference.inner)?,
+            content_reference("candidate", &candidate.inner)?,
+            sigma_level,
+        )
+        .map_err(reject)?,
+    })
+}
+
 /// A validated biological model contract.
 #[pyclass(frozen, name = "BiologicalModel")]
 struct PyBiologicalModel {
@@ -1670,6 +1773,31 @@ impl PyBiologicalModel {
 #[pyfunction]
 fn load_biological_model(path: PathBuf) -> PyResult<PyBiologicalModel> {
     let bytes = fs::read(&path).map_err(reject)?;
+    let model: BiologicalModel = serde_json::from_slice(&bytes).map_err(reject)?;
+    model.validate().map_err(reject)?;
+    Ok(PyBiologicalModel {
+        inner: model,
+        bytes,
+    })
+}
+
+/// Validate a biological-model document authored in Python (a `dict` matching
+/// the `nctforge.biological-model/0.2.0` schema) into a usable model object —
+/// the external-experiment path: researchers supply their own weights and
+/// fractionation without writing a JSON file, and validation, content
+/// hashing, and `apply_model` behavior stay identical to the file path.
+#[pyfunction]
+fn make_biological_model(document: Bound<'_, PyAny>) -> PyResult<PyBiologicalModel> {
+    let json = if let Ok(text) = document.extract::<String>() {
+        text
+    } else {
+        let module = document.py().import("json").map_err(reject)?;
+        module
+            .call_method1("dumps", (&document,))
+            .and_then(|v| v.extract::<String>())
+            .map_err(reject)?
+    };
+    let bytes = json.into_bytes();
     let model: BiologicalModel = serde_json::from_slice(&bytes).map_err(reject)?;
     model.validate().map_err(reject)?;
     Ok(PyBiologicalModel {
@@ -2561,6 +2689,7 @@ fn _nctforge(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyExternalDoseBundle>()?;
     m.add_class::<PyBedBundle>()?;
     m.add_class::<PyCombinedDoseBundle>()?;
+    m.add_class::<PyDoseComparison>()?;
     m.add_function(wrap_pyfunction!(backends, m)?)?;
     m.add_function(wrap_pyfunction!(file_sha256, m)?)?;
     m.add_function(wrap_pyfunction!(generate_case, m)?)?;
@@ -2575,6 +2704,7 @@ fn _nctforge(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(load_physical_dose_bundle, m)?)?;
     m.add_function(wrap_pyfunction!(collect_run, m)?)?;
     m.add_function(wrap_pyfunction!(load_biological_model, m)?)?;
+    m.add_function(wrap_pyfunction!(make_biological_model, m)?)?;
     m.add_function(wrap_pyfunction!(apply_model, m)?)?;
     m.add_function(wrap_pyfunction!(compute_dvh, m)?)?;
     m.add_function(wrap_pyfunction!(compute_dvh_biological, m)?)?;
@@ -2600,5 +2730,6 @@ fn _nctforge(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(bed_from_external_dose, m)?)?;
     m.add_function(wrap_pyfunction!(load_bed_bundle, m)?)?;
     m.add_function(wrap_pyfunction!(combine_biological_doses, m)?)?;
+    m.add_function(wrap_pyfunction!(compare_dose_bundles, m)?)?;
     Ok(())
 }

@@ -132,6 +132,22 @@ enum Command {
     Import(ImportArgs),
     /// Export transport input to an external code (MCNP deck).
     Export(ExportArgs),
+    /// Compare two physical dose bundles on the same frozen case
+    /// (cross-code agreement record; no equivalence claim).
+    Compare {
+        /// Reference physical dose bundle JSON.
+        #[arg(long)]
+        reference: PathBuf,
+        /// Candidate physical dose bundle JSON.
+        #[arg(long)]
+        candidate: PathBuf,
+        /// Combined-uncertainty multiplier for the within-sigma fraction.
+        #[arg(long, default_value_t = 2.0)]
+        sigma_level: f64,
+        /// New output path for the dose-comparison JSON.
+        #[arg(long)]
+        output: PathBuf,
+    },
     /// Compute exact dose-volume metrics (D_x, V_x, min/mean/max, EUD)
     /// over a named voxel mask.
     Metrics {
@@ -4515,6 +4531,52 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                 println!("wrote MCNP deck at {}", output.display());
             }
         },
+        Some(Command::Compare {
+            reference,
+            candidate,
+            sigma_level,
+            output,
+        }) => {
+            let reference_bytes = fs::read(&reference)?;
+            let reference_bundle: PhysicalDoseBundle = serde_json::from_slice(&reference_bytes)?;
+            let candidate_bytes = fs::read(&candidate)?;
+            let candidate_bundle: PhysicalDoseBundle = serde_json::from_slice(&candidate_bytes)?;
+            let comparison = nctforge_evidence::compare_dose_bundles(
+                &reference_bundle,
+                &candidate_bundle,
+                nctforge_core::ContentReference {
+                    id: reference.display().to_string(),
+                    sha256: nctforge_evidence::sha256_hex(&reference_bytes),
+                },
+                nctforge_core::ContentReference {
+                    id: candidate.display().to_string(),
+                    sha256: nctforge_evidence::sha256_hex(&candidate_bytes),
+                },
+                sigma_level,
+            )
+            .map_err(|error| io::Error::other(format!("compare: {error}")))?;
+            write_new_json(&output, &comparison)?;
+            println!("dose comparison at {}", output.display());
+            println!(
+                "case {}: {} voxels, sigma level {}",
+                comparison.case_id, comparison.voxel_count, comparison.sigma_level
+            );
+            for quantity in &comparison.quantities {
+                let sigma_note = quantity
+                    .within_sigma_fraction
+                    .map(|f| format!("  within-{:.1}σ: {:.1}%", comparison.sigma_level, f * 100.0))
+                    .unwrap_or_default();
+                println!(
+                    "  {}: max |Δ| = {:.4e}  mean |Δ| = {:.4e}  max normalized = {:.4}{}",
+                    quantity.quantity,
+                    quantity.max_abs_difference,
+                    quantity.mean_abs_difference,
+                    quantity.max_normalized_difference,
+                    sigma_note
+                );
+            }
+            println!("qualification: {}", comparison.qualification);
+        }
         Some(Command::Plan(args)) => match args.command {
             PlanCommand::Import {
                 table,

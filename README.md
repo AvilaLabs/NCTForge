@@ -692,6 +692,30 @@ Python parity is `import_external_dose`, `bed_from_external_dose`, and
 `combine_biological_doses`. This is a research evaluation aid only — the
 record states no clinical, equivalence, or commissioning claim.
 
+### Cross-code dose comparison
+
+`nctforge compare` measures voxelwise agreement between two physical dose
+bundles on the same frozen case — for example an OpenMC-collected result
+against an MCNP- or PHITS-imported one — and writes a
+`nctforge.dose-comparison/0.1.0` record:
+
+```text
+nctforge compare \
+  --reference openmc-dose.json --candidate mcnp-dose.json \
+  --sigma-level 2 --output comparison.json
+```
+
+Both inputs must share `case_id`, an equivalent grid, the same component
+set, and the same unit; anything else rejects — a frozen case is the only
+valid comparison basis. Per component and `physical_total` the record
+reports max/mean/RMS absolute difference, a normalized difference anchored
+to the reference maximum (never a per-voxel ratio that explodes near zero),
+and — when both sides state uncertainties — the fraction of voxels within
+`sigma_level` combined sigmas. Both input content hashes and provenance
+chains are bound into the record. It reports measured agreement only: no
+equivalence, clinical, or commissioning verdict is implied. Python parity
+is `compare_dose_bundles`.
+
 ### Exposure-plan tables and diagnostics
 
 The `nctforge plan` family bridges spreadsheet workflows and the JSON
