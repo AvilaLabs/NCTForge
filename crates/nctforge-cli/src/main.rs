@@ -222,9 +222,9 @@ enum BenchmarkCommand {
         /// Directory containing ct/*.dcm and rtstruct.dcm.
         input: PathBuf,
     },
-    /// Derive a voxel-box material assignment from a verified case's RT
-    /// structure set. Every mapped ROI must rasterize to exactly an
-    /// axis-aligned box; non-box ROIs are rejected rather than approximated.
+    /// Derive a material assignment from a verified case's RT structure set.
+    /// ROIs that fill their bounding box become exact CSG box regions; other
+    /// masks become exact voxel-set regions realized as lattice elements.
     /// Emits the assignment plus a derived transport case whose base material
     /// is the supplied file.
     DeriveMaterials {
@@ -290,7 +290,7 @@ enum OpenMcCommand {
         /// profiles, forbidden otherwise).
         #[arg(long)]
         acceptance: Option<PathBuf>,
-        /// DICOM-derived voxel-box material assignment (structure-derived
+        /// DICOM-derived material assignment (structure-derived
         /// cases only).
         #[arg(long)]
         assignment: Option<PathBuf>,
@@ -326,7 +326,7 @@ enum OpenMcCommand {
         /// profiles, forbidden otherwise).
         #[arg(long)]
         acceptance: Option<PathBuf>,
-        /// DICOM-derived voxel-box material assignment (structure-derived
+        /// DICOM-derived material assignment (structure-derived
         /// cases only).
         #[arg(long)]
         assignment: Option<PathBuf>,
@@ -1371,42 +1371,41 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                         .roi(name)
                         .ok_or_else(|| io::Error::other(format!("no ROI named {name:?}")))?;
 
-                    // Axis-aligned box fit: the mask must fill its own
-                    // bounding box exactly, or the CSG cell would silently
-                    // misassign voxels.
+                    // Rasterize the mask to voxel indices; when it fills its
+                    // own bounding box exactly it becomes a CSG box region,
+                    // otherwise an exact voxel-set region realized as
+                    // per-voxel lattice elements.
                     let mut lower = [u32::MAX; 3];
                     let mut upper = [0_u32; 3];
-                    let mut count = 0_usize;
+                    let mut indices = Vec::new();
                     for (index, included) in mask.voxels.iter().copied().enumerate() {
                         if !included {
                             continue;
                         }
-                        count += 1;
                         let k = index / (nx * ny);
                         let j = (index % (nx * ny)) / nx;
                         let i = index % nx;
+                        indices.push([i as u32, j as u32, k as u32]);
                         for (axis, value) in [i, j, k].iter().enumerate() {
                             lower[axis] = lower[axis].min(*value as u32);
                             upper[axis] = upper[axis].max(*value as u32);
                         }
                     }
-                    if count == 0 {
+                    if indices.is_empty() {
                         return Err(io::Error::other(format!("ROI {name:?} is empty")).into());
                     }
                     let box_voxels: u64 = (0..3)
                         .map(|axis| u64::from(upper[axis] - lower[axis] + 1))
                         .product();
-                    if box_voxels != count as u64 {
-                        return Err(io::Error::other(format!(
-                            "ROI {name:?} is not an axis-aligned box ({count} voxels inside a {box_voxels}-voxel bounding box); general masks need voxel-level material support"
-                        ))
-                        .into());
-                    }
+                    let shape = if box_voxels == indices.len() as u64 {
+                        nctforge_transport::MaterialRegionShape::VoxelBox { lower, upper }
+                    } else {
+                        nctforge_transport::MaterialRegionShape::VoxelSet { indices }
+                    };
                     material_regions.push(MaterialRegion {
                         name: name.clone(),
                         material,
-                        voxel_lower: lower,
-                        voxel_upper: upper,
+                        shape,
                     });
                 }
 
@@ -1444,8 +1443,16 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                 );
                 for region in &assignment.regions {
                     println!(
-                        "region {}: voxels {:?}..{:?} -> {}",
-                        region.name, region.voxel_lower, region.voxel_upper, region.material.id
+                        "region {}: {} voxel(s) ({}) -> {}",
+                        region.name,
+                        region.voxel_count(),
+                        match &region.shape {
+                            nctforge_transport::MaterialRegionShape::VoxelBox { lower, upper } =>
+                                format!("box {lower:?}..{upper:?}"),
+                            nctforge_transport::MaterialRegionShape::VoxelSet { .. } =>
+                                "voxel set".to_owned(),
+                        },
+                        region.material.id
                     );
                 }
                 println!("assignment: {}", output_assignment.display());

@@ -13,8 +13,8 @@ mod response;
 pub use model::{
     AngularDistribution, EnergyDistribution, FixedSourceDefinition, IntervalConvention,
     MATERIAL_ASSIGNMENT_SCHEMA, MaterialAssignment, MaterialDefinition, MaterialRegion,
-    NeutronThermalTreatment, NuclideMassFraction, ParticleType, SourceSpatialDistribution,
-    TransportCase, TransportModelError,
+    MaterialRegionShape, NeutronThermalTreatment, NuclideMassFraction, ParticleType,
+    SourceSpatialDistribution, TransportCase, TransportModelError,
 };
 pub use nctforge_core::ContentReference;
 pub use response::{

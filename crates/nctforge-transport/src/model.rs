@@ -213,12 +213,13 @@ impl TransportCase {
     }
 }
 
-pub const MATERIAL_ASSIGNMENT_SCHEMA: &str = "nctforge.material-assignment/0.1.0";
+pub const MATERIAL_ASSIGNMENT_SCHEMA: &str = "nctforge.material-assignment/0.2.0";
 
-/// A transport-neutral DICOM-derived material assignment: named axis-aligned
-/// voxel-index regions that override the case's base material. Every region
-/// was verified at derivation time to equal its bounding box, so the CSG
-/// decomposition is exact — not an approximation of a general mask.
+/// A transport-neutral DICOM-derived material assignment: named voxel regions
+/// that override the case's base material. Regions are either exact
+/// axis-aligned voxel boxes (realized as CSG cells) or explicit voxel sets
+/// (realized as per-voxel lattice elements); arbitrary masks are represented
+/// exactly rather than approximated.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct MaterialAssignment {
@@ -235,30 +236,89 @@ pub struct MaterialAssignment {
     pub provenance_id: String,
 }
 
-/// One axis-aligned voxel box — inclusive lower/upper index bounds — carrying
-/// a material that overrides the base material inside the box.
+/// One named voxel region carrying a material that overrides the base
+/// material on the region's voxels.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct MaterialRegion {
     pub name: String,
     pub material: MaterialDefinition,
-    pub voxel_lower: [u32; 3],
-    pub voxel_upper: [u32; 3],
+    /// The voxels the material applies to, as `{"kind": "voxel_box" |
+    /// "voxel_set", ...}`.
+    pub shape: MaterialRegionShape,
+}
+
+/// How a material region's member voxels are declared.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum MaterialRegionShape {
+    /// Inclusive axis-aligned voxel-index bounds; exact CSG box.
+    VoxelBox { lower: [u32; 3], upper: [u32; 3] },
+    /// Explicit `[i, j, k]` voxel indices (grid convention
+    /// `i + nx*j + nx*ny*k`); realized as per-voxel lattice elements.
+    VoxelSet { indices: Vec<[u32; 3]> },
 }
 
 impl MaterialRegion {
-    /// World-space (mm) edges of the voxel box under an axis-aligned grid.
-    /// Voxel indices span half-open cells, so the upper edge adds one spacing.
+    /// Whether this region's voxels can be represented as a single CSG box.
     #[must_use]
-    pub fn world_bounds_mm(&self, geometry: &GridGeometry) -> ([f64; 3], [f64; 3]) {
-        let mut lower = [0.0; 3];
-        let mut upper = [0.0; 3];
+    pub fn is_axis_aligned_box(&self) -> bool {
+        matches!(self.shape, MaterialRegionShape::VoxelBox { .. })
+    }
+
+    /// Number of member voxels.
+    #[must_use]
+    pub fn voxel_count(&self) -> usize {
+        match &self.shape {
+            MaterialRegionShape::VoxelBox { lower, upper } => {
+                if (0..3).any(|axis| lower[axis] > upper[axis]) {
+                    0
+                } else {
+                    (0..3)
+                        .map(|axis| (upper[axis] - lower[axis] + 1) as usize)
+                        .product()
+                }
+            }
+            MaterialRegionShape::VoxelSet { indices } => indices.len(),
+        }
+    }
+
+    /// Visit every member voxel's `[i, j, k]` index.
+    pub fn for_each_voxel(&self, mut visit: impl FnMut([u32; 3])) {
+        match &self.shape {
+            MaterialRegionShape::VoxelBox { lower, upper } => {
+                for k in lower[2]..=upper[2] {
+                    for j in lower[1]..=upper[1] {
+                        for i in lower[0]..=upper[0] {
+                            visit([i, j, k]);
+                        }
+                    }
+                }
+            }
+            MaterialRegionShape::VoxelSet { indices } => {
+                for &index in indices {
+                    visit(index);
+                }
+            }
+        }
+    }
+
+    /// World-space (mm) edges of a `VoxelBox` region under an axis-aligned
+    /// grid. Voxel indices span half-open cells, so the upper edge adds one
+    /// spacing. `None` for voxel-set regions, which have no single CSG box.
+    #[must_use]
+    pub fn world_bounds_mm(&self, geometry: &GridGeometry) -> Option<([f64; 3], [f64; 3])> {
+        let MaterialRegionShape::VoxelBox { lower, upper } = &self.shape else {
+            return None;
+        };
+        let mut lower_mm = [0.0; 3];
+        let mut upper_mm = [0.0; 3];
         for axis in 0..3 {
             let edge0 = geometry.origin_mm[axis] - 0.5 * geometry.spacing_mm[axis];
-            lower[axis] = edge0 + f64::from(self.voxel_lower[axis]) * geometry.spacing_mm[axis];
-            upper[axis] = edge0 + f64::from(self.voxel_upper[axis] + 1) * geometry.spacing_mm[axis];
+            lower_mm[axis] = edge0 + f64::from(lower[axis]) * geometry.spacing_mm[axis];
+            upper_mm[axis] = edge0 + f64::from(upper[axis] + 1) * geometry.spacing_mm[axis];
         }
-        (lower, upper)
+        Some((lower_mm, upper_mm))
     }
 }
 
@@ -276,6 +336,12 @@ impl MaterialAssignment {
         if self.regions.is_empty() {
             return Err(TransportModelError::EmptyMaterialAssignment);
         }
+        // Region world bounds are emitted in grid-axis coordinates: the
+        // voxel-axis direction matrix must be the identity so that a voxel
+        // index maps to a world-axis-aligned box (or lattice element).
+        if geometry.direction != [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] {
+            return Err(TransportModelError::NonAxisAlignedMaterialAssignment);
+        }
         let mut names = BTreeSet::new();
         for region in &self.regions {
             validate_identifier("material_region.name", &region.name)?;
@@ -285,29 +351,64 @@ impl MaterialAssignment {
                 ));
             }
             region.material.validate()?;
-            for axis in 0..3 {
-                if region.voxel_lower[axis] > region.voxel_upper[axis]
-                    || region.voxel_upper[axis] >= geometry.shape[axis]
+            if region.voxel_count() == 0 {
+                return Err(TransportModelError::EmptyMaterialRegion(
+                    region.name.clone(),
+                ));
+            }
+            if let MaterialRegionShape::VoxelBox { lower, upper } = &region.shape {
+                for axis in 0..3 {
+                    if lower[axis] > upper[axis] || upper[axis] >= geometry.shape[axis] {
+                        return Err(TransportModelError::MaterialRegionOutsideGrid(
+                            region.name.clone(),
+                        ));
+                    }
+                }
+            }
+            // Voxel-set indices are bounds-checked before occupancy; an
+            // out-of-grid index would silently map to a wrong flat voxel.
+            if let MaterialRegionShape::VoxelSet { indices } = &region.shape {
+                if indices
+                    .iter()
+                    .any(|voxel| (0..3).any(|axis| voxel[axis] >= geometry.shape[axis]))
                 {
                     return Err(TransportModelError::MaterialRegionOutsideGrid(
                         region.name.clone(),
                     ));
                 }
+                let mut unique = BTreeSet::new();
+                if indices.iter().any(|voxel| !unique.insert(voxel)) {
+                    return Err(TransportModelError::DuplicateVoxelInRegion(
+                        region.name.clone(),
+                    ));
+                }
             }
         }
-        // Region boxes may not overlap: CSG precedence would silently pick one.
+        // No voxel may carry two materials: occupancy is checked per voxel so
+        // boxes and voxel sets share one exact overlap rule.
+        let voxel_total = geometry
+            .shape
+            .iter()
+            .map(|dim| *dim as usize)
+            .product::<usize>();
+        let nx = geometry.shape[0] as usize;
+        let ny = geometry.shape[1] as usize;
+        let mut occupancy = vec![usize::MAX; voxel_total];
         for (index, region) in self.regions.iter().enumerate() {
-            for other in &self.regions[index + 1..] {
-                let disjoint = (0..3).any(|axis| {
-                    region.voxel_upper[axis] < other.voxel_lower[axis]
-                        || other.voxel_upper[axis] < region.voxel_lower[axis]
-                });
-                if !disjoint {
-                    return Err(TransportModelError::OverlappingMaterialRegions {
-                        first: region.name.clone(),
-                        second: other.name.clone(),
-                    });
+            let mut overlap = None;
+            region.for_each_voxel(|voxel| {
+                let flat = voxel[0] as usize + nx * voxel[1] as usize + nx * ny * voxel[2] as usize;
+                if occupancy[flat] == usize::MAX {
+                    occupancy[flat] = index;
+                } else {
+                    overlap = Some(occupancy[flat]);
                 }
+            });
+            if let Some(first) = overlap {
+                return Err(TransportModelError::OverlappingMaterialRegions {
+                    first: self.regions[first].name.clone(),
+                    second: region.name.clone(),
+                });
             }
         }
         Ok(())
@@ -398,6 +499,15 @@ pub enum TransportModelError {
     MaterialRegionOutsideGrid(String),
     #[error("material regions {first:?} and {second:?} overlap")]
     OverlappingMaterialRegions { first: String, second: String },
+    #[error("material region {0} contains no voxels")]
+    EmptyMaterialRegion(String),
+    #[error("material region {0} lists the same voxel more than once")]
+    DuplicateVoxelInRegion(String),
+    #[error(
+        "material assignment requires an axis-aligned grid (identity direction); \
+         rotated or permuted voxel axes are not representable by box surfaces or rectilinear lattices"
+    )]
+    NonAxisAlignedMaterialAssignment,
 }
 
 #[cfg(test)]
@@ -472,8 +582,10 @@ mod tests {
             regions: vec![MaterialRegion {
                 name: "core".into(),
                 material: material(),
-                voxel_lower: [1, 1, 1],
-                voxel_upper: [2, 2, 2],
+                shape: MaterialRegionShape::VoxelBox {
+                    lower: [1, 1, 1],
+                    upper: [2, 2, 2],
+                },
             }],
             provenance_id: "case:sha256:test".into(),
         }
@@ -486,7 +598,7 @@ mod tests {
         assignment.validate(&geometry).unwrap();
         // Voxel center -10 mm, spacing 5 mm -> edge0 = -12.5 mm.
         // Voxel [1,1,1]..[2,2,2] maps to [-7.5, 2.5) mm on every axis.
-        let (lower, upper) = assignment.regions[0].world_bounds_mm(&geometry);
+        let (lower, upper) = assignment.regions[0].world_bounds_mm(&geometry).unwrap();
         assert_eq!(lower, [-7.5, -7.5, -7.5]);
         assert_eq!(upper, [2.5, 2.5, 2.5]);
     }
@@ -510,7 +622,10 @@ mod tests {
         );
 
         let mut outside = assignment();
-        outside.regions[0].voxel_upper = [3, 3, 4];
+        outside.regions[0].shape = MaterialRegionShape::VoxelBox {
+            lower: [1, 1, 1],
+            upper: [3, 3, 4],
+        };
         assert_eq!(
             outside.validate(&geometry),
             Err(TransportModelError::MaterialRegionOutsideGrid(
@@ -519,13 +634,14 @@ mod tests {
         );
 
         let mut inverted = assignment();
-        inverted.regions[0].voxel_lower = [2, 2, 2];
-        inverted.regions[0].voxel_upper = [1, 1, 1];
+        inverted.regions[0].shape = MaterialRegionShape::VoxelBox {
+            lower: [2, 2, 2],
+            upper: [1, 1, 1],
+        };
+        // An inverted box contains no voxels — the empty-region gate fires.
         assert_eq!(
             inverted.validate(&geometry),
-            Err(TransportModelError::MaterialRegionOutsideGrid(
-                "core".into()
-            ))
+            Err(TransportModelError::EmptyMaterialRegion("core".into()))
         );
 
         let mut duplicate = assignment();
@@ -545,8 +661,10 @@ mod tests {
         overlapping.regions.push(MaterialRegion {
             name: "second".into(),
             material: material(),
-            voxel_lower: [2, 2, 2],
-            voxel_upper: [3, 3, 3],
+            shape: MaterialRegionShape::VoxelBox {
+                lower: [2, 2, 2],
+                upper: [3, 3, 3],
+            },
         });
         assert!(matches!(
             overlapping.validate(&geometry),
@@ -555,14 +673,88 @@ mod tests {
 
         // Touching boxes do not overlap — halves are half-open.
         let mut adjacent = assignment();
-        adjacent.regions[0].voxel_upper = [1, 1, 1];
+        adjacent.regions[0].shape = MaterialRegionShape::VoxelBox {
+            lower: [1, 1, 1],
+            upper: [1, 1, 1],
+        };
         adjacent.regions.push(MaterialRegion {
             name: "second".into(),
             material: material(),
-            voxel_lower: [2, 2, 2],
-            voxel_upper: [3, 3, 3],
+            shape: MaterialRegionShape::VoxelBox {
+                lower: [2, 2, 2],
+                upper: [3, 3, 3],
+            },
         });
         adjacent.validate(&geometry).unwrap();
+    }
+
+    #[test]
+    fn voxel_set_regions_validate_per_voxel() {
+        let geo = geometry();
+
+        // A non-box L-shape: three voxels that do not fill a bounding box.
+        let mut set_assignment = assignment();
+        set_assignment.regions[0].shape = MaterialRegionShape::VoxelSet {
+            indices: vec![[0, 0, 0], [1, 0, 0], [0, 1, 0]],
+        };
+        set_assignment.validate(&geo).unwrap();
+        assert_eq!(set_assignment.regions[0].voxel_count(), 3);
+        assert!(!set_assignment.regions[0].is_axis_aligned_box());
+        assert_eq!(set_assignment.regions[0].world_bounds_mm(&geo), None);
+
+        // Box and set share the per-voxel overlap rule.
+        let mut mixed = assignment();
+        mixed.regions[0].name = "box".into();
+        mixed.regions.push(MaterialRegion {
+            name: "set".into(),
+            material: material(),
+            shape: MaterialRegionShape::VoxelSet {
+                indices: vec![[0, 0, 0], [2, 2, 2]],
+            },
+        });
+        assert_eq!(
+            mixed.validate(&geo),
+            Err(TransportModelError::OverlappingMaterialRegions {
+                first: "box".into(),
+                second: "set".into(),
+            })
+        );
+
+        // Out-of-grid, duplicate, and empty voxel sets are rejected.
+        let mut outside = assignment();
+        outside.regions[0].shape = MaterialRegionShape::VoxelSet {
+            indices: vec![[0, 0, 0], [4, 0, 0]],
+        };
+        assert_eq!(
+            outside.validate(&geo),
+            Err(TransportModelError::MaterialRegionOutsideGrid(
+                "core".into()
+            ))
+        );
+
+        let mut duplicated = assignment();
+        duplicated.regions[0].shape = MaterialRegionShape::VoxelSet {
+            indices: vec![[0, 0, 0], [0, 0, 0]],
+        };
+        assert_eq!(
+            duplicated.validate(&geo),
+            Err(TransportModelError::DuplicateVoxelInRegion("core".into()))
+        );
+
+        let mut empty_set = assignment();
+        empty_set.regions[0].shape = MaterialRegionShape::VoxelSet { indices: vec![] };
+        assert_eq!(
+            empty_set.validate(&geo),
+            Err(TransportModelError::EmptyMaterialRegion("core".into()))
+        );
+
+        // Rotated grids cannot express voxel-index regions in world space.
+        let mut rotated = geometry();
+        rotated.direction = [0.0, 1.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 1.0];
+        assert_eq!(
+            assignment().validate(&rotated),
+            Err(TransportModelError::NonAxisAlignedMaterialAssignment)
+        );
     }
 
     #[test]

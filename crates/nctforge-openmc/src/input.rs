@@ -639,14 +639,15 @@ impl OpenMcInputDeck {
             return Err(OpenMcInputError::CaseSourceMismatch);
         }
 
-        // DICOM-derived material regions override the base material inside
-        // verified voxel boxes. Folded-response tallies encode the base
-        // material's atom densities, so a region may only change the mass
-        // fraction of a nuclide that a fluence-fold estimator explicitly
-        // covers — collection rescales those components by the region/base
-        // density ratio. Every other nuclide fraction must match the base
-        // material exactly, and densities must match because per-voxel
-        // collection mass assumes a single density.
+        // DICOM-derived material regions override the base material on their
+        // voxels. Folded-response tallies encode the base material's atom
+        // densities, so a region may only change the mass fraction of a
+        // nuclide that a fluence-fold estimator explicitly covers —
+        // collection rescales those components by the region/base
+        // atom-density ratio (density × mass fraction). Every other nuclide
+        // fraction must match the base material exactly; per-voxel mass then
+        // differs only through the region density, which collection uses for
+        // heating normalization and residual-component scaling.
         let covered_nuclides: Vec<&str> = component_profile
             .components
             .iter()
@@ -676,12 +677,11 @@ impl OpenMcInputDeck {
                     ));
                 }
                 for region in &assignment.regions {
-                    if (region.material.density_g_cm3 - material.density_g_cm3).abs() > f64::EPSILON
-                    {
-                        return Err(OpenMcInputError::AssignmentDensityMismatch(
-                            region.name.clone(),
-                        ));
-                    }
+                    // Region densities may differ: collection normalizes
+                    // heating by per-voxel mass and rescales folded-response
+                    // components by atom-density ratios. Temperature must
+                    // still match — the cross sections are bound to the base
+                    // material's temperature.
                     if region.material.temperature_k != material.temperature_k {
                         return Err(OpenMcInputError::InvalidAssignment(format!(
                             "region {} temperature differs from the base material",
@@ -1180,16 +1180,35 @@ fn region_material_ids(assignment: Option<&MaterialAssignment>) -> Vec<u32> {
     ids
 }
 
+/// Lattice mode assigns materials per voxel element; element universes and
+/// their cells use IDs `LATTICE_UNIVERSE_BASE + material_index` and the
+/// lattice itself carries `LATTICE_ID`, all outside the CSG ID ranges.
+const LATTICE_ID: u32 = 100;
+const LATTICE_UNIVERSE_BASE: u32 = 1000;
+
 fn geometry_xml(
     case: &TransportCase,
     mesh: &OpenMcScoringMesh,
     assignment: Option<&MaterialAssignment>,
 ) -> Result<Vec<u8>, OpenMcInputError> {
     xml_document("geometry", |writer| {
-        // Base cell: outer box with every region box subtracted.
+        // Lattice mode: any voxel-set region forces the whole grid into a
+        // rectilinear lattice so every voxel carries its assigned material
+        // exactly; box-only assignments use exact CSG cells instead.
+        let lattice_mode = assignment.is_some_and(|assignment| {
+            assignment
+                .regions
+                .iter()
+                .any(|region| !region.is_axis_aligned_box())
+        });
+
+        // Base cell: outer box with every region box subtracted (CSG mode),
+        // or the plain outer box filled with the material lattice.
         let mut base_region = "1 -2 3 -4 5 -6".to_owned();
         let mut cells = Vec::new();
-        if let Some(assignment) = assignment {
+        if let Some(assignment) = assignment
+            && !lattice_mode
+        {
             let material_ids = region_material_ids(Some(assignment));
             for (index, region) in assignment.regions.iter().enumerate() {
                 let first_surface = REGION_SURFACE_BASE + 6 * index as u32;
@@ -1210,7 +1229,11 @@ fn geometry_xml(
         let mut cell = BytesStart::new("cell");
         cell.push_attribute(("id", "1"));
         cell.push_attribute(("name", case.case_id.as_str()));
-        cell.push_attribute(("material", "1"));
+        if lattice_mode {
+            cell.push_attribute(("fill", LATTICE_ID.to_string().as_str()));
+        } else {
+            cell.push_attribute(("material", "1"));
+        }
         cell.push_attribute(("region", base_region.as_str()));
         cell.push_attribute(("universe", "1"));
         writer.write_event(Event::Empty(cell))?;
@@ -1223,6 +1246,91 @@ fn geometry_xml(
             element.push_attribute(("universe", "1"));
             writer.write_event(Event::Empty(element))?;
         }
+        if lattice_mode && let Some(assignment) = assignment {
+            // One universe per distinct material: base material (id 1) fills
+            // universe LATTICE_UNIVERSE_BASE, region material id m fills
+            // BASE + m - 1. Each element cell fills its lattice element
+            // entirely (no region attribute).
+            let material_ids = region_material_ids(Some(assignment));
+            let voxel_universe = |region_index: Option<usize>| -> u32 {
+                match region_index {
+                    None => LATTICE_UNIVERSE_BASE,
+                    Some(index) => LATTICE_UNIVERSE_BASE + material_ids[index] - 1,
+                }
+            };
+            let [nx, ny, nz] = case.geometry.shape.map(|d| d as usize);
+            let mut owner = vec![None::<usize>; nx * ny * nz];
+            for (index, region) in assignment.regions.iter().enumerate() {
+                region.for_each_voxel(|voxel| {
+                    owner[voxel[0] as usize
+                        + nx * voxel[1] as usize
+                        + nx * ny * voxel[2] as usize] = Some(index);
+                });
+            }
+            for (offset, material_id) in (1..=region_material_count(Some(assignment))).enumerate() {
+                let universe = (LATTICE_UNIVERSE_BASE + offset as u32).to_string();
+                let mut element = BytesStart::new("cell");
+                element.push_attribute(("id", universe.as_str()));
+                element.push_attribute(("material", material_id.to_string().as_str()));
+                element.push_attribute(("universe", universe.as_str()));
+                writer.write_event(Event::Empty(element))?;
+            }
+            // OpenMC's XML universes list runs x-fastest with the y index
+            // reversed (src/lattice.cpp): word i + nx*iy + nx*ny*iz fills
+            // element (i, ny-1-iy, iz).
+            let mut words = String::new();
+            for k in 0..nz {
+                for j in (0..ny).rev() {
+                    for i in 0..nx {
+                        words
+                            .push_str(&voxel_universe(owner[i + nx * j + nx * ny * k]).to_string());
+                        words.push(' ');
+                    }
+                    words.push('\n');
+                }
+            }
+            let mut lattice = BytesStart::new("lattice");
+            lattice.push_attribute(("id", LATTICE_ID.to_string().as_str()));
+            lattice.push_attribute(("name", "material_map"));
+            writer.write_event(Event::Start(lattice))?;
+            for (tag, values) in [
+                (
+                    "dimension",
+                    format!(
+                        "{} {} {}",
+                        case.geometry.shape[0], case.geometry.shape[1], case.geometry.shape[2]
+                    ),
+                ),
+                (
+                    "lower_left",
+                    (0..3)
+                        .map(|axis| {
+                            format_float(
+                                (case.geometry.origin_mm[axis]
+                                    - 0.5 * case.geometry.spacing_mm[axis])
+                                    / 10.0,
+                            )
+                        })
+                        .collect::<Vec<_>>()
+                        .join(" "),
+                ),
+                (
+                    "pitch",
+                    case.geometry
+                        .spacing_mm
+                        .iter()
+                        .map(|spacing| format_float(spacing / 10.0))
+                        .collect::<Vec<_>>()
+                        .join(" "),
+                ),
+                ("universes", words.trim_end().to_owned()),
+            ] {
+                writer.write_event(Event::Start(BytesStart::new(tag)))?;
+                writer.write_event(Event::Text(BytesText::new(&values)))?;
+                writer.write_event(Event::End(BytesEnd::new(tag)))?;
+            }
+            writer.write_event(Event::End(BytesEnd::new("lattice")))?;
+        }
 
         let mut surfaces = vec![
             (1_u32, "x-plane", mesh.lower_left_cm[0], true),
@@ -1232,9 +1340,13 @@ fn geometry_xml(
             (5, "z-plane", mesh.lower_left_cm[2], true),
             (6, "z-plane", mesh.upper_right_cm[2], true),
         ];
-        if let Some(assignment) = assignment {
+        if let Some(assignment) = assignment
+            && !lattice_mode
+        {
             for (index, region) in assignment.regions.iter().enumerate() {
-                let (lower_mm, upper_mm) = region.world_bounds_mm(&case.geometry);
+                let Some((lower_mm, upper_mm)) = region.world_bounds_mm(&case.geometry) else {
+                    continue;
+                };
                 let first = REGION_SURFACE_BASE + 6 * index as u32;
                 surfaces.extend([
                     (first, "x-plane", lower_mm[0] / 10.0, false),
@@ -1262,6 +1374,16 @@ fn geometry_xml(
         }
         Ok(())
     })
+}
+
+/// Number of distinct material elements in a deck: the base material plus
+/// each distinct region material.
+fn region_material_count(assignment: Option<&MaterialAssignment>) -> u32 {
+    1 + region_material_ids(assignment)
+        .iter()
+        .max()
+        .map(|max| max - 1)
+        .unwrap_or(0)
 }
 
 fn materials_xml(
@@ -2170,10 +2292,6 @@ pub enum OpenMcInputError {
     InvalidAcceptance(String),
     #[error("material assignment is invalid: {0}")]
     InvalidAssignment(String),
-    #[error(
-        "material region {0:?} density differs from the base material; per-region voxel mass is not yet supported"
-    )]
-    AssignmentDensityMismatch(String),
     #[error("candidate-reference decks require a bound acceptance contract")]
     CandidateReferenceRequiresAcceptance,
     #[error("acceptance contracts may only bind candidate-reference decks")]
@@ -2625,14 +2743,13 @@ pub(crate) mod tests {
             }
         }
         serde_json::to_vec_pretty(&serde_json::json!({
-            "schema_version": "nctforge.material-assignment/0.1.0",
+            "schema_version": "nctforge.material-assignment/0.2.0",
             "case_id": "nf-bnct-001",
             "base_material": base,
             "regions": [{
                 "name": "core",
                 "material": region_material,
-                "voxel_lower": [16, 16, 16],
-                "voxel_upper": [23, 23, 23],
+                "shape": {"kind": "voxel_box", "lower": [16, 16, 16], "upper": [23, 23, 23]},
             }],
             "provenance_id": "case:sha256:test",
         }))
@@ -2681,6 +2798,61 @@ pub(crate) mod tests {
         assert!(geometry.contains("<surface id=\"106\" type=\"z-plane\""));
         // Region planes are interior interfaces — no vacuum boundary.
         assert!(!geometry.contains("<surface id=\"101\" type=\"x-plane\" boundary"));
+    }
+
+    #[test]
+    fn voxel_set_assignment_emits_material_lattice() {
+        // A non-box region (an L of three voxels) forces lattice mode: one
+        // fill cell over the outer box, one universe per distinct material,
+        // and a rectilinear lattice whose XML universes list carries the
+        // region's universe only at the member voxels.
+        let mut assignment: serde_json::Value = serde_json::from_slice(&assignment_json()).unwrap();
+        assignment["regions"][0]["shape"] = serde_json::json!({
+            "kind": "voxel_set",
+            "indices": [[5, 3, 2], [6, 3, 2], [5, 4, 2]],
+        });
+        let deck = generate_assigned(&serde_json::to_vec_pretty(&assignment).unwrap()).unwrap();
+        let geometry = std::str::from_utf8(&deck.file("geometry.xml").unwrap().bytes).unwrap();
+        assert!(geometry.contains("fill=\"100\""));
+        assert!(geometry.contains("<lattice id=\"100\" name=\"material_map\">"));
+        assert!(geometry.contains("<dimension>40 40 40</dimension>"));
+        assert!(geometry.contains("<pitch>0.5 0.5 0.5</pitch>"));
+        assert!(geometry.contains("<lower_left>-10 -10 -10</lower_left>"));
+        // Element universes: 1000 = base material (id 1), 1001 = region
+        // material (id 2). No CSG region cells or interior surfaces.
+        assert!(geometry.contains("<cell id=\"1000\" material=\"1\" universe=\"1000\"/>"));
+        assert!(geometry.contains("<cell id=\"1001\" material=\"2\" universe=\"1001\"/>"));
+        assert!(!geometry.contains("~("));
+        assert!(!geometry.contains("id=\"101\""));
+
+        // Universe ordering: the XML word at flat index i + nx*iy + nx*ny*iz
+        // fills lattice element (i, ny-1-iy, iz) — OpenMC's reversed-y
+        // convention. The member voxels (5,3,2), (6,3,2), (5,4,2) therefore
+        // sit at word indices 5 + 40*36 + 1600*2, 6 + 40*36 + 1600*2, and
+        // 5 + 40*35 + 1600*2.
+        let universes: Vec<u32> = geometry
+            .split("<universes>")
+            .nth(1)
+            .unwrap()
+            .split("</universes>")
+            .next()
+            .unwrap()
+            .split_whitespace()
+            .map(|word| word.parse().unwrap())
+            .collect();
+        assert_eq!(universes.len(), 40 * 40 * 40);
+        for (flat, expected) in [
+            (5 + 40 * 36 + 1600 * 2, 1001),
+            (6 + 40 * 36 + 1600 * 2, 1001),
+            (5 + 40 * 35 + 1600 * 2, 1001),
+        ] {
+            assert_eq!(universes[flat], expected, "word {flat}");
+        }
+        assert_eq!(universes.iter().filter(|&&u| u == 1001).count(), 3);
+        assert_eq!(
+            universes.iter().filter(|&&u| u == 1000).count(),
+            40 * 40 * 40 - 3
+        );
     }
 
     #[test]
@@ -2755,13 +2927,18 @@ pub(crate) mod tests {
             Err(OpenMcInputError::InvalidAssignment(_))
         ));
 
-        // Region density must equal the base density under the current
-        // single-voxel-mass collection model.
+        // Region density may differ — collection normalizes heating by the
+        // per-voxel mass and rescales folded components by the atom-density
+        // ratio. Temperature must still match the bound cross sections.
         let mut assignment: serde_json::Value = serde_json::from_slice(&assignment_json()).unwrap();
         assignment["regions"][0]["material"]["density_g_cm3"] = serde_json::json!(1.2);
+        generate_assigned(&serde_json::to_vec_pretty(&assignment).unwrap()).unwrap();
+
+        let mut assignment: serde_json::Value = serde_json::from_slice(&assignment_json()).unwrap();
+        assignment["regions"][0]["material"]["temperature_k"] = serde_json::json!(300.0);
         assert!(matches!(
             generate_assigned(&serde_json::to_vec_pretty(&assignment).unwrap()),
-            Err(OpenMcInputError::AssignmentDensityMismatch(_))
+            Err(OpenMcInputError::InvalidAssignment(_))
         ));
     }
 

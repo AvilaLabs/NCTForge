@@ -357,13 +357,16 @@ Implementation status:
 - complete: Python parity — the bounded API now exposes dose-bundle
   loading, biological-model application, and DVH computation over the same
   Rust contracts, with an extended wheel-level parity suite;
-- complete: DICOM-derived material assignment — `benchmark
-  derive-materials` emits a transport-neutral
-  `nctforge.material-assignment/0.1.0` from verified ROI masks (exact
-  axis-aligned voxel boxes only; arbitrary masks are refused rather than
-  approximated), `openmc generate --assignment` builds multi-cell decks,
-  and `openmc collect` corrects response-covered components by per-voxel
-  region/base mass-fraction ratios;
+- complete (OP-02, first slice): DICOM-derived material assignment —
+  `benchmark derive-materials` emits a transport-neutral
+  `nctforge.material-assignment/0.2.0` from verified ROI masks. Box-exact
+  masks become CSG cell regions; arbitrary masks become `voxel_set` regions
+  realized as a rectilinear material lattice (one universe per distinct
+  material, one element per voxel). Region densities may differ from the
+  base — collection normalizes heating by per-voxel mass and rescales
+  folded components by the atom-density ratio (density × mass fraction),
+  residual folds by the density ratio alone. Rotated grids, overlaps,
+  out-of-grid indices, and duplicated voxels are all rejected;
 - in progress: candidate-reference execution — three frozen-seed 300M-history
   runs are executing under the predeclared acceptance contract; the report
   and reference-status decision follow when the runs complete;

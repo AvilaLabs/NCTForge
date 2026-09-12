@@ -306,39 +306,55 @@ pub struct CollectedDose {
 }
 
 /// Convert a manifest tally's raw means to gray per source neutron per voxel.
+/// `voxel_mass_kg` carries one entry per scoring voxel so heterogeneous
+/// material densities normalize heating tallies by the true local mass.
 fn normalize_tally(
     contract: &OpenMcTallyContract,
     tally: &OpenMcStatepointTally,
     voxel_volume_cm3: f64,
-    voxel_mass_kg: f64,
+    voxel_mass_kg: &[f64],
 ) -> Result<CollectedDose, OpenMcCollectError> {
-    let scale = match contract.collection_normalization {
-        crate::input::OpenMcCollectionNormalization::DivideByVoxelVolumeCm3 => {
-            1.0 / voxel_volume_cm3
-        }
-        crate::input::OpenMcCollectionNormalization::ElectronVoltToJouleDivideByVoxelMassKg => {
-            EV_TO_JOULE / voxel_mass_kg
-        }
-        crate::input::OpenMcCollectionNormalization::None => {
-            return Err(OpenMcCollectError::UncollectableQuantity(
-                contract.name.clone(),
-            ));
-        }
-    };
     if tally.mean.len() != tally.standard_error.len() {
         return Err(OpenMcCollectError::InvalidResultsShape {
             tally: contract.name.clone(),
             shape: vec![tally.mean.len() as u64],
         });
     }
-    Ok(CollectedDose {
-        values: tally.mean.iter().map(|value| value * scale).collect(),
-        absolute_standard_uncertainty: tally
-            .standard_error
-            .iter()
-            .map(|value| value * scale)
-            .collect(),
-    })
+    match contract.collection_normalization {
+        crate::input::OpenMcCollectionNormalization::DivideByVoxelVolumeCm3 => {
+            let scale = 1.0 / voxel_volume_cm3;
+            Ok(CollectedDose {
+                values: tally.mean.iter().map(|value| value * scale).collect(),
+                absolute_standard_uncertainty: tally
+                    .standard_error
+                    .iter()
+                    .map(|value| value * scale)
+                    .collect(),
+            })
+        }
+        crate::input::OpenMcCollectionNormalization::ElectronVoltToJouleDivideByVoxelMassKg => {
+            if voxel_mass_kg.len() != tally.mean.len() {
+                return Err(OpenMcCollectError::DoseBinCountMismatch {
+                    tally: contract.name.clone(),
+                    expected: voxel_mass_kg.len(),
+                    actual: tally.mean.len(),
+                });
+            }
+            let normalize = |mean: &[f64]| -> Vec<f64> {
+                mean.iter()
+                    .zip(voxel_mass_kg.iter())
+                    .map(|(value, mass)| value * EV_TO_JOULE / mass)
+                    .collect()
+            };
+            Ok(CollectedDose {
+                values: normalize(&tally.mean),
+                absolute_standard_uncertainty: normalize(&tally.standard_error),
+            })
+        }
+        crate::input::OpenMcCollectionNormalization::None => Err(
+            OpenMcCollectError::UncollectableQuantity(contract.name.clone()),
+        ),
+    }
 }
 
 /// Locate the latest statepoint in a completed run directory.
@@ -441,17 +457,26 @@ pub fn collect_statepoint(
         .iter()
         .try_fold(1usize, |acc, dim| acc.checked_mul(*dim as usize))
         .ok_or(OpenMcCollectError::InvalidMesh)?;
-    let voxel_mass_kg = mesh.voxel_mass_g * 1.0e-3;
-
-    // Region-density correction: folded-response tallies score the base
+    // Region-material corrections: folded-response tallies score the base
     // material's atom densities, so a covered component's per-voxel dose
-    // scales by the region/base mass-fraction ratio of its backing nuclide.
-    // Native heating tallies already see the real material and need no
-    // correction; neither do residual or coupled-photon components.
-    let density_factors = if manifest.bindings.material_assignment.is_some() {
-        Some(load_region_density_factors(working_directory, &manifest)?)
+    // scales by the region/base atom-density ratio (density × mass fraction)
+    // of its backing nuclide, and a residual component — all of whose
+    // nuclides keep base fractions — scales by the density ratio alone.
+    // Native heating tallies already see the real material; their
+    // normalization needs the per-voxel mass, which differs from the base
+    // voxel mass whenever a region carries a different density.
+    let corrections = if manifest.bindings.material_assignment.is_some() {
+        Some(load_region_corrections(working_directory, &manifest)?)
     } else {
         None
+    };
+    let voxel_mass_kg: Vec<f64> = match &corrections {
+        Some(corrections) => corrections
+            .voxel_density_g_cm3
+            .iter()
+            .map(|density| density * mesh.voxel_volume_cm3 * 1.0e-3)
+            .collect(),
+        None => vec![mesh.voxel_mass_g * 1.0e-3; voxel_count],
     };
 
     let mut components: Vec<DoseVolume> = Vec::new();
@@ -485,11 +510,11 @@ pub fn collect_statepoint(
                 actual: tally.mean.len(),
             });
         }
-        let mut dose = normalize_tally(contract, tally, mesh.voxel_volume_cm3, voxel_mass_kg)?;
+        let mut dose = normalize_tally(contract, tally, mesh.voxel_volume_cm3, &voxel_mass_kg)?;
         match (contract.component, contract.particle) {
             (Some(component), _) => {
-                if let Some(factors) = &density_factors
-                    && let Some(factor) = factors.get(&component)
+                if let Some(corrections) = &corrections
+                    && let Some(factor) = corrections.component_factors.get(&component)
                 {
                     for ((value, sigma), factor) in dose
                         .values
@@ -584,15 +609,20 @@ pub fn collect_statepoint(
     Ok(bundle)
 }
 
-/// Per-voxel mass-fraction ratios (region/base) for each response-covered
-/// component, built from the deck's bound material assignment and component
-/// profile. Components without an explicit folded nuclide — residual kerma
-/// and coupled photon heating — are absent from the map and stay uncorrected;
-/// native heating tallies likewise already see the real materials.
-fn load_region_density_factors(
+/// Per-voxel corrections derived from the deck's bound material assignment
+/// and component profile: multiplicative factors for each folded-response
+/// component plus the per-voxel mass density for heating normalization.
+/// Coupled-photon-heating components are absent from the factor map — their
+/// native tallies already see the real materials.
+pub struct RegionCorrections {
+    pub component_factors: BTreeMap<DoseComponent, Vec<f64>>,
+    pub voxel_density_g_cm3: Vec<f64>,
+}
+
+fn load_region_corrections(
     working_directory: &Path,
     manifest: &OpenMcInputManifest,
-) -> Result<BTreeMap<DoseComponent, Vec<f64>>, OpenMcCollectError> {
+) -> Result<RegionCorrections, OpenMcCollectError> {
     let read_bound =
         |name: &str, declared: &ContentReference| -> Result<Vec<u8>, OpenMcCollectError> {
             let path = working_directory.join(name);
@@ -642,40 +672,70 @@ fn load_region_density_factors(
             .unwrap_or(0.0)
     };
 
-    let mut factors = BTreeMap::new();
+    // Per-voxel density: base everywhere except inside each region. Region
+    // assignment validation guarantees non-overlapping membership, so the
+    // last writer cannot mask a conflict.
+    let base_density = assignment.base_material.density_g_cm3;
+    let mut voxel_density_g_cm3 = vec![base_density; voxel_count];
+    for region in &assignment.regions {
+        region.for_each_voxel(|voxel| {
+            voxel_density_g_cm3
+                [voxel[0] as usize + nx * voxel[1] as usize + nx * ny * voxel[2] as usize] =
+                region.material.density_g_cm3;
+        });
+    }
+
+    let mut component_factors = BTreeMap::new();
     for rule in &profile.components {
-        let ComponentEstimator::NjoyPartialKermaFluenceFold { nuclide, .. } = &rule.estimator
-        else {
-            continue;
-        };
-        let base = base_fraction(nuclide);
-        if base <= 0.0 {
-            return Err(OpenMcCollectError::Manifest(
-                "component profile".into(),
-                format!("covered nuclide {nuclide} absent from the assignment base material"),
-            ));
-        }
-        let mut per_voxel = vec![1.0_f64; voxel_count];
-        for region in &assignment.regions {
-            let region_fraction = region
-                .material
-                .nuclides
-                .iter()
-                .find(|n| n.name == *nuclide)
-                .map(|n| n.mass_fraction)
-                .unwrap_or(0.0);
-            let ratio = region_fraction / base;
-            for k in region.voxel_lower[2]..=region.voxel_upper[2] {
-                for j in region.voxel_lower[1]..=region.voxel_upper[1] {
-                    for i in region.voxel_lower[0]..=region.voxel_upper[0] {
-                        per_voxel[i as usize + nx * j as usize + nx * ny * k as usize] = ratio;
-                    }
+        // Folded tallies score atom density × response. The region/base
+        // atom-density ratio factors as (ρ_r/ρ_b) × (f_r/f_b): covered folds
+        // additionally apply their nuclide's fraction ratio inside each
+        // region; residual folds cover only nuclides whose fractions the
+        // assignment gate pins to base, so the density ratio stands alone.
+        // Coupled photon heating is a native tally and needs no factor.
+        let covered_nuclide = match &rule.estimator {
+            ComponentEstimator::NjoyPartialKermaFluenceFold { nuclide, .. } => {
+                if base_fraction(nuclide) <= 0.0 {
+                    return Err(OpenMcCollectError::Manifest(
+                        "component profile".into(),
+                        format!(
+                            "covered nuclide {nuclide} absent from the assignment base material"
+                        ),
+                    ));
                 }
+                Some(nuclide.as_str())
+            }
+            ComponentEstimator::ResidualNeutronKermaFluenceFold { .. } => None,
+            ComponentEstimator::CoupledPhotonHeating => continue,
+        };
+        let mut per_voxel: Vec<f64> = voxel_density_g_cm3
+            .iter()
+            .map(|density| density / base_density)
+            .collect();
+        if let Some(nuclide) = covered_nuclide {
+            let base = base_fraction(nuclide);
+            for region in &assignment.regions {
+                let region_fraction = region
+                    .material
+                    .nuclides
+                    .iter()
+                    .find(|n| n.name == *nuclide)
+                    .map(|n| n.mass_fraction)
+                    .unwrap_or(0.0);
+                let fraction_ratio = region_fraction / base;
+                region.for_each_voxel(|voxel| {
+                    per_voxel[voxel[0] as usize
+                        + nx * voxel[1] as usize
+                        + nx * ny * voxel[2] as usize] *= fraction_ratio;
+                });
             }
         }
-        factors.insert(rule.component, per_voxel);
+        component_factors.insert(rule.component, per_voxel);
     }
-    Ok(factors)
+    Ok(RegionCorrections {
+        component_factors,
+        voxel_density_g_cm3,
+    })
 }
 
 /// Trait-level entry point used by `OpenMcBackend::collect`.
@@ -1158,7 +1218,7 @@ mod tests {
             })
         };
         serde_json::json!({
-            "schema_version": "nctforge.material-assignment/0.1.0",
+            "schema_version": "nctforge.material-assignment/0.2.0",
             "case_id": "synthetic-case",
             "base_material": material("base", serde_json::json!([
                 {"name": "B10", "mass_fraction": 0.5},
@@ -1169,8 +1229,7 @@ mod tests {
                 "material": material("core-unloaded", serde_json::json!([
                     {"name": "N14", "mass_fraction": 1.0},
                 ])),
-                "voxel_lower": [1, 0, 0],
-                "voxel_upper": [1, 0, 0],
+                "shape": {"kind": "voxel_box", "lower": [1, 0, 0], "upper": [1, 0, 0]},
             }],
             "provenance_id": "case:sha256:test",
         })
@@ -1240,7 +1299,7 @@ mod tests {
             serde_json::from_slice(&std::fs::read(&manifest_path).unwrap()).unwrap();
         manifest["bindings"]["component_profile"]["sha256"] = sha256_hex(&profile_bytes).into();
         manifest["bindings"]["material_assignment"] = serde_json::json!({
-            "id": "nctforge.material-assignment/0.1.0",
+            "id": "nctforge.material-assignment/0.2.0",
             "sha256": sha256_hex(&assignment_bytes),
         });
         std::fs::write(
@@ -1254,19 +1313,69 @@ mod tests {
         // Voxel 1 is inside the boron-free region: boron folds to zero,
         // nitrogen doubles (fraction 1.0 vs base 0.5), hydrogen and photon
         // stay uncorrected, and the native-heating total is untouched.
-        let component = |name| {
+        fn component<'a>(
+            bundle: &'a nctforge_core::PhysicalDoseBundle,
+            name: &str,
+        ) -> &'a nctforge_core::DoseVolume {
             bundle
                 .components
                 .iter()
                 .find(|v| serde_json::to_value(v.component).unwrap() == serde_json::json!(name))
                 .unwrap()
-        };
-        assert_eq!(component("boron").values, vec![1.0e-12, 0.0]);
-        assert_eq!(component("nitrogen").values, vec![2.0e-13, 4.0e-13]);
-        assert_eq!(component("hydrogen").values, vec![5.0e-13, 5.0e-13]);
+        }
+        assert_eq!(component(&bundle, "boron").values, vec![1.0e-12, 0.0]);
+        assert_eq!(
+            component(&bundle, "nitrogen").values,
+            vec![2.0e-13, 4.0e-13]
+        );
+        assert_eq!(
+            component(&bundle, "hydrogen").values,
+            vec![5.0e-13, 5.0e-13]
+        );
         let expected_photon = 20_000.0 * 1.602176634e-19 / 1.0e-3;
         assert!(
-            (component("photon").values[1] - expected_photon).abs() / expected_photon < 1.0e-12
+            (component(&bundle, "photon").values[1] - expected_photon).abs() / expected_photon
+                < 1.0e-12
+        );
+
+        // With a denser region material (2×), the atom-density ratio factors
+        // as density × fraction: nitrogen quadruples, the residual hydrogen
+        // fold doubles, and the native heating tally divides by the doubled
+        // voxel mass — halving the reported dose.
+        let mut dense_assignment = assignment_json();
+        dense_assignment["regions"][0]["material"]["density_g_cm3"] = serde_json::json!(2.0);
+        let assignment_bytes = serde_json::to_vec_pretty(&dense_assignment).unwrap();
+        std::fs::write(
+            directory.path().join("nctforge-material-assignment.json"),
+            &assignment_bytes,
+        )
+        .unwrap();
+        manifest["bindings"]["material_assignment"]["sha256"] =
+            sha256_hex(&assignment_bytes).into();
+        std::fs::write(
+            &manifest_path,
+            serde_json::to_vec_pretty(&manifest).unwrap(),
+        )
+        .unwrap();
+        let bundle = collect_statepoint(directory.path()).unwrap();
+        bundle.validate().unwrap();
+        assert_eq!(component(&bundle, "boron").values, vec![1.0e-12, 0.0]);
+        assert_eq!(
+            component(&bundle, "nitrogen").values,
+            vec![2.0e-13, 8.0e-13]
+        );
+        assert_eq!(
+            component(&bundle, "hydrogen").values,
+            vec![5.0e-13, 1.0e-12]
+        );
+        let expected_photon = 20_000.0 * 1.602176634e-19 / 2.0e-3;
+        assert!(
+            (component(&bundle, "photon").values[1] - expected_photon).abs() / expected_photon
+                < 1.0e-12
+        );
+        let expected_total = 190_000.0 * 1.602176634e-19 / 2.0e-3;
+        assert!(
+            (bundle.physical_total.values[1] - expected_total).abs() / expected_total < 1.0e-12
         );
     }
 

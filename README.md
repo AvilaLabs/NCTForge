@@ -397,13 +397,12 @@ clinical or qualification claim.
 ### DICOM-derived material assignment
 
 `benchmark derive-materials` turns verified RT Structure Set masks into a
-transport-neutral `nctforge.material-assignment/0.1.0` artifact: named,
-non-overlapping, axis-aligned voxel boxes that each carry a
-`MaterialDefinition`. Derivation is honest about its limits — every selected
-ROI mask must equal its bounding box exactly, so the emitted CSG
-decomposition is an exact representation, not an approximation of an
-arbitrary mask — and the artifact binds the source `case.json` by SHA-256
-provenance:
+transport-neutral `nctforge.material-assignment/0.2.0` artifact: named,
+non-overlapping voxel regions that each carry a `MaterialDefinition`. An ROI
+that fills its bounding box exactly becomes a `voxel_box` region (realized as
+an exact CSG cell); any other mask becomes a `voxel_set` region listing its
+member voxels explicitly — an exact representation, never an approximation —
+and the artifact binds the source `case.json` by SHA-256 provenance:
 
 ```text
 nctforge benchmark derive-materials \
@@ -422,8 +421,13 @@ reuses the verified DICOM geometry and is written alongside the assignment.
 the `CORE` box.
 
 `openmc generate --assignment` then builds a multi-cell deck: one OpenMC
-material per distinct region material, one CSG cell per region box, and the
-base cell carved with the region complements. Generation gates keep the
+material per distinct region material plus, for box-only assignments, one
+CSG cell per region box with the base cell carved by the region complements.
+Assignments containing any `voxel_set` region instead emit a rectilinear
+material lattice spanning the whole grid — one universe per distinct
+material, one lattice element per voxel — so arbitrary masks assign
+materials exactly. Both paths require an axis-aligned (identity-direction)
+grid. Generation gates keep the
 result scientifically meaningful — the assignment's base material must equal
 the bound material artifact byte-for-byte, region density and temperature
 must match (collection still assumes one voxel mass), regions may not
