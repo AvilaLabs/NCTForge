@@ -472,8 +472,8 @@ fn workspace_help(workspace: HelpWorkspace) -> (&'static str, &'static str) {
             "Follow the ordered gate chain and backend capability flags. Unavailable actions are intentionally disabled.",
         ),
         HelpWorkspace::Dose => (
-            "Physical dose components",
-            "The four physical BNCT components stay separate. This build shows no values because no qualified result bundle exists yet.",
+            "Dose components",
+            "Load a validated physical or biological dose bundle to inspect component statistics and region DVHs. The two layers never merge.",
         ),
         HelpWorkspace::Evidence => (
             "Evidence",
@@ -505,7 +505,7 @@ const FAQ: [FaqEntry; 8] = [
             "execute",
             "prepare",
         ],
-        answer: "The controlled transport path is not qualified yet. The O-17/O-18 transported-photon response treatment still requires review, and the OpenMC adapter does not advertise tested prepare, execute, or import capabilities.",
+        answer: "The controlled transport path is not qualified yet. The O-17/O-18 transported-photon response treatment still requires review, so interactive prepare and execute stay disabled even though the OpenMC adapter advertises those capabilities to the CLI.",
     },
     FaqEntry {
         question: "Does NCTForge depend completely on OpenMC?",
@@ -515,7 +515,7 @@ const FAQ: [FaqEntry; 8] = [
     FaqEntry {
         question: "Where are the dose values and heat maps?",
         keywords: &["dose", "heat", "map", "dvh", "value", "result"],
-        answer: "They are intentionally absent. NCTForge will display dose only after loading a validated physical-dose bundle with component definitions, uncertainty, provenance, and qualification evidence.",
+        answer: "They appear only after loading a validated physical-dose or biological bundle in the Dose workspace. NCTForge never renders placeholder dose values; biological weights stay a separate layer and are never clinical quantities.",
     },
     FaqEntry {
         question: "What do the status labels mean?",

@@ -17,8 +17,14 @@ path = "src/main.rs"
 base64.workspace = true
 eframe.workspace = true
 image.workspace = true
+nctforge-bio = { path = "../nctforge-bio" }
+nctforge-core = { path = "../nctforge-core" }
 nctforge-dicom = { path = "../nctforge-dicom" }
 nctforge-evidence = { path = "../nctforge-evidence" }
 nctforge-openmc = { path = "../nctforge-openmc" }
 nctforge-transport = { path = "../nctforge-transport" }
 nctforge-view = { path = "../nctforge-view" }
+serde_json.workspace = true
+
+[dev-dependencies]
+tempfile = "3"

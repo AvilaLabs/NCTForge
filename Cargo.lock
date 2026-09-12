@@ -2496,11 +2496,15 @@ dependencies = [
  "base64",
  "eframe",
  "image",
+ "nctforge-bio",
+ "nctforge-core",
  "nctforge-dicom",
  "nctforge-evidence",
  "nctforge-openmc",
  "nctforge-transport",
  "nctforge-view",
+ "serde_json",
+ "tempfile",
 ]
 
 [[package]]

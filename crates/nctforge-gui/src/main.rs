@@ -9,8 +9,10 @@ use std::array;
 use std::path::{Path, PathBuf};
 
 use eframe::egui;
+use nctforge_bio::{BiologicalDoseBundle, RegionMask};
+use nctforge_core::PhysicalDoseBundle;
 use nctforge_dicom::{VerifiedBenchmarkCase, load_nf_bnct_001};
-use nctforge_evidence::sha256_hex;
+use nctforge_evidence::{DoseVolumeHistogram, EvidenceBundleManifest, sha256_hex};
 use nctforge_openmc::{OpenMcBackend, TARGET_OPENMC_VERSION};
 use nctforge_transport::TransportBackend;
 use nctforge_view::{AnatomicalPlane, Crosshair, PatientAlignedGrid, SliceView};
@@ -188,6 +190,244 @@ fn readiness_gates(case_loaded: bool) -> [ReadinessGate; 5] {
     ]
 }
 
+/// A loaded dose artifact — physical or biological — with the same contract
+/// validation the CLI enforces. Weighted bundles stay visually distinct.
+enum DoseArtifact {
+    Physical(PhysicalDoseBundle),
+    Biological(BiologicalDoseBundle),
+}
+
+struct LoadedDose {
+    artifact: DoseArtifact,
+    sha256: String,
+}
+
+/// (component label, values, sigma) rows for display.
+type DoseRows<'a> = Vec<(String, &'a [f64], Option<&'a [f64]>)>;
+
+impl DoseArtifact {
+    fn load(path: &Path) -> Result<LoadedDose, String> {
+        let bytes = std::fs::read(path).map_err(|error| format!("{}: {error}", path.display()))?;
+        let sha256 = sha256_hex(&bytes);
+        let schema: serde_json::Value =
+            serde_json::from_slice(&bytes).map_err(|error| error.to_string())?;
+        let artifact = match schema
+            .get("schema_version")
+            .and_then(|value| value.as_str())
+            .unwrap_or_default()
+        {
+            nctforge_core::PHYSICAL_DOSE_BUNDLE_SCHEMA => {
+                let bundle: PhysicalDoseBundle =
+                    serde_json::from_slice(&bytes).map_err(|error| error.to_string())?;
+                bundle.validate().map_err(|error| error.to_string())?;
+                Self::Physical(bundle)
+            }
+            nctforge_bio::BIOLOGICAL_DOSE_BUNDLE_SCHEMA => {
+                let bundle: BiologicalDoseBundle =
+                    serde_json::from_slice(&bytes).map_err(|error| error.to_string())?;
+                bundle.validate().map_err(|error| error.to_string())?;
+                Self::Biological(bundle)
+            }
+            other => return Err(format!("unsupported dose bundle schema {other:?}")),
+        };
+        Ok(LoadedDose { artifact, sha256 })
+    }
+
+    fn case_id(&self) -> &str {
+        match self {
+            Self::Physical(bundle) => &bundle.case_id,
+            Self::Biological(bundle) => &bundle.case_id,
+        }
+    }
+
+    fn unit(&self) -> &str {
+        match self {
+            Self::Physical(bundle) => match bundle.components.first() {
+                Some(volume) => match volume.unit {
+                    nctforge_core::DoseUnit::Gray => "gray",
+                    nctforge_core::DoseUnit::GrayPerSourceParticle => "gray_per_source_particle",
+                },
+                None => "unknown",
+            },
+            Self::Biological(bundle) => &bundle.unit,
+        }
+    }
+
+    fn rows(&self) -> DoseRows<'_> {
+        match self {
+            Self::Physical(bundle) => {
+                let mut rows: DoseRows<'_> = bundle
+                    .components
+                    .iter()
+                    .map(|volume| {
+                        (
+                            serde_json::to_value(volume.component)
+                                .and_then(|v| {
+                                    v.as_str().map(str::to_owned).ok_or(serde_json::Error::io(
+                                        std::io::Error::other("component not a string"),
+                                    ))
+                                })
+                                .unwrap_or_else(|_| "unknown".into()),
+                            volume.values.as_slice(),
+                            volume.absolute_standard_uncertainty.as_deref(),
+                        )
+                    })
+                    .collect();
+                rows.push((
+                    "physical_total".into(),
+                    bundle.physical_total.values.as_slice(),
+                    bundle
+                        .physical_total
+                        .absolute_standard_uncertainty
+                        .as_deref(),
+                ));
+                rows
+            }
+            Self::Biological(bundle) => {
+                let mut rows: DoseRows<'_> = bundle
+                    .components
+                    .iter()
+                    .map(|volume| {
+                        (
+                            serde_json::to_value(volume.component)
+                                .and_then(|v| {
+                                    v.as_str().map(str::to_owned).ok_or(serde_json::Error::io(
+                                        std::io::Error::other("component not a string"),
+                                    ))
+                                })
+                                .unwrap_or_else(|_| "unknown".into()),
+                            volume.values.as_slice(),
+                            volume.absolute_standard_uncertainty.as_deref(),
+                        )
+                    })
+                    .collect();
+                rows.push((
+                    "biological_total".into(),
+                    bundle.total.values.as_slice(),
+                    bundle.total.absolute_standard_uncertainty.as_deref(),
+                ));
+                rows
+            }
+        }
+    }
+
+    fn qualification(&self) -> &'static str {
+        match self {
+            Self::Physical(_) => "synthetic_research_only",
+            Self::Biological(bundle) => match bundle.qualification.as_str() {
+                "synthetic_research_only_not_clinical" => "synthetic_research_only_not_clinical",
+                _ => "unqualified",
+            },
+        }
+    }
+}
+
+/// UI state for the dose workspace: the loaded bundle plus the region mask
+/// and quantity chosen for the DVH panel.
+#[derive(Default)]
+struct DosePanel {
+    bundle_path: String,
+    bundle: Option<LoadedDose>,
+    bundle_error: Option<String>,
+    mask_path: String,
+    quantity: String,
+    histogram: Option<DoseVolumeHistogram>,
+    histogram_error: Option<String>,
+}
+
+impl DosePanel {
+    fn load_bundle(&mut self) {
+        match DoseArtifact::load(Path::new(self.bundle_path.trim())) {
+            Ok(bundle) => {
+                self.bundle_error = None;
+                self.histogram = None;
+                self.quantity = match &bundle.artifact {
+                    DoseArtifact::Physical(_) => "physical_total".into(),
+                    DoseArtifact::Biological(_) => "biological_total".into(),
+                };
+                self.bundle = Some(bundle);
+            }
+            Err(error) => {
+                self.bundle = None;
+                self.bundle_error = Some(error);
+            }
+        }
+    }
+
+    fn compute_histogram(&mut self) {
+        self.histogram = None;
+        self.histogram_error = None;
+        let Some(bundle) = &self.bundle else {
+            self.histogram_error = Some("Load a dose bundle first.".into());
+            return;
+        };
+        let mask: RegionMask = match std::fs::read(self.mask_path.trim())
+            .map_err(|e| e.to_string())
+            .and_then(|bytes| serde_json::from_slice(&bytes).map_err(|e| e.to_string()))
+        {
+            Ok(mask) => mask,
+            Err(error) => {
+                self.histogram_error = Some(format!("mask: {error}"));
+                return;
+            }
+        };
+        let quantity = self.quantity.trim().to_owned();
+        let resolved = bundle
+            .artifact
+            .rows()
+            .into_iter()
+            .find(|(name, ..)| *name == quantity || format!("component:{name}") == quantity)
+            .map(|(_, values, _)| values);
+        let Some(values) = resolved else {
+            self.histogram_error = Some(format!("unknown quantity {quantity:?}"));
+            return;
+        };
+        match DoseVolumeHistogram::compute(
+            bundle.artifact.case_id(),
+            &mask.name,
+            &quantity,
+            nctforge_core::ContentReference {
+                id: bundle.artifact.case_id().to_owned(),
+                sha256: bundle.sha256.clone(),
+            },
+            bundle.artifact.unit(),
+            values,
+            &mask.voxels,
+            match &bundle.artifact {
+                DoseArtifact::Physical(b) => b.geometry.spacing_mm.iter().product(),
+                DoseArtifact::Biological(b) => b.geometry.spacing_mm.iter().product(),
+            },
+            100,
+        ) {
+            Ok(histogram) => self.histogram = Some(histogram),
+            Err(error) => self.histogram_error = Some(error.to_string()),
+        }
+    }
+}
+
+/// UI state for the evidence workspace's bundle-verification panel.
+#[derive(Default)]
+struct EvidencePanel {
+    root: String,
+    manifest: Option<EvidenceBundleManifest>,
+    error: Option<String>,
+}
+
+impl EvidencePanel {
+    fn verify(&mut self) {
+        match EvidenceBundleManifest::load_verified(Path::new(self.root.trim())) {
+            Ok(manifest) => {
+                self.manifest = Some(manifest);
+                self.error = None;
+            }
+            Err(error) => {
+                self.manifest = None;
+                self.error = Some(error.to_string());
+            }
+        }
+    }
+}
+
 struct NctForgeApp {
     case_path: String,
     load_error: Option<String>,
@@ -196,6 +436,8 @@ struct NctForgeApp {
     workspace: WorkspaceTab,
     brand_logo: Option<egui::TextureHandle>,
     help: GuidedHelp,
+    dose_panel: DosePanel,
+    evidence_panel: EvidencePanel,
 }
 
 impl NctForgeApp {
@@ -215,6 +457,8 @@ impl NctForgeApp {
             },
             brand_logo: brand::load_logo_texture(context).ok(),
             help: GuidedHelp::default(),
+            dose_panel: DosePanel::default(),
+            evidence_panel: EvidencePanel::default(),
         };
         if has_initial_case {
             app.load_case();
@@ -281,6 +525,8 @@ impl eframe::App for NctForgeApp {
             &mut self.workspace,
             self.case.as_mut(),
             &mut self.display,
+            &mut self.dose_panel,
+            &mut self.evidence_panel,
             &mut tour_targets,
         );
         self.help
@@ -417,6 +663,8 @@ fn show_workbench(
     workspace: &mut WorkspaceTab,
     case: Option<&mut ViewerCase>,
     display: &mut DisplaySettings,
+    dose_panel: &mut DosePanel,
+    evidence_panel: &mut EvidencePanel,
     tour_targets: &mut TourTargets,
 ) {
     let navigation = egui::Panel::left("nctforge-workspace-navigation")
@@ -473,9 +721,9 @@ fn show_workbench(
                     WorkspaceTab::Transport => {
                         show_transport_workspace(ui, case.as_deref(), tour_targets)
                     }
-                    WorkspaceTab::Dose => show_dose_workspace(ui),
+                    WorkspaceTab::Dose => show_dose_workspace(ui, dose_panel),
                     WorkspaceTab::Evidence => {
-                        show_evidence_workspace(ui, case.as_deref(), tour_targets)
+                        show_evidence_workspace(ui, case.as_deref(), evidence_panel, tour_targets)
                     }
                 });
         });
@@ -811,91 +1059,217 @@ fn capability_label(ui: &mut egui::Ui, name: &str, enabled: bool) {
     });
 }
 
-fn show_dose_workspace(ui: &mut egui::Ui) {
+fn show_dose_workspace(ui: &mut egui::Ui, panel: &mut DosePanel) {
     show_workspace_heading(
         ui,
-        "Physical dose components",
-        "Unweighted absorbed dose stays separate from biological interpretation.",
+        "Dose components",
+        "Physical and biological layers stay separate; only validated bundles render.",
     );
-    ui.columns(4, |columns| {
-        for (column, (symbol, name, color, detail)) in columns.iter_mut().zip([
-            (
-                "D_B",
-                "Boron",
-                egui::Color32::from_rgb(92, 207, 171),
-                "B-10 charged reaction products; emitted photon energy excluded.",
-            ),
-            (
-                "D_N",
-                "Nitrogen",
-                egui::Color32::from_rgb(99, 165, 244),
-                "Charged products assigned to the nitrogen reaction group.",
-            ),
-            (
-                "D_H",
-                "Hydrogen / neutron",
-                egui::Color32::from_rgb(228, 167, 91),
-                "Residual non-photon neutron KERMA, with its contributor ledger.",
-            ),
-            (
-                "D_gamma",
-                "Photon",
-                egui::Color32::from_rgb(206, 121, 226),
-                "Incident and transported secondary-photon energy deposition.",
-            ),
-        ]) {
-            egui::Frame::group(column.style()).show(column, |ui| {
-                ui.set_min_height(150.0);
-                ui.colored_label(color, egui::RichText::new(symbol).size(20.0).strong());
-                ui.strong(name);
-                ui.small(detail);
-                ui.add_space(8.0);
-                ui.label(
-                    egui::RichText::new("NO RESULT LOADED")
-                        .small()
-                        .strong()
-                        .color(GateState::Pending.color()),
-                );
-            });
+
+    egui::Frame::group(ui.style()).show(ui, |ui| {
+        ui.horizontal(|ui| {
+            ui.label(egui::RichText::new("DOSE BUNDLE").small().strong());
+            ui.add(
+                egui::TextEdit::singleline(&mut panel.bundle_path)
+                    .desired_width(520.0)
+                    .hint_text("/path/to/dose-bundle.json"),
+            );
+            if ui.button("Load + validate").clicked() {
+                panel.load_bundle();
+            }
+        });
+        if let Some(error) = &panel.bundle_error {
+            ui.colored_label(egui::Color32::LIGHT_RED, format!("Load rejected: {error}"));
         }
     });
 
-    ui.add_space(14.0);
+    let Some(bundle) = &panel.bundle else {
+        ui.add_space(12.0);
+        egui::Frame::new()
+            .fill(egui::Color32::from_rgb(41, 32, 22))
+            .corner_radius(8)
+            .inner_margin(egui::Margin::same(14))
+            .show(ui, |ui| {
+                status_badge(ui, GateState::Pending, "NO RESULT LOADED");
+                ui.label(
+                    "NCTForge does not render placeholder dose values. Load a validated \
+                     physical or biological dose bundle to inspect components, totals, \
+                     and DVHs.",
+                );
+            });
+        return;
+    };
+
+    ui.add_space(10.0);
+    let artifact = &bundle.artifact;
+    let is_biological = matches!(artifact, DoseArtifact::Biological(_));
     egui::Frame::new()
-        .fill(egui::Color32::from_rgb(41, 32, 22))
+        .fill(if is_biological {
+            egui::Color32::from_rgb(36, 26, 46)
+        } else {
+            egui::Color32::from_rgb(22, 30, 41)
+        })
         .corner_radius(8)
         .inner_margin(egui::Margin::same(14))
         .show(ui, |ui| {
-            status_badge(ui, GateState::Blocked, "NUMERICAL DISPLAY LOCKED");
-            ui.heading("No placeholder dose values");
-            ui.label(
-                "NCTForge will not render synthetic-looking heat maps, DVHs, totals, or uncertainty "
-                    .to_owned()
-                    + "until a validated physical-dose bundle is actually loaded.",
-            );
+            ui.horizontal(|ui| {
+                ui.vertical(|ui| {
+                    ui.heading(artifact.case_id());
+                    ui.monospace(format!("sha256:{}", bundle.sha256));
+                });
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    status_badge(ui, GateState::Verified, "VALIDATED");
+                    status_badge(
+                        ui,
+                        if is_biological {
+                            GateState::Blocked
+                        } else {
+                            GateState::Frozen
+                        },
+                        artifact.qualification().to_uppercase().as_str(),
+                    );
+                });
+            });
+            if is_biological {
+                ui.colored_label(
+                    egui::Color32::from_rgb(206, 121, 226),
+                    "Biologically weighted — never aliases physical dose. Not a clinical quantity.",
+                );
+            }
         });
 
-    ui.add_space(12.0);
-    ui.heading("Later, this workspace will provide");
-    ui.horizontal_wrapped(|ui| {
-        for capability in [
-            "linked component overlays",
-            "absolute one-sigma uncertainty",
-            "ROI statistics and DVHs",
-            "physical-total closure",
-            "side-by-side backend comparison",
-            "separate biological model layer",
-        ] {
-            egui::Frame::group(ui.style()).show(ui, |ui| {
-                ui.label(capability);
+    ui.add_space(10.0);
+    let rows = artifact.rows();
+    let columns = rows.len().clamp(1, 5);
+    ui.columns(columns, |columns| {
+        for (column, (name, values, sigma)) in columns.iter_mut().zip(rows.iter()) {
+            let (symbol, color) = match name.as_str() {
+                "boron" => ("D_B", egui::Color32::from_rgb(92, 207, 171)),
+                "nitrogen" => ("D_N", egui::Color32::from_rgb(99, 165, 244)),
+                "hydrogen" => ("D_H", egui::Color32::from_rgb(228, 167, 91)),
+                "photon" => ("D_gamma", egui::Color32::from_rgb(206, 121, 226)),
+                _ => ("Σ", egui::Color32::from_rgb(151, 158, 178)),
+            };
+            let max = values.iter().copied().fold(0.0_f64, f64::max);
+            let mean = values.iter().sum::<f64>() / values.len().max(1) as f64;
+            egui::Frame::group(column.style()).show(column, |ui| {
+                ui.set_min_height(120.0);
+                ui.colored_label(color, egui::RichText::new(symbol).size(18.0).strong());
+                ui.strong(name.as_str());
+                ui.monospace(format!("max  {max:.3e}"));
+                ui.monospace(format!("mean {mean:.3e}"));
+                ui.small(if sigma.is_some() {
+                    "1σ uncertainty present"
+                } else {
+                    "no uncertainty carried"
+                });
             });
         }
     });
+    ui.monospace(format!("unit: {}", artifact.unit()));
+
+    ui.add_space(14.0);
+    ui.heading("Region dose-volume histogram");
+    egui::Frame::group(ui.style()).show(ui, |ui| {
+        ui.horizontal(|ui| {
+            ui.label("Mask");
+            ui.add(
+                egui::TextEdit::singleline(&mut panel.mask_path)
+                    .desired_width(360.0)
+                    .hint_text("/path/to/region-mask.json"),
+            );
+            ui.label("Quantity");
+            ui.add(
+                egui::TextEdit::singleline(&mut panel.quantity)
+                    .desired_width(170.0)
+                    .hint_text("physical_total"),
+            );
+            if ui.button("Compute DVH").clicked() {
+                panel.compute_histogram();
+            }
+        });
+        if let Some(error) = &panel.histogram_error {
+            ui.colored_label(egui::Color32::LIGHT_RED, format!("DVH rejected: {error}"));
+        }
+        if let Some(histogram) = &panel.histogram {
+            ui.label(format!(
+                "region {} · {} voxels · {:.1} mm³ · {}",
+                histogram.region,
+                histogram.region_voxel_count,
+                histogram.region_volume_mm3,
+                histogram.unit
+            ));
+            show_dvh_curve(ui, histogram);
+        }
+    });
+}
+
+/// Draw the cumulative V(d) curve directly — no plotting dependency.
+fn show_dvh_curve(ui: &mut egui::Ui, histogram: &DoseVolumeHistogram) {
+    let (response, painter) = ui.allocate_painter(
+        egui::vec2(ui.available_width(), 180.0),
+        egui::Sense::hover(),
+    );
+    let rect = response.rect.shrink2(egui::vec2(46.0, 12.0));
+    painter.rect_stroke(
+        rect,
+        4.0,
+        egui::Stroke::new(1.0, egui::Color32::from_rgb(72, 82, 99)),
+        egui::StrokeKind::Inside,
+    );
+    let max_dose = histogram.dose_edges.last().copied().unwrap_or(0.0);
+    if max_dose <= 0.0 {
+        painter.text(
+            rect.center(),
+            egui::Align2::CENTER_CENTER,
+            "zero dose in region",
+            egui::FontId::monospace(12.0),
+            egui::Color32::from_rgb(151, 158, 178),
+        );
+        return;
+    }
+    let points: Vec<egui::Pos2> = histogram
+        .dose_edges
+        .iter()
+        .zip(&histogram.cumulative_volume_fraction)
+        .map(|(dose, fraction)| {
+            egui::pos2(
+                rect.left() + (dose / max_dose) as f32 * rect.width(),
+                rect.bottom() - (*fraction as f32) * rect.height(),
+            )
+        })
+        .collect();
+    painter.add(egui::Shape::line(
+        points,
+        egui::Stroke::new(2.0, egui::Color32::from_rgb(139, 229, 235)),
+    ));
+    painter.text(
+        egui::pos2(rect.left() - 8.0, rect.top()),
+        egui::Align2::RIGHT_CENTER,
+        "100%",
+        egui::FontId::monospace(10.0),
+        egui::Color32::from_rgb(137, 146, 165),
+    );
+    painter.text(
+        egui::pos2(rect.left() - 8.0, rect.bottom()),
+        egui::Align2::RIGHT_CENTER,
+        "0%",
+        egui::FontId::monospace(10.0),
+        egui::Color32::from_rgb(137, 146, 165),
+    );
+    painter.text(
+        egui::pos2(rect.right(), rect.bottom() + 4.0),
+        egui::Align2::RIGHT_TOP,
+        format!("{:.3e} {}", max_dose, histogram.unit),
+        egui::FontId::monospace(10.0),
+        egui::Color32::from_rgb(137, 146, 165),
+    );
 }
 
 fn show_evidence_workspace(
     ui: &mut egui::Ui,
     case: Option<&ViewerCase>,
+    panel: &mut EvidencePanel,
     tour_targets: &mut TourTargets,
 ) {
     show_workspace_heading(
@@ -965,6 +1339,43 @@ fn show_evidence_workspace(
                 .to_owned()
                 + "cross-code comparison, and experimental validation remain separate claims.",
         );
+    });
+
+    ui.add_space(14.0);
+    ui.heading("Exported evidence bundle");
+    egui::Frame::group(ui.style()).show(ui, |ui| {
+        ui.horizontal(|ui| {
+            ui.label("Bundle root");
+            ui.add(
+                egui::TextEdit::singleline(&mut panel.root)
+                    .desired_width(460.0)
+                    .hint_text("/path/to/evidence-bundle"),
+            );
+            if ui.button("Verify manifest + hashes").clicked() {
+                panel.verify();
+            }
+        });
+        if let Some(error) = &panel.error {
+            ui.colored_label(
+                egui::Color32::LIGHT_RED,
+                format!("Verification rejected: {error}"),
+            );
+        }
+        if let Some(manifest) = &panel.manifest {
+            status_badge(ui, GateState::Verified, "ALL ARTIFACTS VERIFIED");
+            let qualification = serde_json::to_value(manifest.qualification.clone())
+                .ok()
+                .and_then(|value| value.as_str().map(str::to_owned))
+                .unwrap_or_else(|| "unknown".into());
+            ui.monospace(format!("case: {} · {}", manifest.case_id, qualification));
+            for artifact in &manifest.artifacts {
+                ui.horizontal(|ui| {
+                    ui.monospace(format!("{:28}", artifact.role));
+                    ui.label(artifact.path.clone());
+                    ui.monospace(format!("sha256:{}…", &artifact.sha256[..12]));
+                });
+            }
+        }
     });
 }
 
@@ -1350,6 +1761,78 @@ mod tests {
         );
     }
 
+    fn physical_bundle_json() -> serde_json::Value {
+        let reference = |id: &str| serde_json::json!({"id": id, "sha256": "a".repeat(64)});
+        let component = |name: &str, value: f64, sigma: f64| {
+            serde_json::json!({
+                "component": name,
+                "unit": "gray_per_source_particle",
+                "values": [value, value],
+                "absolute_standard_uncertainty": [sigma, sigma],
+            })
+        };
+        serde_json::json!({
+            "schema_version": "nctforge.physical-dose-bundle/0.2.0",
+            "case_id": "synthetic-case",
+            "frame_of_reference_uid": null,
+            "geometry": {
+                "shape": [2, 1, 1],
+                "spacing_mm": [5.0, 5.0, 5.0],
+                "origin_mm": [-2.5, -2.5, -2.5],
+                "direction": [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
+            },
+            "component_profile": reference("profile"),
+            "response_set": reference("response"),
+            "components": [
+                component("boron", 1.0e-12, 1.0e-14),
+                component("nitrogen", 2.0e-13, 2.0e-15),
+                component("hydrogen", 5.0e-14, 5.0e-16),
+                component("photon", 3.0e-13, 3.0e-15),
+            ],
+            "physical_total": {
+                "unit": "gray_per_source_particle",
+                "values": [1.75e-12, 1.75e-12],
+                "absolute_standard_uncertainty": [1.1e-14, 1.1e-14],
+                "uncertainty_method": "dedicated_estimator",
+            },
+            "provenance_id": "test-provenance",
+        })
+    }
+
+    #[test]
+    fn dose_artifact_loads_validates_and_exposes_component_rows() {
+        let scratch = tempfile::tempdir().unwrap();
+        let path = scratch.path().join("bundle.json");
+        std::fs::write(
+            &path,
+            serde_json::to_vec_pretty(&physical_bundle_json()).unwrap(),
+        )
+        .unwrap();
+        let loaded = DoseArtifact::load(&path).unwrap();
+        assert!(matches!(loaded.artifact, DoseArtifact::Physical(_)));
+        assert_eq!(loaded.artifact.case_id(), "synthetic-case");
+        assert_eq!(loaded.artifact.qualification(), "synthetic_research_only");
+        let rows = loaded.artifact.rows();
+        assert_eq!(rows.len(), 5);
+        assert_eq!(rows[4].0, "physical_total");
+        assert_eq!(rows[4].1, &[1.75e-12, 1.75e-12]);
+        assert_eq!(loaded.sha256.len(), 64);
+    }
+
+    #[test]
+    fn dose_artifact_rejects_unknown_schema_and_invalid_bundles() {
+        let scratch = tempfile::tempdir().unwrap();
+        let bad_schema = scratch.path().join("bad.json");
+        std::fs::write(&bad_schema, b"{\"schema_version\": \"other/9.9.9\"}").unwrap();
+        assert!(DoseArtifact::load(&bad_schema).is_err());
+
+        let mut invalid = physical_bundle_json();
+        invalid["physical_total"]["values"] = serde_json::json!([1.0]);
+        let invalid_path = scratch.path().join("invalid.json");
+        std::fs::write(&invalid_path, serde_json::to_vec(&invalid).unwrap()).unwrap();
+        assert!(DoseArtifact::load(&invalid_path).is_err());
+    }
+
     #[test]
     fn every_empty_workspace_renders_at_the_minimum_viewport() {
         let context = egui::Context::default();
@@ -1365,7 +1848,15 @@ mod tests {
             let mut display = DisplaySettings::default();
             let mut tour_targets = TourTargets::default();
             let mut output = context.run_ui(input, |ui| {
-                show_workbench(ui, &mut workspace, None, &mut display, &mut tour_targets);
+                show_workbench(
+                    ui,
+                    &mut workspace,
+                    None,
+                    &mut display,
+                    &mut DosePanel::default(),
+                    &mut EvidencePanel::default(),
+                    &mut tour_targets,
+                );
             });
             output.textures_delta.clear();
         }

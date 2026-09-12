@@ -174,12 +174,15 @@ are ignored by default and contain visibly synthetic identity values only.
 
 Without a case argument, the GUI opens on a research-readiness overview. Passing
 a verified case opens its geometry workspace directly. Use the left navigation
-to see the current OpenMC capability gates, the four-component dose workspace,
-and the evidence ledger. Select the `?` button or press `F1` for contextual
-guidance, bundled offline answers, and guided tours that dim the application and
-spotlight live workflow controls. Dose and transport actions are disabled
-because this build has no qualified response bundle or executable backend; the
-interface does not show placeholder dose values. See [ADR
+to see the current OpenMC capability gates, the dose workspace, and the evidence
+ledger. The dose workspace loads any validated physical or biological bundle
+file — component statistics, totals, and a region-mask DVH plot — while keeping
+the two layers visually distinct. The evidence workspace can verify an exported
+`artifact-manifest.json` in place. Select the `?` button or press `F1` for
+contextual guidance, bundled offline answers, and guided tours that dim the
+application and spotlight live workflow controls. Interactive transport actions
+stay disabled until the upstream response gates are qualified, and the interface
+never shows placeholder dose values. See [ADR
 0014](docs/adr/0014-evidence-aware-workbench-shell.md).
 
 `pip install nctforge` is the planned primary distribution path for scientific
