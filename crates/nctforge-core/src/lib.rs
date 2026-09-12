@@ -300,6 +300,54 @@ impl RegionMask {
         }
         Ok(mask)
     }
+
+    /// Mean and maximum of a per-voxel quantity inside this mask.
+    ///
+    /// `values` must be laid out on the same voxel count as the mask.
+    pub fn summarize(&self, values: &[f64]) -> Result<MaskDoseSummary, ValidationError> {
+        if values.len() != self.voxels.len() {
+            return Err(ValidationError::MaskValuesLength {
+                mask: self.name.clone(),
+                mask_voxels: self.voxels.len(),
+                values: values.len(),
+            });
+        }
+        let included = self
+            .voxels
+            .iter()
+            .copied()
+            .zip(values.iter().copied())
+            .filter_map(|(inside, value)| inside.then_some(value));
+        let mut sum = 0.0;
+        let mut maximum = f64::NEG_INFINITY;
+        let mut count = 0_usize;
+        for value in included {
+            if !value.is_finite() {
+                return Err(ValidationError::NonFiniteMaskValue {
+                    mask: self.name.clone(),
+                });
+            }
+            sum += value;
+            maximum = maximum.max(value);
+            count += 1;
+        }
+        if count == 0 {
+            return Err(ValidationError::EmptyMask(self.name.clone()));
+        }
+        Ok(MaskDoseSummary {
+            voxel_count: count,
+            mean: sum / count as f64,
+            maximum,
+        })
+    }
+}
+
+/// Mean and maximum of a per-voxel quantity inside a `RegionMask`.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct MaskDoseSummary {
+    pub voxel_count: usize,
+    pub mean: f64,
+    pub maximum: f64,
 }
 
 /// Schema identifier carried by every `PhysicalDoseBundle`.
@@ -509,6 +557,14 @@ pub enum ValidationError {
     EmptyMask(String),
     #[error("threshold window [{minimum}, {maximum}] must be finite with minimum <= maximum")]
     InvalidThresholdWindow { minimum: f64, maximum: f64 },
+    #[error("mask {mask:?} covers {mask_voxels} voxels but the values array has {values} entries")]
+    MaskValuesLength {
+        mask: String,
+        mask_voxels: usize,
+        values: usize,
+    },
+    #[error("mask {mask:?} contains a non-finite value")]
+    NonFiniteMaskValue { mask: String },
 }
 
 #[derive(Debug, Error, PartialEq, Eq)]

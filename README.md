@@ -580,7 +580,28 @@ nctforge mask threshold --ct-dir CT-DIR --min -10 --max 40 \
 ```
 
 Resulting masks feed `benchmark derive-materials --mask`, `nctforge dvh`,
-and `nctforge bio apply --region-mask`.
+`nctforge bio apply --region-mask`, and `nctforge irradiation-time`.
+
+`nctforge irradiation-time` evaluates organ-limited irradiation time over a
+per-source-particle endpoint — a physical component/total or a biological
+weighted total — under declared `max`/`mean` region limits, emitting a
+`nctforge.irradiation-time-report/0.1.0` that names the limiting structure,
+each region's admissible time and particle budget, and the assumptions
+(linear accumulation at constant source strength, static anatomy, no
+inter-fraction recovery):
+
+```text
+nctforge irradiation-time \
+  --dose DOSE-BUNDLE.json --quantity physical_total \
+  --source-strength 1e9 \
+  --limit CORD=max:12.5 --limit SKIN=mean:5.0 \
+  --mask CORD=cord.json --mask SKIN=skin.json \
+  --output NEW-REPORT.json
+```
+
+Endpoints in absolute units (not per-source-particle), non-positive source
+strengths, limits without a same-named mask, and zero-statistic regions
+are reported explicitly — the last as unbounded rather than an error.
 
 `nctforge dvh` computes a deterministic `nctforge.dose-volume-histogram/0.1.0`
 over a named voxel mask for any component or total in a physical or

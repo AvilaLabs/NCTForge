@@ -117,6 +117,29 @@ enum Command {
     /// Combine or construct RegionMask volumes (subtraction, union,
     /// intersection, CT-threshold regions) for limiting-organ construction.
     Mask(MaskArgs),
+    /// Evaluate organ-limited irradiation time over a per-source-particle
+    /// dose endpoint, reporting the limiting structure and assumptions.
+    IrradiationTime {
+        /// Physical or biological dose bundle JSON.
+        #[arg(long)]
+        dose: PathBuf,
+        /// `component:NAME`, `physical_total`, or `biological_total`.
+        #[arg(long)]
+        quantity: String,
+        /// Source strength in source particles per second.
+        #[arg(long)]
+        source_strength: f64,
+        /// Region limit `NAME=max|mean:LIMIT` in endpoint dose units;
+        /// repeatable.
+        #[arg(long = "limit", required = true)]
+        limits: Vec<String>,
+        /// RegionMask binding `NAME=path`; repeatable.
+        #[arg(long = "mask", required = true)]
+        masks: Vec<String>,
+        /// New output path for the irradiation-time report JSON.
+        #[arg(long)]
+        output: PathBuf,
+    },
 }
 
 #[derive(Debug, Args)]
@@ -4032,6 +4055,130 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                 write_mask(&mask, &output)?;
             }
         },
+        Some(Command::IrradiationTime {
+            dose,
+            quantity,
+            source_strength,
+            limits,
+            masks,
+            output,
+        }) => {
+            let dose_bytes = fs::read(&dose)?;
+            let schema: serde_json::Value = serde_json::from_slice(&dose_bytes)?;
+            let mut region_masks = Vec::with_capacity(masks.len());
+            for binding in &masks {
+                let (name, path) = binding
+                    .split_once('=')
+                    .ok_or_else(|| io::Error::other("--mask entries must be NAME=path"))?;
+                let mask = read_region_mask(Path::new(path))?;
+                if mask.name != name {
+                    return Err(io::Error::other(format!(
+                        "--mask {name}: mask file names itself {:?}",
+                        mask.name
+                    ))
+                    .into());
+                }
+                region_masks.push(mask);
+            }
+            let mut organ_limits = Vec::with_capacity(limits.len());
+            for entry in &limits {
+                let (name, rest) = entry.split_once('=').ok_or_else(|| {
+                    io::Error::other("--limit entries must be NAME=max|mean:LIMIT")
+                })?;
+                let (metric, value) = rest.split_once(':').ok_or_else(|| {
+                    io::Error::other("--limit entries must be NAME=max|mean:LIMIT")
+                })?;
+                let metric = match metric {
+                    "max" => nctforge_evidence::LimitMetric::Max,
+                    "mean" => nctforge_evidence::LimitMetric::Mean,
+                    other => {
+                        return Err(io::Error::other(format!(
+                            "--limit {name}: unknown metric {other:?} (max|mean)"
+                        ))
+                        .into());
+                    }
+                };
+                let limit: f64 = value.parse().map_err(|_| {
+                    io::Error::other(format!("--limit {name}: invalid limit {value:?}"))
+                })?;
+                organ_limits.push(nctforge_evidence::OrganLimit {
+                    region: name.to_owned(),
+                    metric,
+                    limit,
+                });
+            }
+            let source = nctforge_core::ContentReference {
+                id: dose.display().to_string(),
+                sha256: nctforge_evidence::sha256_file(&dose)?,
+            };
+            let report = match schema
+                .get("schema_version")
+                .and_then(|v| v.as_str())
+                .unwrap_or_default()
+            {
+                nctforge_core::PHYSICAL_DOSE_BUNDLE_SCHEMA => {
+                    let bundle: PhysicalDoseBundle = serde_json::from_slice(&dose_bytes)?;
+                    let (values, unit) = dose_values(&bundle, &quantity)?;
+                    nctforge_evidence::IrradiationTimeReport::evaluate(
+                        &bundle.case_id,
+                        &quantity,
+                        source,
+                        unit,
+                        values,
+                        &region_masks,
+                        &organ_limits,
+                        source_strength,
+                    )?
+                }
+                nctforge_bio::BIOLOGICAL_DOSE_BUNDLE_SCHEMA => {
+                    let bundle: nctforge_bio::BiologicalDoseBundle =
+                        serde_json::from_slice(&dose_bytes)?;
+                    let (values, unit) = biological_dose_values(&bundle, &quantity)?;
+                    nctforge_evidence::IrradiationTimeReport::evaluate(
+                        &bundle.case_id,
+                        &quantity,
+                        source,
+                        unit,
+                        values,
+                        &region_masks,
+                        &organ_limits,
+                        source_strength,
+                    )?
+                }
+                other => {
+                    return Err(io::Error::other(format!(
+                        "unsupported dose bundle schema {other:?}"
+                    ))
+                    .into());
+                }
+            };
+            write_new_json(&output, &report)?;
+            println!("irradiation-time report at {}", output.display());
+            for region in &report.regions {
+                match (region.max_time_s, region.max_source_particles) {
+                    (Some(time), Some(particles)) => println!(
+                        "{} {:?} limit {}: {:.6e} endpoint/s -> max {:.6e} s ({:.6e} particles)",
+                        region.region,
+                        region.metric,
+                        region.limit,
+                        region.endpoint_rate_per_s,
+                        time,
+                        particles,
+                    ),
+                    _ => println!(
+                        "{} {:?} limit {}: zero endpoint rate -> unbounded",
+                        region.region, region.metric, region.limit,
+                    ),
+                }
+            }
+            match &report.limiting {
+                Some(limiting) => println!(
+                    "limiting structure: {} ({:?}), max {:.6e} s",
+                    limiting.region, limiting.metric, limiting.max_time_s
+                ),
+                None => println!("no region bounds the irradiation (all endpoint rates zero)"),
+            }
+        }
         None => {
             println!("NCTForge research scaffold");
             println!("Not commissioned or certified for clinical use.");

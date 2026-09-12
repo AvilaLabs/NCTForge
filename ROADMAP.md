@@ -378,6 +378,13 @@ Implementation status:
   subtract/union/intersect `RegionMask` volumes with shared-frame and
   non-empty-result checks, and `mask threshold` builds regions from a DICOM
   CT modality (HU) window for limiting-organ construction;
+- complete (OP-07, first slice): organ-limited irradiation time —
+  `nctforge irradiation-time` evaluates per-source-particle endpoints
+  (physical or biological weighted) under per-region max/mean limits,
+  emitting `nctforge.irradiation-time-report/0.1.0` with the limiting
+  structure, per-region time and particle budgets, and declared
+  assumptions; zero-statistic regions are unbounded and absolute-unit
+  endpoints are rejected;
 - in progress (OP-01): NIfTI imaging I/O — `nctforge-nifti` reads and writes
   NIfTI-1 `.nii`/`.nii.gz` 3-D scalar volumes (`u8`–`f64`), prefers sform
   over qform, converts RAS+ to patient LPS with transform provenance,
