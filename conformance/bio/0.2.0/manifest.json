@@ -1,0 +1,65 @@
+{
+  "suite": "nctforge.biological-model-conformance/0.2.0",
+  "model_schema": "nctforge.biological-model/0.2.0",
+  "dose_schema": "nctforge.physical-dose-bundle/0.2.0",
+  "bundle_schema": "nctforge.biological-dose-bundle/0.2.0",
+  "notes": [
+    "Each case names a biological model under cases/, a physical dose",
+    "bundle, and region masks; expected bundles are byte-fixed because",
+    "biological provenance embeds the model document's SHA-256.",
+    "expect=ok cases must apply; expect=reject cases must fail with the",
+    "named stable rejection token.",
+    "Fixture weights and alpha/beta ratios are analytic stand-ins for",
+    "conformance checking — not clinical model parameters."
+  ],
+  "cases": [
+    {
+      "file": "cases/model-fixed-weights.json",
+      "dose": "cases/physical-bundle.json",
+      "regions": ["cases/mask-core.json", "cases/mask-margin.json"],
+      "expect": "ok",
+      "description": "fixed per-component weights with a core-region override",
+      "bundle": "expected/fixed-weights.bundle.json"
+    },
+    {
+      "file": "cases/model-isoeffective.json",
+      "dose": "cases/physical-bundle.json",
+      "regions": ["cases/mask-core.json", "cases/mask-margin.json"],
+      "expect": "ok",
+      "description": "photon-isoeffective semantics, per-region weights, no fractionation",
+      "bundle": "expected/isoeffective.bundle.json"
+    },
+    {
+      "file": "cases/model-isoeffective-fractionated.json",
+      "dose": "cases/physical-bundle.json",
+      "regions": ["cases/mask-core.json", "cases/mask-margin.json"],
+      "expect": "ok",
+      "description": "photon-isoeffective LQ fractionation with region alpha/beta override",
+      "bundle": "expected/isoeffective-fractionated.bundle.json"
+    },
+    {
+      "file": "cases/model-fixed-weights.json",
+      "dose": "cases/physical-bundle.json",
+      "regions": ["cases/mask-margin.json"],
+      "expect": "reject",
+      "error": "missing_region_mask",
+      "description": "model declares region core but no core mask is supplied"
+    },
+    {
+      "file": "cases/model-legacy-schema.json",
+      "dose": "cases/physical-bundle.json",
+      "regions": [],
+      "expect": "reject",
+      "error": "unsupported_schema",
+      "description": "0.1.0 model under a 0.2.0-only reader"
+    },
+    {
+      "file": "cases/model-unit-mismatch.json",
+      "dose": "cases/physical-bundle.json",
+      "regions": [],
+      "expect": "reject",
+      "error": "unit_mismatch",
+      "description": "model declares gray input; the dose bundle is per-source-particle"
+    }
+  ]
+}

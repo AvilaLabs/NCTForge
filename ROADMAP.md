@@ -352,7 +352,10 @@ Implementation status:
   with first-order sigma propagation, while components stay linear
   weighted values; both schema bumps are 0.2.0 because
   `deny_unknown_fields` makes the new fields forward-incompatible.
-  Published reference-case fixtures and sensitivity sweeps remain open;
+  Published reference cases now live in `conformance/bio/0.2.0/` — one
+  byte-fixed golden bundle per model family plus stable rejection tokens
+  (`cargo test -p nctforge-bio --test bio_conformance`); sensitivity sweeps
+  remain open;
 - complete: deterministic `nctforge.dose-volume-histogram/0.1.0` over named
   voxel masks for any bundle component or total;
 - complete: evidence-bundle export — `evidence export` collects inputs,

@@ -1,0 +1,106 @@
+{
+  "schema_version": "nctforge.biological-dose-bundle/0.2.0",
+  "case_id": "bio-conformance",
+  "geometry": {
+    "shape": [
+      2,
+      1,
+      1
+    ],
+    "spacing_mm": [
+      5.0,
+      5.0,
+      5.0
+    ],
+    "origin_mm": [
+      -2.5,
+      -2.5,
+      -2.5
+    ],
+    "direction": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  },
+  "physical_bundle_provenance": "conformance-physical-bundle",
+  "model": {
+    "id": "nctforge.conformance.photon-isoeffective.v1",
+    "sha256": "d33b2beb8c759fc455a6ab9db1b969fcc2c2f399049d78f7169255d026a91f58"
+  },
+  "weight_semantics": "photon_isoeffective",
+  "unit": "weighted_gray_per_source_particle",
+  "components": [
+    {
+      "component": "boron",
+      "unit": "weighted_gray_per_source_particle",
+      "values": [
+        4.9000000000000005e-12,
+        2e-12
+      ],
+      "absolute_standard_uncertainty": [
+        4.9000000000000006e-14,
+        2e-14
+      ]
+    },
+    {
+      "component": "nitrogen",
+      "unit": "weighted_gray_per_source_particle",
+      "values": [
+        5e-13,
+        5e-13
+      ],
+      "absolute_standard_uncertainty": [
+        5.000000000000001e-15,
+        5.000000000000001e-15
+      ]
+    },
+    {
+      "component": "hydrogen",
+      "unit": "weighted_gray_per_source_particle",
+      "values": [
+        1.6000000000000003e-13,
+        1.6000000000000003e-13
+      ],
+      "absolute_standard_uncertainty": [
+        1.6000000000000002e-15,
+        1.6000000000000002e-15
+      ]
+    },
+    {
+      "component": "photon",
+      "unit": "weighted_gray_per_source_particle",
+      "values": [
+        3e-13,
+        3e-13
+      ],
+      "absolute_standard_uncertainty": [
+        3e-15,
+        3e-15
+      ]
+    }
+  ],
+  "total": {
+    "unit": "weighted_gray_per_source_particle",
+    "values": [
+      5.8600000000000005e-12,
+      2.96e-12
+    ],
+    "absolute_standard_uncertainty": [
+      5.860000000000001e-14,
+      2.96e-14
+    ],
+    "uncertainty_method": "correlated_component_sum"
+  },
+  "regions_applied": [
+    "core",
+    "margin"
+  ],
+  "qualification": "synthetic_research_only_not_clinical"
+}

@@ -1,0 +1,113 @@
+{
+  "schema_version": "nctforge.biological-dose-bundle/0.2.0",
+  "case_id": "bio-conformance",
+  "geometry": {
+    "shape": [
+      2,
+      1,
+      1
+    ],
+    "spacing_mm": [
+      5.0,
+      5.0,
+      5.0
+    ],
+    "origin_mm": [
+      -2.5,
+      -2.5,
+      -2.5
+    ],
+    "direction": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  },
+  "physical_bundle_provenance": "conformance-physical-bundle",
+  "model": {
+    "id": "nctforge.conformance.photon-isoeffective-lq.v1",
+    "sha256": "eeebd4ec33641c951997526a7248aa48b31fb643267408bdbcd934bac72b1ba4"
+  },
+  "weight_semantics": "photon_isoeffective",
+  "unit": "weighted_gray_per_source_particle",
+  "components": [
+    {
+      "component": "boron",
+      "unit": "weighted_gray_per_source_particle",
+      "values": [
+        4.9000000000000005e-12,
+        2e-12
+      ],
+      "absolute_standard_uncertainty": [
+        4.9000000000000006e-14,
+        2e-14
+      ]
+    },
+    {
+      "component": "nitrogen",
+      "unit": "weighted_gray_per_source_particle",
+      "values": [
+        5e-13,
+        5e-13
+      ],
+      "absolute_standard_uncertainty": [
+        5.000000000000001e-15,
+        5.000000000000001e-15
+      ]
+    },
+    {
+      "component": "hydrogen",
+      "unit": "weighted_gray_per_source_particle",
+      "values": [
+        1.6000000000000003e-13,
+        1.6000000000000003e-13
+      ],
+      "absolute_standard_uncertainty": [
+        1.6000000000000002e-15,
+        1.6000000000000002e-15
+      ]
+    },
+    {
+      "component": "photon",
+      "unit": "weighted_gray_per_source_particle",
+      "values": [
+        3e-13,
+        3e-13
+      ],
+      "absolute_standard_uncertainty": [
+        3e-15,
+        3e-15
+      ]
+    }
+  ],
+  "fractionation": {
+    "fraction_count": 30,
+    "source_particles_per_fraction": 1000000000.0,
+    "regions_applied": [
+      "core"
+    ]
+  },
+  "total": {
+    "unit": "weighted_eqd2",
+    "values": [
+      0.14658584900000002,
+      0.053332569600000004
+    ],
+    "absolute_standard_uncertainty": [
+      0.0014667169800000003,
+      0.0005338513920000001
+    ],
+    "uncertainty_method": "correlated_component_sum"
+  },
+  "regions_applied": [
+    "core",
+    "margin"
+  ],
+  "qualification": "synthetic_research_only_not_clinical"
+}

@@ -1,0 +1,105 @@
+{
+  "schema_version": "nctforge.biological-dose-bundle/0.2.0",
+  "case_id": "bio-conformance",
+  "geometry": {
+    "shape": [
+      2,
+      1,
+      1
+    ],
+    "spacing_mm": [
+      5.0,
+      5.0,
+      5.0
+    ],
+    "origin_mm": [
+      -2.5,
+      -2.5,
+      -2.5
+    ],
+    "direction": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  },
+  "physical_bundle_provenance": "conformance-physical-bundle",
+  "model": {
+    "id": "nctforge.conformance.fixed-component-weights.v1",
+    "sha256": "7957abd6283c7f357e6a8efa1dbcc8861c51accdf09c7ed5ff51fe24ea575c30"
+  },
+  "weight_semantics": "fixed_per_component",
+  "unit": "weighted_gray_per_source_particle",
+  "components": [
+    {
+      "component": "boron",
+      "unit": "weighted_gray_per_source_particle",
+      "values": [
+        4.9000000000000005e-12,
+        3.8e-12
+      ],
+      "absolute_standard_uncertainty": [
+        4.9000000000000006e-14,
+        3.7999999999999996e-14
+      ]
+    },
+    {
+      "component": "nitrogen",
+      "unit": "weighted_gray_per_source_particle",
+      "values": [
+        5e-13,
+        5e-13
+      ],
+      "absolute_standard_uncertainty": [
+        5.000000000000001e-15,
+        5.000000000000001e-15
+      ]
+    },
+    {
+      "component": "hydrogen",
+      "unit": "weighted_gray_per_source_particle",
+      "values": [
+        1.6000000000000003e-13,
+        1.6000000000000003e-13
+      ],
+      "absolute_standard_uncertainty": [
+        1.6000000000000002e-15,
+        1.6000000000000002e-15
+      ]
+    },
+    {
+      "component": "photon",
+      "unit": "weighted_gray_per_source_particle",
+      "values": [
+        3e-13,
+        3e-13
+      ],
+      "absolute_standard_uncertainty": [
+        3e-15,
+        3e-15
+      ]
+    }
+  ],
+  "total": {
+    "unit": "weighted_gray_per_source_particle",
+    "values": [
+      5.8600000000000005e-12,
+      4.76e-12
+    ],
+    "absolute_standard_uncertainty": [
+      5.860000000000001e-14,
+      4.7599999999999994e-14
+    ],
+    "uncertainty_method": "correlated_component_sum"
+  },
+  "regions_applied": [
+    "core"
+  ],
+  "qualification": "synthetic_research_only_not_clinical"
+}

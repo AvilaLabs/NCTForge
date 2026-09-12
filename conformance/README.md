@@ -79,5 +79,26 @@ cargo test -p nctforge-phits --test adapter_conformance
 
 Regeneration uses the same `NCTFORGE_UPDATE_CONFORMANCE=1` convention.
 
+## `bio/0.2.0/` — biological model application
+
+Covers `nctforge.biological-model/0.2.0` →
+`nctforge.biological-dose-bundle/0.2.0` application. `manifest.json` names a
+model, a physical dose bundle, and region masks per case; `expected/` holds
+the reference biological bundles. One case per model family:
+
+- `fixed-weights` — `fixed_per_component` with a core-region override
+- `isoeffective` — `photon_isoeffective` per-region weights, unfractionated
+- `isoeffective-fractionated` — LQ fractionation with a region α/β override
+  (the `weighted_eqd2` total)
+
+Reject cases pin the stable tokens `missing_region_mask`,
+`unsupported_schema`, and `unit_mismatch`. Fixture weights and α/β ratios
+are analytic stand-ins for conformance checking — not clinical model
+parameters.
+
+```text
+cargo test -p nctforge-bio --test bio_conformance
+```
+
 Research only: conformance here means contract fidelity — it does not
 qualify any producer's physics or imply clinical suitability.

@@ -1,0 +1,12 @@
+{
+  "schema_version": "nctforge.biological-model/0.2.0",
+  "id": "nctforge.conformance.unit-mismatch.v1",
+  "weight_semantics": "fixed_per_component",
+  "input_unit": "gray",
+  "component_weights": {
+    "boron": 3.8,
+    "nitrogen": 2.5,
+    "hydrogen": 3.2,
+    "photon": 1.0
+  }
+}

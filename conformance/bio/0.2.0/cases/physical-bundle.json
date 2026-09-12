@@ -1,0 +1,52 @@
+{
+  "schema_version": "nctforge.physical-dose-bundle/0.2.0",
+  "case_id": "bio-conformance",
+  "frame_of_reference_uid": null,
+  "geometry": {
+    "shape": [2, 1, 1],
+    "spacing_mm": [5.0, 5.0, 5.0],
+    "origin_mm": [-2.5, -2.5, -2.5],
+    "direction": [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
+  },
+  "component_profile": {
+    "id": "conformance-component-profile",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "response_set": {
+    "id": "conformance-response-set",
+    "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "components": [
+    {
+      "component": "boron",
+      "unit": "gray_per_source_particle",
+      "values": [1.0e-12, 1.0e-12],
+      "absolute_standard_uncertainty": [1.0e-14, 1.0e-14]
+    },
+    {
+      "component": "nitrogen",
+      "unit": "gray_per_source_particle",
+      "values": [2.0e-13, 2.0e-13],
+      "absolute_standard_uncertainty": [2.0e-15, 2.0e-15]
+    },
+    {
+      "component": "hydrogen",
+      "unit": "gray_per_source_particle",
+      "values": [5.0e-14, 5.0e-14],
+      "absolute_standard_uncertainty": [5.0e-16, 5.0e-16]
+    },
+    {
+      "component": "photon",
+      "unit": "gray_per_source_particle",
+      "values": [3.0e-13, 3.0e-13],
+      "absolute_standard_uncertainty": [3.0e-15, 3.0e-15]
+    }
+  ],
+  "physical_total": {
+    "unit": "gray_per_source_particle",
+    "values": [1.75e-12, 1.75e-12],
+    "absolute_standard_uncertainty": [1.1e-14, 1.1e-14],
+    "uncertainty_method": "dedicated_estimator"
+  },
+  "provenance_id": "conformance-physical-bundle"
+}

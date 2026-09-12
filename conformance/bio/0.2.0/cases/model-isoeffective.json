@@ -1,0 +1,27 @@
+{
+  "schema_version": "nctforge.biological-model/0.2.0",
+  "id": "nctforge.conformance.photon-isoeffective.v1",
+  "weight_semantics": "photon_isoeffective",
+  "input_unit": "gray_per_source_particle",
+  "component_weights": {
+    "boron": 3.8,
+    "nitrogen": 2.5,
+    "hydrogen": 3.2,
+    "photon": 1.0
+  },
+  "region_weights": {
+    "core": {
+      "boron": 4.9,
+      "nitrogen": 2.5,
+      "hydrogen": 3.2,
+      "photon": 1.0
+    },
+    "margin": {
+      "boron": 2.0,
+      "nitrogen": 2.5,
+      "hydrogen": 3.2,
+      "photon": 1.0
+    }
+  },
+  "validity_domain": "conformance fixture CBE factors; not a clinical model"
+}
