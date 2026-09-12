@@ -1,0 +1,99 @@
+{
+  "schema_version": "nctforge.physical-dose-bundle/0.2.0",
+  "case_id": "conformance-case",
+  "frame_of_reference_uid": null,
+  "geometry": {
+    "shape": [
+      2,
+      2,
+      1
+    ],
+    "spacing_mm": [
+      10.0,
+      10.0,
+      10.0
+    ],
+    "origin_mm": [
+      -5.0,
+      -5.0,
+      -5.0
+    ],
+    "direction": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  },
+  "component_profile": {
+    "id": "external:conformance-sim",
+    "sha256": "40b3b5aab6c02eebe12b7195f73465e76525c9837806e63c83e087863d98adb3"
+  },
+  "response_set": {
+    "id": "external:conformance-sim",
+    "sha256": "40b3b5aab6c02eebe12b7195f73465e76525c9837806e63c83e087863d98adb3"
+  },
+  "components": [
+    {
+      "component": "boron",
+      "unit": "gray_per_source_particle",
+      "values": [
+        1e-12,
+        2e-12,
+        1.5e-12,
+        5e-13
+      ],
+      "absolute_standard_uncertainty": null
+    },
+    {
+      "component": "nitrogen",
+      "unit": "gray_per_source_particle",
+      "values": [
+        2e-13,
+        4e-13,
+        3.0000000000000003e-13,
+        1e-13
+      ],
+      "absolute_standard_uncertainty": null
+    },
+    {
+      "component": "hydrogen",
+      "unit": "gray_per_source_particle",
+      "values": [
+        5e-13,
+        1e-12,
+        7.5e-13,
+        2.5e-13
+      ],
+      "absolute_standard_uncertainty": null
+    },
+    {
+      "component": "photon",
+      "unit": "gray_per_source_particle",
+      "values": [
+        3e-12,
+        6e-12,
+        4.500000000000001e-12,
+        1.5e-12
+      ],
+      "absolute_standard_uncertainty": null
+    }
+  ],
+  "physical_total": {
+    "unit": "gray_per_source_particle",
+    "values": [
+      4.7000000000000006e-12,
+      9.400000000000001e-12,
+      7.050000000000001e-12,
+      2.3500000000000003e-12
+    ],
+    "absolute_standard_uncertainty": null,
+    "uncertainty_method": "unavailable"
+  },
+  "provenance_id": "interchange:conformance-sim:sha256:40b3b5aab6c02eebe12b7195f73465e76525c9837806e63c83e087863d98adb3"
+}

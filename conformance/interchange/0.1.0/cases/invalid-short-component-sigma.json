@@ -1,0 +1,112 @@
+{
+  "schema_version": "nctforge.component-dose-interchange/0.1.0",
+  "case_id": "conformance-case",
+  "frame_of_reference_uid": "1.2.840.10008.conformance.1",
+  "geometry": {
+    "shape": [
+      2,
+      2,
+      1
+    ],
+    "spacing_mm": [
+      10.0,
+      10.0,
+      10.0
+    ],
+    "origin_mm": [
+      -5.0,
+      -5.0,
+      -5.0
+    ],
+    "direction": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  },
+  "producer": {
+    "system": "conformance-sim",
+    "version": "0.0.0",
+    "normalization": "per source particle; conformance fixture tallies"
+  },
+  "components": [
+    {
+      "component": "boron",
+      "unit": "gray_per_source_particle",
+      "values": [
+        1e-12,
+        2e-12,
+        1.5e-12,
+        5e-13
+      ],
+      "absolute_standard_uncertainty": [
+        1e-14
+      ]
+    },
+    {
+      "component": "nitrogen",
+      "unit": "gray_per_source_particle",
+      "values": [
+        2e-13,
+        4e-13,
+        3.0000000000000003e-13,
+        1e-13
+      ],
+      "absolute_standard_uncertainty": [
+        2e-15,
+        4e-15,
+        3.0000000000000002e-15,
+        1e-15
+      ]
+    },
+    {
+      "component": "hydrogen",
+      "unit": "gray_per_source_particle",
+      "values": [
+        5e-13,
+        1e-12,
+        7.5e-13,
+        2.5e-13
+      ],
+      "absolute_standard_uncertainty": [
+        5e-15,
+        1e-14,
+        7.500000000000001e-15,
+        2.5e-15
+      ]
+    },
+    {
+      "component": "photon",
+      "unit": "gray_per_source_particle",
+      "values": [
+        3e-12,
+        6e-12,
+        4.500000000000001e-12,
+        1.5e-12
+      ],
+      "absolute_standard_uncertainty": [
+        3.0000000000000005e-14,
+        6.000000000000001e-14,
+        4.500000000000001e-14,
+        1.5000000000000002e-14
+      ]
+    }
+  ],
+  "component_profile": {
+    "id": "conformance-component-profile",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "response_set": {
+    "id": "conformance-response-set",
+    "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "total": {
+    "mode": "component_sum"
+  }
+}

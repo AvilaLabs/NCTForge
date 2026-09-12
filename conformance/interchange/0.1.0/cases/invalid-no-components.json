@@ -1,0 +1,50 @@
+{
+  "schema_version": "nctforge.component-dose-interchange/0.1.0",
+  "case_id": "conformance-case",
+  "frame_of_reference_uid": "1.2.840.10008.conformance.1",
+  "geometry": {
+    "shape": [
+      2,
+      2,
+      1
+    ],
+    "spacing_mm": [
+      10.0,
+      10.0,
+      10.0
+    ],
+    "origin_mm": [
+      -5.0,
+      -5.0,
+      -5.0
+    ],
+    "direction": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  },
+  "producer": {
+    "system": "conformance-sim",
+    "version": "0.0.0",
+    "normalization": "per source particle; conformance fixture tallies"
+  },
+  "components": [],
+  "component_profile": {
+    "id": "conformance-component-profile",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "response_set": {
+    "id": "conformance-response-set",
+    "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "total": {
+    "mode": "component_sum"
+  }
+}

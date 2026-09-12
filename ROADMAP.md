@@ -469,8 +469,13 @@ Implementation status:
   threads through `dvh`/`metrics`/`bio apply` — verified end-to-end on a
   synthetic PHITS-labeled fixture in `examples/interchange/` (analytic
   stand-in values, not PHITS output);
-- pending: committed parser fixtures and conformance suite per producing
-  system, versioned reference outputs, real-engine examples for OP-04;
+- complete (first slice): public conformance suite —
+  `conformance/interchange/0.1.0/` ships a manifest-driven fixture set (4
+  valid documents with byte-fixed golden bundles, 15 rejection cases with
+  stable error tokens) exercised by
+  `cargo test -p nctforge-core --test interchange_conformance`;
+- pending: committed parser fixtures per producing system and real-engine
+  examples for OP-04;
 - pending: OP-05 MCNP deck export, OP-10 external-dose/BED combined
   analysis, and the cross-code frozen-case comparison.
 

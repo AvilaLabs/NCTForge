@@ -1,0 +1,127 @@
+{
+  "suite": "nctforge.component-dose-interchange-conformance/0.1.0",
+  "interchange_schema": "nctforge.component-dose-interchange/0.1.0",
+  "bundle_schema": "nctforge.physical-dose-bundle/0.2.0",
+  "notes": [
+    "Each case names a document under cases/ and the expected outcome.",
+    "expect=ok cases must import; expected/ holds the reference bundle.",
+    "expect=reject cases must fail; error is the stable rejection token.",
+    "Provenance embeds the document SHA-256, so fixtures are byte-fixed."
+  ],
+  "cases": [
+    {
+      "file": "cases/valid-component-sum.json",
+      "expect": "ok",
+      "description": "component_sum total; declared references; per-voxel sigmas",
+      "bundle": "expected/valid-component-sum.bundle.json"
+    },
+    {
+      "file": "cases/valid-dedicated-total.json",
+      "expect": "ok",
+      "description": "dedicated producer total with estimator sigmas",
+      "bundle": "expected/valid-dedicated-total.bundle.json"
+    },
+    {
+      "file": "cases/valid-dedicated-no-sigma.json",
+      "expect": "ok",
+      "description": "dedicated total without sigmas records unavailable uncertainty",
+      "bundle": "expected/valid-dedicated-no-sigma.bundle.json"
+    },
+    {
+      "file": "cases/valid-minimal.json",
+      "expect": "ok",
+      "description": "minimal document: absent references bind the document hash",
+      "bundle": "expected/valid-minimal.bundle.json"
+    },
+    {
+      "file": "cases/invalid-unsupported-schema.json",
+      "expect": "reject",
+      "description": "schema_version the importer does not support",
+      "error": "unsupported_schema"
+    },
+    {
+      "file": "cases/invalid-empty-case-id.json",
+      "expect": "reject",
+      "description": "blank case_id",
+      "error": "empty_identifier"
+    },
+    {
+      "file": "cases/invalid-empty-producer-system.json",
+      "expect": "reject",
+      "description": "blank producer system",
+      "error": "empty_identifier"
+    },
+    {
+      "file": "cases/invalid-no-components.json",
+      "expect": "reject",
+      "description": "empty components array",
+      "error": "no_components"
+    },
+    {
+      "file": "cases/invalid-duplicate-component.json",
+      "expect": "reject",
+      "description": "boron listed twice",
+      "error": "duplicate_component"
+    },
+    {
+      "file": "cases/invalid-missing-component.json",
+      "expect": "reject",
+      "description": "photon component absent",
+      "error": "missing_component"
+    },
+    {
+      "file": "cases/invalid-inconsistent-units.json",
+      "expect": "reject",
+      "description": "hydrogen in gray while others are gray_per_source_particle",
+      "error": "inconsistent_units"
+    },
+    {
+      "file": "cases/invalid-short-dose.json",
+      "expect": "reject",
+      "description": "boron values shorter than voxel count",
+      "error": "dose_length"
+    },
+    {
+      "file": "cases/invalid-negative-dose.json",
+      "expect": "reject",
+      "description": "negative nitrogen dose",
+      "error": "invalid_dose"
+    },
+    {
+      "file": "cases/invalid-short-component-sigma.json",
+      "expect": "reject",
+      "description": "boron sigma shorter than voxel count",
+      "error": "uncertainty_length"
+    },
+    {
+      "file": "cases/invalid-short-total.json",
+      "expect": "reject",
+      "description": "dedicated total shorter than voxel count",
+      "error": "total_length"
+    },
+    {
+      "file": "cases/invalid-negative-total.json",
+      "expect": "reject",
+      "description": "negative dedicated total dose",
+      "error": "invalid_total"
+    },
+    {
+      "file": "cases/invalid-total-sigma-length.json",
+      "expect": "reject",
+      "description": "dedicated total sigma shorter than voxel count",
+      "error": "total_uncertainty_length"
+    },
+    {
+      "file": "cases/invalid-bad-reference.json",
+      "expect": "reject",
+      "description": "declared response_set is not a canonical content reference",
+      "error": "invalid_reference"
+    },
+    {
+      "file": "cases/invalid-bad-geometry.json",
+      "expect": "reject",
+      "description": "direction matrix not orthonormal",
+      "error": "geometry"
+    }
+  ]
+}
