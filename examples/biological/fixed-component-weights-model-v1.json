@@ -1,0 +1,20 @@
+{
+  "schema_version": "nctforge.biological-model/0.1.0",
+  "id": "nctforge.examples.fixed-component-weights.v1",
+  "weight_semantics": "fixed_per_component",
+  "input_unit": "gray_per_source_particle",
+  "component_weights": {
+    "boron": 3.8,
+    "nitrogen": 2.5,
+    "hydrogen": 3.2,
+    "photon": 1.0
+  },
+  "region_weights": {
+    "core": {
+      "boron": 4.9,
+      "nitrogen": 2.5,
+      "hydrogen": 3.2,
+      "photon": 1.0
+    }
+  }
+}

@@ -9,6 +9,8 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use clap::{Args, Parser, Subcommand};
+use nctforge_bio::{BiologicalModel, RegionMask, apply_biological_model};
+use nctforge_core::PhysicalDoseBundle;
 use nctforge_dicom::synthetic::generate_nf_bnct_001;
 use nctforge_dicom::verify_nf_bnct_001;
 use nctforge_njoy::{
@@ -75,6 +77,27 @@ enum Command {
     Openmc(OpenMcArgs),
     /// Prepare deterministic NJOY response-generation artifacts.
     Njoy(NjoyArgs),
+    /// Apply a separately versioned biological model to a physical dose bundle.
+    Bio(BioArgs),
+    /// Compute a dose-volume histogram over a named voxel mask.
+    Dvh {
+        /// Physical or biological dose bundle JSON.
+        #[arg(long)]
+        dose: PathBuf,
+        /// `component:boron|nitrogen|hydrogen|photon`, `physical_total`, or
+        /// `biological_total` (the last only for biological bundles).
+        #[arg(long)]
+        quantity: String,
+        /// RegionMask JSON (`name` + per-voxel `voxels` booleans).
+        #[arg(long)]
+        mask: PathBuf,
+        /// Number of equal-width dose bins over [0, max].
+        #[arg(long, default_value_t = 100)]
+        bins: usize,
+        /// New output path for the DVH JSON.
+        #[arg(long)]
+        output: PathBuf,
+    },
 }
 
 #[derive(Debug, Args)]
@@ -172,6 +195,32 @@ enum OpenMcCommand {
 struct OpenMcDataArgs {
     #[command(subcommand)]
     command: OpenMcDataCommand,
+}
+
+#[derive(Debug, Args)]
+struct BioArgs {
+    #[command(subcommand)]
+    command: BioCommand,
+}
+
+#[derive(Debug, Subcommand)]
+enum BioCommand {
+    /// Produce a biological dose bundle from a physical dose bundle.
+    Apply {
+        /// Biological model JSON (`nctforge.biological-model/0.1.0`).
+        #[arg(long)]
+        model: PathBuf,
+        /// Physical dose bundle JSON produced by `openmc collect`.
+        #[arg(long)]
+        physical_bundle: PathBuf,
+        /// Region mask as `name=path` pairs; required when the model
+        /// declares region weight overrides.
+        #[arg(long = "region-mask")]
+        region_masks: Vec<String>,
+        /// New output path for the biological dose bundle JSON.
+        #[arg(long)]
+        output: PathBuf,
+    },
 }
 
 #[derive(Debug, Args)]
@@ -3019,12 +3068,192 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                 );
             }
         },
+        Some(Command::Bio(args)) => match args.command {
+            BioCommand::Apply {
+                model,
+                physical_bundle,
+                region_masks,
+                output,
+            } => {
+                let model_bytes = fs::read(&model)?;
+                let model: BiologicalModel = serde_json::from_slice(&model_bytes)?;
+                let bundle_bytes = fs::read(&physical_bundle)?;
+                let physical: PhysicalDoseBundle = serde_json::from_slice(&bundle_bytes)?;
+                let mut masks = Vec::new();
+                for pair in &region_masks {
+                    let (name, path) = pair.split_once('=').ok_or_else(|| {
+                        io::Error::other(format!(
+                            "region mask {pair:?} must be written as name=path"
+                        ))
+                    })?;
+                    let mask: RegionMask = serde_json::from_slice(&fs::read(path)?)?;
+                    if mask.name != name {
+                        return Err(io::Error::other(format!(
+                            "region mask {path} is named {:?}, expected {name:?}",
+                            mask.name
+                        ))
+                        .into());
+                    }
+                    masks.push(mask);
+                }
+                let bundle = apply_biological_model(&model, &model_bytes, &physical, &masks)?;
+                let json = serde_json::to_vec_pretty(&bundle)?;
+                let mut file = fs::OpenOptions::new()
+                    .write(true)
+                    .create_new(true)
+                    .open(&output)?;
+                file.write_all(&json)?;
+                file.write_all(b"\n")?;
+                file.sync_all()?;
+                println!("biological dose bundle at {}", output.display());
+                println!("model: {} sha256:{}", model.id, bundle.model.sha256);
+                println!("physical provenance: {}", bundle.physical_bundle_provenance);
+                println!("regions applied: {}", bundle.regions_applied.join(","));
+                println!("qualification: {}", bundle.qualification);
+            }
+        },
+        Some(Command::Dvh {
+            dose,
+            quantity,
+            mask,
+            bins,
+            output,
+        }) => {
+            let dose_bytes = fs::read(&dose)?;
+            let schema: serde_json::Value = serde_json::from_slice(&dose_bytes)?;
+            let mask: RegionMask = serde_json::from_slice(&fs::read(&mask)?)?;
+            let source = nctforge_core::ContentReference {
+                id: dose.display().to_string(),
+                sha256: nctforge_evidence::sha256_file(&dose)?,
+            };
+            let histogram = match schema
+                .get("schema_version")
+                .and_then(|v| v.as_str())
+                .unwrap_or_default()
+            {
+                nctforge_core::PHYSICAL_DOSE_BUNDLE_SCHEMA => {
+                    let bundle: PhysicalDoseBundle = serde_json::from_slice(&dose_bytes)?;
+                    let (values, unit) = dose_values(&bundle, &quantity)?;
+                    let voxel_volume = bundle.geometry.spacing_mm.iter().product();
+                    nctforge_evidence::DoseVolumeHistogram::compute(
+                        &bundle.case_id,
+                        &mask.name,
+                        &quantity,
+                        source,
+                        unit,
+                        values,
+                        &mask.voxels,
+                        voxel_volume,
+                        bins,
+                    )?
+                }
+                nctforge_bio::BIOLOGICAL_DOSE_BUNDLE_SCHEMA => {
+                    let bundle: nctforge_bio::BiologicalDoseBundle =
+                        serde_json::from_slice(&dose_bytes)?;
+                    let (values, unit) = biological_dose_values(&bundle, &quantity)?;
+                    let voxel_volume = bundle.geometry.spacing_mm.iter().product();
+                    nctforge_evidence::DoseVolumeHistogram::compute(
+                        &bundle.case_id,
+                        &mask.name,
+                        &quantity,
+                        source,
+                        unit,
+                        values,
+                        &mask.voxels,
+                        voxel_volume,
+                        bins,
+                    )?
+                }
+                other => {
+                    return Err(io::Error::other(format!(
+                        "unsupported dose bundle schema {other:?}"
+                    ))
+                    .into());
+                }
+            };
+            let json = serde_json::to_vec_pretty(&histogram)?;
+            let mut file = fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&output)?;
+            file.write_all(&json)?;
+            file.write_all(b"\n")?;
+            file.sync_all()?;
+            println!("dose-volume histogram at {}", output.display());
+            println!(
+                "region: {} ({} voxels)",
+                histogram.region, histogram.region_voxel_count
+            );
+            println!("quantity: {} [{}]", histogram.quantity, histogram.unit);
+        }
         None => {
             println!("NCTForge research scaffold");
             println!("Not commissioned or certified for clinical use.");
         }
     }
     Ok(())
+}
+
+fn dose_values<'a>(
+    bundle: &'a PhysicalDoseBundle,
+    quantity: &str,
+) -> Result<(&'a [f64], &'a str), Box<dyn Error>> {
+    if let Some(name) = quantity.strip_prefix("component:") {
+        let component = match name {
+            "boron" => nctforge_core::DoseComponent::Boron,
+            "nitrogen" => nctforge_core::DoseComponent::Nitrogen,
+            "hydrogen" => nctforge_core::DoseComponent::Hydrogen,
+            "photon" => nctforge_core::DoseComponent::Photon,
+            other => {
+                return Err(io::Error::other(format!("unknown dose component {other:?}")).into());
+            }
+        };
+        let volume = bundle
+            .components
+            .iter()
+            .find(|v| v.component == component)
+            .ok_or_else(|| io::Error::other(format!("bundle lacks component {name}")))?;
+        let unit = match volume.unit {
+            nctforge_core::DoseUnit::Gray => "gray",
+            nctforge_core::DoseUnit::GrayPerSourceParticle => "gray_per_source_particle",
+        };
+        return Ok((&volume.values, unit));
+    }
+    if quantity == "physical_total" {
+        let unit = match bundle.physical_total.unit {
+            nctforge_core::DoseUnit::Gray => "gray",
+            nctforge_core::DoseUnit::GrayPerSourceParticle => "gray_per_source_particle",
+        };
+        return Ok((&bundle.physical_total.values, unit));
+    }
+    Err(io::Error::other(format!("unknown physical quantity {quantity:?}")).into())
+}
+
+fn biological_dose_values<'a>(
+    bundle: &'a nctforge_bio::BiologicalDoseBundle,
+    quantity: &str,
+) -> Result<(&'a [f64], &'a str), Box<dyn Error>> {
+    if let Some(name) = quantity.strip_prefix("component:") {
+        let component = match name {
+            "boron" => nctforge_core::DoseComponent::Boron,
+            "nitrogen" => nctforge_core::DoseComponent::Nitrogen,
+            "hydrogen" => nctforge_core::DoseComponent::Hydrogen,
+            "photon" => nctforge_core::DoseComponent::Photon,
+            other => {
+                return Err(io::Error::other(format!("unknown dose component {other:?}")).into());
+            }
+        };
+        let volume = bundle
+            .components
+            .iter()
+            .find(|v| v.component == component)
+            .ok_or_else(|| io::Error::other(format!("bundle lacks component {name}")))?;
+        return Ok((&volume.values, &volume.unit));
+    }
+    if quantity == "biological_total" {
+        return Ok((&bundle.total.values, &bundle.total.unit));
+    }
+    Err(io::Error::other(format!("unknown biological quantity {quantity:?}")).into())
 }
 
 fn bytes_to_gib(bytes: u64) -> f64 {

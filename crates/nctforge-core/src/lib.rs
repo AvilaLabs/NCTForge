@@ -217,6 +217,9 @@ pub struct PhysicalTotalDoseVolume {
     pub uncertainty_method: TotalUncertaintyMethod,
 }
 
+/// Schema identifier carried by every `PhysicalDoseBundle`.
+pub const PHYSICAL_DOSE_BUNDLE_SCHEMA: &str = "nctforge.physical-dose-bundle/0.2.0";
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PhysicalDoseBundle {
@@ -442,7 +445,7 @@ mod tests {
 
     fn valid_bundle() -> PhysicalDoseBundle {
         PhysicalDoseBundle {
-            schema_version: "nctforge.physical-dose-bundle/0.2.0".into(),
+            schema_version: PHYSICAL_DOSE_BUNDLE_SCHEMA.into(),
             case_id: "synthetic".into(),
             frame_of_reference_uid: None,
             geometry: geometry(),

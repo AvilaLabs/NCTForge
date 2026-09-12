@@ -429,6 +429,42 @@ These are conformance thresholds for the synthetic benchmark, not clinical
 commissioning tolerances; a passing report earns reference-result status for
 the run set only within the case's declared qualification ceiling.
 
+### Biological interpretation and dose-volume histograms
+
+`nctforge-bio` is a separately versioned interpretation layer. A
+`nctforge.biological-model/0.1.0` artifact assigns dimensionless
+effectiveness weights to the four physical dose components, with optional
+per-region overrides; `bio apply` produces a
+`nctforge.biological-dose-bundle/0.1.0` whose weighted values never alias
+physical dose (`weighted_gray*` unit labels, a `synthetic_research_only`
+qualification, and content hashes binding the model and physical bundle).
+The biological total's uncertainty is the fully-correlated sum of the
+weighted component sigmas, since all components share transport histories.
+The NF-BNCT-001 specification's exclusion of CBE/RBE/Gy-Eq claims is
+preserved: biological bundles exist only when a model artifact is supplied,
+and a demonstration model plus a core-region mask live under
+`examples/biological/`:
+
+```text
+nctforge bio apply \
+  --model examples/biological/fixed-component-weights-model-v1.json \
+  --physical-bundle DOSE-BUNDLE.json \
+  --region-mask core=examples/biological/core-region-mask.json \
+  --output NEW-BIO-BUNDLE.json
+```
+
+`nctforge dvh` computes a deterministic `nctforge.dose-volume-histogram/0.1.0`
+over a named voxel mask for any component or total in a physical or
+biological bundle — equal-width dose bins, differential volume fractions that
+sum to one, and a cumulative `V(d)` curve:
+
+```text
+nctforge dvh \
+  --dose DOSE-BUNDLE.json --quantity component:boron \
+  --mask examples/biological/core-region-mask.json \
+  --bins 100 --output NEW-DVH.json
+```
+
 A controlled ENDF/B-VIII.1 + TENDL-2025 mixed-source candidate was then
 executed under selection schema `0.3.0`. The six shared nuclides reproduce the
 baseline exactly, but all four TENDL-2025 substitutions remain rejected with

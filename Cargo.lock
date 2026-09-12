@@ -2427,11 +2427,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "nctforge-bio"
+version = "0.1.0"
+dependencies = [
+ "nctforge-core",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "thiserror 2.0.20",
+]
+
+[[package]]
 name = "nctforge-cli"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "nctforge-bio",
+ "nctforge-core",
  "nctforge-dicom",
+ "nctforge-evidence",
  "nctforge-njoy",
  "nctforge-openmc",
  "nctforge-transport",

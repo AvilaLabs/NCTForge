@@ -530,7 +530,7 @@ pub fn collect_statepoint(
     };
 
     let bundle = PhysicalDoseBundle {
-        schema_version: "nctforge.physical-dose-bundle/0.2.0".to_string(),
+        schema_version: nctforge_core::PHYSICAL_DOSE_BUNDLE_SCHEMA.to_string(),
         case_id: manifest.case_id.clone(),
         frame_of_reference_uid: None,
         geometry,
