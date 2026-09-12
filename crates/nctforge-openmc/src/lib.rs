@@ -81,6 +81,8 @@ pub struct OpenMcBackendConfig {
     pub nuclear_data_manifest: PathBuf,
     pub execution_profile: PathBuf,
     pub acceptance: Option<PathBuf>,
+    /// DICOM-derived voxel-box material assignment for structure-derived cases.
+    pub material_assignment: Option<PathBuf>,
     pub nuclear_data_root: PathBuf,
 }
 
@@ -181,6 +183,7 @@ impl TransportBackend for OpenMcBackend {
                 .map_err(|error| OpenMcError::Io(format!("{}: {error}", path.display())))
         };
         let acceptance_json = config.acceptance.as_ref().map(&read).transpose()?;
+        let assignment_json = config.material_assignment.as_ref().map(&read).transpose()?;
         let deck = OpenMcInputDeck::generate(
             case,
             &config.nuclear_data_root,
@@ -192,6 +195,7 @@ impl TransportBackend for OpenMcBackend {
                 nuclear_data_manifest_json: &read(&config.nuclear_data_manifest)?,
                 execution_profile_json: &read(&config.execution_profile)?,
                 acceptance_json: acceptance_json.as_deref(),
+                material_assignment_json: assignment_json.as_deref(),
             },
         )?;
         deck.write_new(working_directory)?;
@@ -361,6 +365,7 @@ mod tests {
             nuclear_data_manifest: write("nuclear-data.json", &inputs.nuclear_data_json),
             execution_profile: write("profile.json", PROFILE_JSON),
             acceptance: None,
+            material_assignment: None,
             nuclear_data_root: inputs.data_root.path().to_path_buf(),
         };
         (

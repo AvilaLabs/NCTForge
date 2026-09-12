@@ -12,7 +12,7 @@ use clap::{Args, Parser, Subcommand};
 use nctforge_bio::{BiologicalModel, RegionMask, apply_biological_model};
 use nctforge_core::PhysicalDoseBundle;
 use nctforge_dicom::synthetic::generate_nf_bnct_001;
-use nctforge_dicom::verify_nf_bnct_001;
+use nctforge_dicom::{load_nf_bnct_001, verify_nf_bnct_001};
 use nctforge_njoy::{
     DEFAULT_CAPTURE_ENERGY_BALANCE_RELATIVE_TOLERANCE,
     DEFAULT_LAW7_BREAKUP_NORMALIZATION_TOLERANCE, DEFAULT_LAW7_BREAKUP_RELATIVE_ENERGY_TOLERANCE,
@@ -52,8 +52,8 @@ use nctforge_openmc::{
     OpenMcNeutronTransportDomainDocument, evaluate_runs,
 };
 use nctforge_transport::{
-    CompletedRun, ComponentDefinitionProfile, MaterialDefinition, ResponseGenerationMethod,
-    TransportBackend, TransportCase,
+    CompletedRun, ComponentDefinitionProfile, MATERIAL_ASSIGNMENT_SCHEMA, MaterialAssignment,
+    MaterialDefinition, MaterialRegion, ResponseGenerationMethod, TransportBackend, TransportCase,
 };
 
 #[derive(Debug, Parser)]
@@ -153,6 +153,32 @@ enum BenchmarkCommand {
         /// Directory containing ct/*.dcm and rtstruct.dcm.
         input: PathBuf,
     },
+    /// Derive a voxel-box material assignment from a verified case's RT
+    /// structure set. Every mapped ROI must rasterize to exactly an
+    /// axis-aligned box; non-box ROIs are rejected rather than approximated.
+    /// Emits the assignment plus a derived transport case whose base material
+    /// is the supplied file.
+    DeriveMaterials {
+        /// Verified NF-BNCT-001 case directory (ct/, rtstruct.dcm, case.json).
+        #[arg(long)]
+        case_root: PathBuf,
+        /// Transport-case JSON supplying geometry, source, and histories.
+        #[arg(long)]
+        case: PathBuf,
+        /// Base material filling all voxels outside mapped regions.
+        #[arg(long)]
+        base_material: PathBuf,
+        /// JSON object {"regions": {"ROI_NAME": "material-file.json"}};
+        /// material paths resolve relative to this file's directory.
+        #[arg(long)]
+        map: PathBuf,
+        /// New output path for the material-assignment JSON.
+        #[arg(long)]
+        output_assignment: PathBuf,
+        /// New output path for the derived transport-case JSON.
+        #[arg(long)]
+        output_case: PathBuf,
+    },
 }
 
 #[derive(Debug, Args)]
@@ -195,6 +221,10 @@ enum OpenMcCommand {
         /// profiles, forbidden otherwise).
         #[arg(long)]
         acceptance: Option<PathBuf>,
+        /// DICOM-derived voxel-box material assignment (structure-derived
+        /// cases only).
+        #[arg(long)]
+        assignment: Option<PathBuf>,
         /// New output directory for the generated deck; it must not already exist.
         #[arg(long)]
         output: PathBuf,
@@ -227,6 +257,10 @@ enum OpenMcCommand {
         /// profiles, forbidden otherwise).
         #[arg(long)]
         acceptance: Option<PathBuf>,
+        /// DICOM-derived voxel-box material assignment (structure-derived
+        /// cases only).
+        #[arg(long)]
+        assignment: Option<PathBuf>,
         /// Root containing cross_sections.xml and every selected HDF5 file.
         #[arg(long)]
         nuclear_data_root: PathBuf,
@@ -1222,6 +1256,132 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                     );
                 }
             }
+            BenchmarkCommand::DeriveMaterials {
+                case_root,
+                case,
+                base_material,
+                map,
+                output_assignment,
+                output_case,
+            } => {
+                let verified = load_nf_bnct_001(&case_root)?;
+                let mut derived_case: TransportCase = serde_json::from_slice(&fs::read(&case)?)?;
+                let base: MaterialDefinition = serde_json::from_slice(&fs::read(&base_material)?)?;
+                if derived_case.geometry != verified.ct.geometry {
+                    return Err(io::Error::other(
+                        "transport-case geometry differs from the verified DICOM geometry",
+                    )
+                    .into());
+                }
+                derived_case.material = base;
+                let map_bytes = fs::read(&map)?;
+                let mapping: serde_json::Value = serde_json::from_slice(&map_bytes)?;
+                let regions = mapping
+                    .get("regions")
+                    .and_then(|value| value.as_object())
+                    .ok_or_else(|| {
+                        io::Error::other(
+                            "material map must be {\"regions\": {\"ROI\": \"material.json\"}}",
+                        )
+                    })?;
+                let map_dir = map.parent().unwrap_or(Path::new("."));
+                let geometry = &verified.ct.geometry;
+                let [nx, ny, _] = geometry.shape.map(|v| v as usize);
+
+                let mut material_regions = Vec::with_capacity(regions.len());
+                for (name, material_path) in regions {
+                    let material_path = material_path.as_str().ok_or_else(|| {
+                        io::Error::other(format!("region {name:?} must map to a file path"))
+                    })?;
+                    let material: MaterialDefinition =
+                        serde_json::from_slice(&fs::read(map_dir.join(material_path))?).map_err(
+                            |error| io::Error::other(format!("region {name:?} material: {error}")),
+                        )?;
+                    let mask = verified
+                        .structures
+                        .roi(name)
+                        .ok_or_else(|| io::Error::other(format!("no ROI named {name:?}")))?;
+
+                    // Axis-aligned box fit: the mask must fill its own
+                    // bounding box exactly, or the CSG cell would silently
+                    // misassign voxels.
+                    let mut lower = [u32::MAX; 3];
+                    let mut upper = [0_u32; 3];
+                    let mut count = 0_usize;
+                    for (index, included) in mask.voxels.iter().copied().enumerate() {
+                        if !included {
+                            continue;
+                        }
+                        count += 1;
+                        let k = index / (nx * ny);
+                        let j = (index % (nx * ny)) / nx;
+                        let i = index % nx;
+                        for (axis, value) in [i, j, k].iter().enumerate() {
+                            lower[axis] = lower[axis].min(*value as u32);
+                            upper[axis] = upper[axis].max(*value as u32);
+                        }
+                    }
+                    if count == 0 {
+                        return Err(io::Error::other(format!("ROI {name:?} is empty")).into());
+                    }
+                    let box_voxels: u64 = (0..3)
+                        .map(|axis| u64::from(upper[axis] - lower[axis] + 1))
+                        .product();
+                    if box_voxels != count as u64 {
+                        return Err(io::Error::other(format!(
+                            "ROI {name:?} is not an axis-aligned box ({count} voxels inside a {box_voxels}-voxel bounding box); general masks need voxel-level material support"
+                        ))
+                        .into());
+                    }
+                    material_regions.push(MaterialRegion {
+                        name: name.clone(),
+                        material,
+                        voxel_lower: lower,
+                        voxel_upper: upper,
+                    });
+                }
+
+                let case_sha = nctforge_evidence::sha256_file(&case_root.join("case.json"))?;
+                let assignment = MaterialAssignment {
+                    schema_version: MATERIAL_ASSIGNMENT_SCHEMA.into(),
+                    // The assignment binds the transport case it is validated
+                    // against; the DICOM case is bound through provenance_id.
+                    case_id: derived_case.case_id.clone(),
+                    base_material: derived_case.material.clone(),
+                    regions: material_regions,
+                    provenance_id: format!("case:sha256:{case_sha}"),
+                };
+                assignment.validate(geometry).map_err(|error| {
+                    io::Error::other(format!("derived assignment is invalid: {error}"))
+                })?;
+                derived_case.validate().map_err(|error| {
+                    io::Error::other(format!("derived transport case is invalid: {error}"))
+                })?;
+                for (path, document) in [
+                    (&output_assignment, serde_json::to_value(&assignment)?),
+                    (&output_case, serde_json::to_value(&derived_case)?),
+                ] {
+                    let mut file = fs::OpenOptions::new()
+                        .write(true)
+                        .create_new(true)
+                        .open(path)?;
+                    serde_json::to_writer_pretty(&mut file, &document)?;
+                    file.write_all(b"\n")?;
+                }
+                println!(
+                    "derived {} material region(s) for {}",
+                    assignment.regions.len(),
+                    assignment.case_id
+                );
+                for region in &assignment.regions {
+                    println!(
+                        "region {}: voxels {:?}..{:?} -> {}",
+                        region.name, region.voxel_lower, region.voxel_upper, region.material.id
+                    );
+                }
+                println!("assignment: {}", output_assignment.display());
+                println!("derived case: {}", output_case.display());
+            }
         },
         Some(Command::Openmc(args)) => match args.command {
             OpenMcCommand::Data(args) => match args.command {
@@ -1407,6 +1567,7 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                 execution_profile,
                 nuclear_data_root,
                 acceptance,
+                assignment,
                 output,
             } => {
                 let case_json = fs::read(&case)?;
@@ -1418,6 +1579,7 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                 let nuclear_data_manifest_json = fs::read(&nuclear_data_manifest)?;
                 let execution_profile_json = fs::read(&execution_profile)?;
                 let acceptance_json = acceptance.as_ref().map(fs::read).transpose()?;
+                let assignment_json = assignment.as_ref().map(fs::read).transpose()?;
                 let deck = OpenMcInputDeck::generate(
                     &case,
                     &nuclear_data_root,
@@ -1429,6 +1591,7 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                         nuclear_data_manifest_json: &nuclear_data_manifest_json,
                         execution_profile_json: &execution_profile_json,
                         acceptance_json: acceptance_json.as_deref(),
+                        material_assignment_json: assignment_json.as_deref(),
                     },
                 )?;
                 deck.write_new(&output)?;
@@ -1453,6 +1616,7 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                 nuclear_data_manifest,
                 execution_profile,
                 acceptance,
+                assignment,
                 nuclear_data_root,
                 openmc,
                 environment,
@@ -1470,6 +1634,7 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                     nuclear_data_manifest,
                     execution_profile,
                     acceptance,
+                    material_assignment: assignment,
                     nuclear_data_root,
                 };
                 let mut backend = OpenMcBackend::new(&openmc).configured(config);

@@ -335,6 +335,40 @@ Exit evidence:
 - independent verifier rejects modified artifacts;
 - all R3 tasks in the OpenPINT capability matrix pass their acceptance evidence.
 
+Implementation status:
+
+- complete: biological interpretation layer — `nctforge-bio` applies a
+  separately versioned `nctforge.biological-model/0.1.0` artifact to a
+  physical dose bundle, producing `nctforge.biological-dose-bundle/0.1.0`
+  whose `weighted_gray*` units and `synthetic_research_only` qualification
+  can never alias physical dose;
+- complete: deterministic `nctforge.dose-volume-histogram/0.1.0` over named
+  voxel masks for any bundle component or total;
+- complete: evidence-bundle export — `evidence export` collects inputs,
+  deck files, logs, statepoints, and dose bundles into a
+  `nctforge.evidence-bundle-manifest/0.1.0` directory; `evidence verify`
+  re-checks every artifact hash and rejects tampering;
+- complete: one-command `openmc run` chaining prepare, execute, and
+  collect, with optional `--evidence-root` export;
+- complete: GUI parity — the dose workspace loads validated physical and
+  biological bundles (component statistics, totals, region-mask DVH plot)
+  and the evidence workspace verifies bundle manifests in place; no
+  placeholder values and no GUI-side scientific logic;
+- complete: Python parity — the bounded API now exposes dose-bundle
+  loading, biological-model application, and DVH computation over the same
+  Rust contracts, with an extended wheel-level parity suite;
+- complete: DICOM-derived material assignment — `benchmark
+  derive-materials` emits a transport-neutral
+  `nctforge.material-assignment/0.1.0` from verified ROI masks (exact
+  axis-aligned voxel boxes only; arbitrary masks are refused rather than
+  approximated), `openmc generate --assignment` builds multi-cell decks,
+  and `openmc collect` corrects response-covered components by per-voxel
+  region/base mass-fraction ratios;
+- in progress: candidate-reference execution — three frozen-seed 300M-history
+  runs are executing under the predeclared acceptance contract; the report
+  and reference-status decision follow when the runs complete;
+- pending: optional GUI slice-overlay of loaded dose on the patient grid.
+
 ## R4 — Transport-neutral reference platform
 
 Add generic component-dose import and cross-code comparison cases.

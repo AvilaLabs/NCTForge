@@ -394,6 +394,52 @@ The collected smoke bundle is execution evidence only — a five-batch,
 thousand-history run cannot produce reference values, and the bundle makes no
 clinical or qualification claim.
 
+### DICOM-derived material assignment
+
+`benchmark derive-materials` turns verified RT Structure Set masks into a
+transport-neutral `nctforge.material-assignment/0.1.0` artifact: named,
+non-overlapping, axis-aligned voxel boxes that each carry a
+`MaterialDefinition`. Derivation is honest about its limits — every selected
+ROI mask must equal its bounding box exactly, so the emitted CSG
+decomposition is an exact representation, not an approximation of an
+arbitrary mask — and the artifact binds the source `case.json` by SHA-256
+provenance:
+
+```text
+nctforge benchmark derive-materials \
+  --case-root CASE-ROOT \
+  --case transport/case.json \
+  --base-material transport/material.json \
+  --map examples/derived/material-map.json \
+  --output-assignment NEW-ASSIGNMENT.json \
+  --output-case NEW-DERIVED-CASE.json
+```
+
+`--map` is a JSON object `{"regions": {"ROI_NAME": "material-file.json"}}`
+whose paths resolve relative to the map file. The derived transport case
+reuses the verified DICOM geometry and is written alongside the assignment.
+`examples/derived/` ships a runnable demonstration that unloads boron from
+the `CORE` box.
+
+`openmc generate --assignment` then builds a multi-cell deck: one OpenMC
+material per distinct region material, one CSG cell per region box, and the
+base cell carved with the region complements. Generation gates keep the
+result scientifically meaningful — the assignment's base material must equal
+the bound material artifact byte-for-byte, region density and temperature
+must match (collection still assumes one voxel mass), regions may not
+introduce nuclides absent from the base material, and only nuclides covered
+by `njoy_partial_kerma_fluence_fold` component estimators may change
+fraction; uncovered nuclides must match the base exactly so the residual
+response tables stay valid.
+
+At collection the folded-response tallies still encode the base material's
+atom densities, so `openmc collect` applies a per-voxel region/base
+mass-fraction ratio to each covered component's values and 1-sigma
+uncertainties, leaving residual, photon, and native-heating components
+untouched. The emitted assignment and component profile are copied into the
+deck directory and hash-verified against the manifest before any correction
+is applied.
+
 ### Candidate-reference runs and acceptance evaluation
 
 Candidate-reference execution profiles (`purpose: candidate_reference`,

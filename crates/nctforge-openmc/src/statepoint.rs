@@ -10,7 +10,9 @@ use nctforge_core::{
     ContentReference, DoseComponent, DoseUnit, DoseVolume, GridGeometry, PhysicalDoseBundle,
     PhysicalTotalDoseVolume, TotalUncertaintyMethod,
 };
-use nctforge_transport::CompletedRun;
+use nctforge_transport::{
+    CompletedRun, ComponentDefinitionProfile, ComponentEstimator, MaterialAssignment,
+};
 use thiserror::Error;
 
 use crate::input::{OpenMcInputManifest, OpenMcTallyContract, sha256_hex};
@@ -441,6 +443,17 @@ pub fn collect_statepoint(
         .ok_or(OpenMcCollectError::InvalidMesh)?;
     let voxel_mass_kg = mesh.voxel_mass_g * 1.0e-3;
 
+    // Region-density correction: folded-response tallies score the base
+    // material's atom densities, so a covered component's per-voxel dose
+    // scales by the region/base mass-fraction ratio of its backing nuclide.
+    // Native heating tallies already see the real material and need no
+    // correction; neither do residual or coupled-photon components.
+    let density_factors = if manifest.bindings.material_assignment.is_some() {
+        Some(load_region_density_factors(working_directory, &manifest)?)
+    } else {
+        None
+    };
+
     let mut components: Vec<DoseVolume> = Vec::new();
     let mut physical_total: Option<PhysicalTotalDoseVolume> = None;
 
@@ -472,14 +485,29 @@ pub fn collect_statepoint(
                 actual: tally.mean.len(),
             });
         }
-        let dose = normalize_tally(contract, tally, mesh.voxel_volume_cm3, voxel_mass_kg)?;
+        let mut dose = normalize_tally(contract, tally, mesh.voxel_volume_cm3, voxel_mass_kg)?;
         match (contract.component, contract.particle) {
-            (Some(component), _) => components.push(DoseVolume {
-                component,
-                unit: DoseUnit::GrayPerSourceParticle,
-                values: dose.values,
-                absolute_standard_uncertainty: Some(dose.absolute_standard_uncertainty),
-            }),
+            (Some(component), _) => {
+                if let Some(factors) = &density_factors
+                    && let Some(factor) = factors.get(&component)
+                {
+                    for ((value, sigma), factor) in dose
+                        .values
+                        .iter_mut()
+                        .zip(dose.absolute_standard_uncertainty.iter_mut())
+                        .zip(factor.iter())
+                    {
+                        *value *= factor;
+                        *sigma *= factor;
+                    }
+                }
+                components.push(DoseVolume {
+                    component,
+                    unit: DoseUnit::GrayPerSourceParticle,
+                    values: dose.values,
+                    absolute_standard_uncertainty: Some(dose.absolute_standard_uncertainty),
+                })
+            }
             // The physical total is the coupled heating tally: no component and
             // no particle filter. Particle-filtered audit heating is collected
             // by the estimator comparison, not the dose bundle.
@@ -556,6 +584,100 @@ pub fn collect_statepoint(
     Ok(bundle)
 }
 
+/// Per-voxel mass-fraction ratios (region/base) for each response-covered
+/// component, built from the deck's bound material assignment and component
+/// profile. Components without an explicit folded nuclide — residual kerma
+/// and coupled photon heating — are absent from the map and stay uncorrected;
+/// native heating tallies likewise already see the real materials.
+fn load_region_density_factors(
+    working_directory: &Path,
+    manifest: &OpenMcInputManifest,
+) -> Result<BTreeMap<DoseComponent, Vec<f64>>, OpenMcCollectError> {
+    let read_bound =
+        |name: &str, declared: &ContentReference| -> Result<Vec<u8>, OpenMcCollectError> {
+            let path = working_directory.join(name);
+            let bytes = std::fs::read(&path).map_err(|error| {
+                OpenMcCollectError::Io(path.display().to_string(), error.to_string())
+            })?;
+            if sha256_hex(&bytes) != declared.sha256 {
+                return Err(OpenMcCollectError::BindingMismatch(name.to_owned()));
+            }
+            Ok(bytes)
+        };
+    let assignment_bytes = read_bound(
+        "nctforge-material-assignment.json",
+        &manifest
+            .bindings
+            .material_assignment
+            .clone()
+            .expect("checked by caller"),
+    )?;
+    let profile_bytes = read_bound(
+        "nctforge-component-profile.json",
+        &manifest.bindings.component_profile,
+    )?;
+    let assignment: MaterialAssignment =
+        serde_json::from_slice(&assignment_bytes).map_err(|error| {
+            OpenMcCollectError::Manifest("material assignment".into(), error.to_string())
+        })?;
+    let profile: ComponentDefinitionProfile =
+        serde_json::from_slice(&profile_bytes).map_err(|error| {
+            OpenMcCollectError::Manifest("component profile".into(), error.to_string())
+        })?;
+
+    let voxel_count = manifest
+        .scoring_mesh
+        .dimensions
+        .iter()
+        .map(|d| *d as usize)
+        .product::<usize>();
+    let [nx, ny, _] = manifest.scoring_mesh.dimensions.map(|d| d as usize);
+    let base_fraction = |name: &str| -> f64 {
+        assignment
+            .base_material
+            .nuclides
+            .iter()
+            .find(|n| n.name == name)
+            .map(|n| n.mass_fraction)
+            .unwrap_or(0.0)
+    };
+
+    let mut factors = BTreeMap::new();
+    for rule in &profile.components {
+        let ComponentEstimator::NjoyPartialKermaFluenceFold { nuclide, .. } = &rule.estimator
+        else {
+            continue;
+        };
+        let base = base_fraction(nuclide);
+        if base <= 0.0 {
+            return Err(OpenMcCollectError::Manifest(
+                "component profile".into(),
+                format!("covered nuclide {nuclide} absent from the assignment base material"),
+            ));
+        }
+        let mut per_voxel = vec![1.0_f64; voxel_count];
+        for region in &assignment.regions {
+            let region_fraction = region
+                .material
+                .nuclides
+                .iter()
+                .find(|n| n.name == *nuclide)
+                .map(|n| n.mass_fraction)
+                .unwrap_or(0.0);
+            let ratio = region_fraction / base;
+            for k in region.voxel_lower[2]..=region.voxel_upper[2] {
+                for j in region.voxel_lower[1]..=region.voxel_upper[1] {
+                    for i in region.voxel_lower[0]..=region.voxel_upper[0] {
+                        per_voxel[i as usize + nx * j as usize + nx * ny * k as usize] = ratio;
+                    }
+                }
+            }
+        }
+        factors.insert(rule.component, per_voxel);
+    }
+    Ok(factors)
+}
+
 /// Trait-level entry point used by `OpenMcBackend::collect`.
 pub fn collect_completed(
     completed: &CompletedRun,
@@ -594,6 +716,8 @@ pub enum OpenMcCollectError {
     Io(String, String),
     #[error("cannot parse input manifest {0}: {1}")]
     Manifest(String, String),
+    #[error("bound deck file {0} does not hash to its manifest reference")]
+    BindingMismatch(String),
     #[error("run header does not match the input manifest for {0}")]
     RunHeaderMismatch(String),
     #[error("contract tally {0} absent from the statepoint")]
@@ -1020,6 +1144,130 @@ mod tests {
         );
         assert!(bundle.provenance_id.starts_with("openmc-input-manifest:"));
         assert!(bundle.provenance_id.contains("+statepoint:"));
+    }
+
+    fn assignment_json() -> serde_json::Value {
+        let material = |id: &str, nuclides: serde_json::Value| {
+            serde_json::json!({
+                "schema_version": "nctforge.material-definition/0.1.0",
+                "id": id,
+                "density_g_cm3": 1.0,
+                "temperature_k": 293.6,
+                "nuclides": nuclides,
+                "neutron_thermal_treatment": "free_gas",
+            })
+        };
+        serde_json::json!({
+            "schema_version": "nctforge.material-assignment/0.1.0",
+            "case_id": "synthetic-case",
+            "base_material": material("base", serde_json::json!([
+                {"name": "B10", "mass_fraction": 0.5},
+                {"name": "N14", "mass_fraction": 0.5},
+            ])),
+            "regions": [{
+                "name": "core",
+                "material": material("core-unloaded", serde_json::json!([
+                    {"name": "N14", "mass_fraction": 1.0},
+                ])),
+                "voxel_lower": [1, 0, 0],
+                "voxel_upper": [1, 0, 0],
+            }],
+            "provenance_id": "case:sha256:test",
+        })
+    }
+
+    fn component_profile_json() -> serde_json::Value {
+        let fold = |component: &str, nuclide: &str, mt: u16| {
+            serde_json::json!({
+                "component": component,
+                "estimator": {
+                    "kind": "njoy_partial_kerma_fluence_fold",
+                    "nuclide": nuclide,
+                    "reaction_mt": mt,
+                    "heatr_partial_kerma_mt": mt + 300,
+                    "photon_energy": "excluded_and_transported",
+                },
+            })
+        };
+        serde_json::json!({
+            "schema_version": "nctforge.component-definition-profile/0.1.0",
+            "id": "profile",
+            "spatial_model": "macroscopic_local_charged_particle_kerma",
+            "source_normalization": "per_unit_weight_source_neutron",
+            "neutron_response": {
+                "unit": "gray_square_centimeter",
+                "interpolation": "linear_linear",
+                "fold_normalization": "divide_track_length_by_scoring_volume_cm3",
+                "outside_domain": "reject_run",
+            },
+            "components": [
+                fold("boron", "B10", 107),
+                fold("nitrogen", "N14", 103),
+                {
+                    "component": "hydrogen",
+                    "estimator": {
+                        "kind": "residual_neutron_kerma_fluence_fold",
+                        "heatr_total_kerma_mt": 301,
+                        "subtract_components": ["boron", "nitrogen"],
+                    },
+                },
+                {"component": "photon", "estimator": {"kind": "coupled_photon_heating"}},
+            ],
+            "physical_total": "coupled_heating_without_particle_filter",
+        })
+    }
+
+    #[test]
+    fn region_density_correction_scales_covered_components_only() {
+        let directory = tempfile::tempdir().unwrap();
+        write_deck(directory.path(), &tally_defs());
+
+        // Bind the assignment and real profile bytes into the manifest.
+        let assignment_bytes = serde_json::to_vec_pretty(&assignment_json()).unwrap();
+        let profile_bytes = serde_json::to_vec_pretty(&component_profile_json()).unwrap();
+        std::fs::write(
+            directory.path().join("nctforge-material-assignment.json"),
+            &assignment_bytes,
+        )
+        .unwrap();
+        std::fs::write(
+            directory.path().join("nctforge-component-profile.json"),
+            &profile_bytes,
+        )
+        .unwrap();
+        let manifest_path = directory.path().join(OPENMC_INPUT_MANIFEST_FILE);
+        let mut manifest: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&manifest_path).unwrap()).unwrap();
+        manifest["bindings"]["component_profile"]["sha256"] = sha256_hex(&profile_bytes).into();
+        manifest["bindings"]["material_assignment"] = serde_json::json!({
+            "id": "nctforge.material-assignment/0.1.0",
+            "sha256": sha256_hex(&assignment_bytes),
+        });
+        std::fs::write(
+            &manifest_path,
+            serde_json::to_vec_pretty(&manifest).unwrap(),
+        )
+        .unwrap();
+
+        let bundle = collect_statepoint(directory.path()).unwrap();
+        bundle.validate().unwrap();
+        // Voxel 1 is inside the boron-free region: boron folds to zero,
+        // nitrogen doubles (fraction 1.0 vs base 0.5), hydrogen and photon
+        // stay uncorrected, and the native-heating total is untouched.
+        let component = |name| {
+            bundle
+                .components
+                .iter()
+                .find(|v| serde_json::to_value(v.component).unwrap() == serde_json::json!(name))
+                .unwrap()
+        };
+        assert_eq!(component("boron").values, vec![1.0e-12, 0.0]);
+        assert_eq!(component("nitrogen").values, vec![2.0e-13, 4.0e-13]);
+        assert_eq!(component("hydrogen").values, vec![5.0e-13, 5.0e-13]);
+        let expected_photon = 20_000.0 * 1.602176634e-19 / 1.0e-3;
+        assert!(
+            (component("photon").values[1] - expected_photon).abs() / expected_photon < 1.0e-12
+        );
     }
 
     #[test]

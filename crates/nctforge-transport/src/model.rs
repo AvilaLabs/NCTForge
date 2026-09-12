@@ -213,6 +213,107 @@ impl TransportCase {
     }
 }
 
+pub const MATERIAL_ASSIGNMENT_SCHEMA: &str = "nctforge.material-assignment/0.1.0";
+
+/// A transport-neutral DICOM-derived material assignment: named axis-aligned
+/// voxel-index regions that override the case's base material. Every region
+/// was verified at derivation time to equal its bounding box, so the CSG
+/// decomposition is exact — not an approximation of a general mask.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct MaterialAssignment {
+    pub schema_version: String,
+    pub case_id: String,
+    /// The base material filling all voxels outside every region. Carried
+    /// explicitly so per-voxel density-ratio correction can be computed from
+    /// the assignment alone; generation requires it to equal the bound
+    /// material artifact.
+    pub base_material: MaterialDefinition,
+    pub regions: Vec<MaterialRegion>,
+    /// Content-bound provenance of the source case the masks were rasterized
+    /// from — for example `case:sha256:<hex>`.
+    pub provenance_id: String,
+}
+
+/// One axis-aligned voxel box — inclusive lower/upper index bounds — carrying
+/// a material that overrides the base material inside the box.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct MaterialRegion {
+    pub name: String,
+    pub material: MaterialDefinition,
+    pub voxel_lower: [u32; 3],
+    pub voxel_upper: [u32; 3],
+}
+
+impl MaterialRegion {
+    /// World-space (mm) edges of the voxel box under an axis-aligned grid.
+    /// Voxel indices span half-open cells, so the upper edge adds one spacing.
+    #[must_use]
+    pub fn world_bounds_mm(&self, geometry: &GridGeometry) -> ([f64; 3], [f64; 3]) {
+        let mut lower = [0.0; 3];
+        let mut upper = [0.0; 3];
+        for axis in 0..3 {
+            let edge0 = geometry.origin_mm[axis] - 0.5 * geometry.spacing_mm[axis];
+            lower[axis] = edge0 + f64::from(self.voxel_lower[axis]) * geometry.spacing_mm[axis];
+            upper[axis] = edge0 + f64::from(self.voxel_upper[axis] + 1) * geometry.spacing_mm[axis];
+        }
+        (lower, upper)
+    }
+}
+
+impl MaterialAssignment {
+    pub fn validate(&self, geometry: &GridGeometry) -> Result<(), TransportModelError> {
+        validate_identifier("material_assignment.schema_version", &self.schema_version)?;
+        if self.schema_version != MATERIAL_ASSIGNMENT_SCHEMA {
+            return Err(TransportModelError::UnsupportedMaterialAssignmentSchema(
+                self.schema_version.clone(),
+            ));
+        }
+        validate_identifier("material_assignment.case_id", &self.case_id)?;
+        self.base_material.validate()?;
+        validate_identifier("material_assignment.provenance_id", &self.provenance_id)?;
+        if self.regions.is_empty() {
+            return Err(TransportModelError::EmptyMaterialAssignment);
+        }
+        let mut names = BTreeSet::new();
+        for region in &self.regions {
+            validate_identifier("material_region.name", &region.name)?;
+            if !names.insert(region.name.as_str()) {
+                return Err(TransportModelError::DuplicateMaterialRegion(
+                    region.name.clone(),
+                ));
+            }
+            region.material.validate()?;
+            for axis in 0..3 {
+                if region.voxel_lower[axis] > region.voxel_upper[axis]
+                    || region.voxel_upper[axis] >= geometry.shape[axis]
+                {
+                    return Err(TransportModelError::MaterialRegionOutsideGrid(
+                        region.name.clone(),
+                    ));
+                }
+            }
+        }
+        // Region boxes may not overlap: CSG precedence would silently pick one.
+        for (index, region) in self.regions.iter().enumerate() {
+            for other in &self.regions[index + 1..] {
+                let disjoint = (0..3).any(|axis| {
+                    region.voxel_upper[axis] < other.voxel_lower[axis]
+                        || other.voxel_upper[axis] < region.voxel_lower[axis]
+                });
+                if !disjoint {
+                    return Err(TransportModelError::OverlappingMaterialRegions {
+                        first: region.name.clone(),
+                        second: other.name.clone(),
+                    });
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
 fn validate_identifier(label: &'static str, value: &str) -> Result<(), TransportModelError> {
     if value.trim().is_empty() {
         Err(TransportModelError::EmptyIdentifier(label))
@@ -287,6 +388,16 @@ pub enum TransportModelError {
     InvalidSourceEnergy,
     #[error("transport case requests zero source histories")]
     ZeroRequestedHistories,
+    #[error("unsupported material-assignment schema {0:?}")]
+    UnsupportedMaterialAssignmentSchema(String),
+    #[error("material assignment contains no regions")]
+    EmptyMaterialAssignment,
+    #[error("material region {0} occurs more than once")]
+    DuplicateMaterialRegion(String),
+    #[error("material region {0} has voxel bounds outside the case grid")]
+    MaterialRegionOutsideGrid(String),
+    #[error("material regions {first:?} and {second:?} overlap")]
+    OverlappingMaterialRegions { first: String, second: String },
 }
 
 #[cfg(test)]
@@ -342,6 +453,116 @@ mod tests {
             source.validate(),
             Err(TransportModelError::InvalidSourceDirection)
         );
+    }
+
+    fn geometry() -> GridGeometry {
+        GridGeometry {
+            shape: [4, 4, 4],
+            spacing_mm: [5.0, 5.0, 5.0],
+            origin_mm: [-10.0, -10.0, -10.0],
+            direction: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
+        }
+    }
+
+    fn assignment() -> MaterialAssignment {
+        MaterialAssignment {
+            schema_version: MATERIAL_ASSIGNMENT_SCHEMA.into(),
+            case_id: "nf-bnct-001".into(),
+            base_material: material(),
+            regions: vec![MaterialRegion {
+                name: "core".into(),
+                material: material(),
+                voxel_lower: [1, 1, 1],
+                voxel_upper: [2, 2, 2],
+            }],
+            provenance_id: "case:sha256:test".into(),
+        }
+    }
+
+    #[test]
+    fn valid_assignment_passes_and_maps_to_world_edges() {
+        let geometry = geometry();
+        let assignment = assignment();
+        assignment.validate(&geometry).unwrap();
+        // Voxel center -10 mm, spacing 5 mm -> edge0 = -12.5 mm.
+        // Voxel [1,1,1]..[2,2,2] maps to [-7.5, 2.5) mm on every axis.
+        let (lower, upper) = assignment.regions[0].world_bounds_mm(&geometry);
+        assert_eq!(lower, [-7.5, -7.5, -7.5]);
+        assert_eq!(upper, [2.5, 2.5, 2.5]);
+    }
+
+    #[test]
+    fn rejects_bad_assignment_schema_regions_and_overlap() {
+        let geometry = geometry();
+
+        let mut wrong_schema = assignment();
+        wrong_schema.schema_version = "other/9.9.9".into();
+        assert!(matches!(
+            wrong_schema.validate(&geometry),
+            Err(TransportModelError::UnsupportedMaterialAssignmentSchema(_))
+        ));
+
+        let mut empty = assignment();
+        empty.regions.clear();
+        assert_eq!(
+            empty.validate(&geometry),
+            Err(TransportModelError::EmptyMaterialAssignment)
+        );
+
+        let mut outside = assignment();
+        outside.regions[0].voxel_upper = [3, 3, 4];
+        assert_eq!(
+            outside.validate(&geometry),
+            Err(TransportModelError::MaterialRegionOutsideGrid(
+                "core".into()
+            ))
+        );
+
+        let mut inverted = assignment();
+        inverted.regions[0].voxel_lower = [2, 2, 2];
+        inverted.regions[0].voxel_upper = [1, 1, 1];
+        assert_eq!(
+            inverted.validate(&geometry),
+            Err(TransportModelError::MaterialRegionOutsideGrid(
+                "core".into()
+            ))
+        );
+
+        let mut duplicate = assignment();
+        let copy = duplicate.regions[0].clone();
+        duplicate.regions.push(MaterialRegion {
+            name: "second".into(),
+            ..copy
+        });
+        duplicate.regions[1].name = "core".into();
+        assert_eq!(
+            duplicate.validate(&geometry),
+            Err(TransportModelError::DuplicateMaterialRegion("core".into()))
+        );
+
+        let mut overlapping = assignment();
+        overlapping.regions[0].name = "first".into();
+        overlapping.regions.push(MaterialRegion {
+            name: "second".into(),
+            material: material(),
+            voxel_lower: [2, 2, 2],
+            voxel_upper: [3, 3, 3],
+        });
+        assert!(matches!(
+            overlapping.validate(&geometry),
+            Err(TransportModelError::OverlappingMaterialRegions { .. })
+        ));
+
+        // Touching boxes do not overlap — halves are half-open.
+        let mut adjacent = assignment();
+        adjacent.regions[0].voxel_upper = [1, 1, 1];
+        adjacent.regions.push(MaterialRegion {
+            name: "second".into(),
+            material: material(),
+            voxel_lower: [2, 2, 2],
+            voxel_upper: [3, 3, 3],
+        });
+        adjacent.validate(&geometry).unwrap();
     }
 
     #[test]

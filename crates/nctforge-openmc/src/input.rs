@@ -7,7 +7,8 @@ use std::path::Path;
 use nctforge_core::{ContentReference, DoseComponent, GridGeometry};
 use nctforge_transport::{
     AngularDistribution, ComponentDefinitionProfile, EnergyDistribution, FixedSourceDefinition,
-    MaterialDefinition, NeutronResponseSet, ParticleType, SourceSpatialDistribution, TransportCase,
+    MATERIAL_ASSIGNMENT_SCHEMA, MaterialAssignment, MaterialDefinition, NeutronResponseSet,
+    ParticleType, SourceSpatialDistribution, TransportCase,
 };
 use quick_xml::Writer;
 use quick_xml::events::{BytesDecl, BytesEnd, BytesStart, BytesText, Event};
@@ -392,6 +393,10 @@ pub struct OpenMcInputArtifacts<'a> {
     /// Acceptance contract required for `candidate_reference` decks and
     /// forbidden otherwise, so smoke manifests remain byte-identical.
     pub acceptance_json: Option<&'a [u8]>,
+    /// DICOM-derived voxel-box material assignment. Present only for
+    /// structure-derived cases; the deck then emits one CSG cell per region
+    /// and one OpenMC material per distinct region material.
+    pub material_assignment_json: Option<&'a [u8]>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -441,6 +446,8 @@ pub struct OpenMcInputBindings {
     pub execution_profile: ContentReference,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub acceptance: Option<ContentReference>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub material_assignment: Option<ContentReference>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -632,6 +639,100 @@ impl OpenMcInputDeck {
             return Err(OpenMcInputError::CaseSourceMismatch);
         }
 
+        // DICOM-derived material regions override the base material inside
+        // verified voxel boxes. Folded-response tallies encode the base
+        // material's atom densities, so a region may only change the mass
+        // fraction of a nuclide that a fluence-fold estimator explicitly
+        // covers — collection rescales those components by the region/base
+        // density ratio. Every other nuclide fraction must match the base
+        // material exactly, and densities must match because per-voxel
+        // collection mass assumes a single density.
+        let covered_nuclides: Vec<&str> = component_profile
+            .components
+            .iter()
+            .filter_map(|rule| match &rule.estimator {
+                nctforge_transport::ComponentEstimator::NjoyPartialKermaFluenceFold {
+                    nuclide,
+                    ..
+                } => Some(nuclide.as_str()),
+                _ => None,
+            })
+            .collect();
+        let material_assignment = match artifacts.material_assignment_json {
+            Some(bytes) => {
+                let assignment: MaterialAssignment = parse_json("material_assignment", bytes)?;
+                assignment
+                    .validate(&case.geometry)
+                    .map_err(|error| OpenMcInputError::InvalidAssignment(error.to_string()))?;
+                if assignment.case_id != case.case_id {
+                    return Err(OpenMcInputError::InvalidAssignment(format!(
+                        "assignment case_id {} does not match case {}",
+                        assignment.case_id, case.case_id
+                    )));
+                }
+                if assignment.base_material != material {
+                    return Err(OpenMcInputError::InvalidAssignment(
+                        "assignment base material differs from the bound material artifact".into(),
+                    ));
+                }
+                for region in &assignment.regions {
+                    if (region.material.density_g_cm3 - material.density_g_cm3).abs() > f64::EPSILON
+                    {
+                        return Err(OpenMcInputError::AssignmentDensityMismatch(
+                            region.name.clone(),
+                        ));
+                    }
+                    if region.material.temperature_k != material.temperature_k {
+                        return Err(OpenMcInputError::InvalidAssignment(format!(
+                            "region {} temperature differs from the base material",
+                            region.name
+                        )));
+                    }
+                    for nuclide in &region.material.nuclides {
+                        let base_fraction = material
+                            .nuclides
+                            .iter()
+                            .find(|n| n.name == nuclide.name)
+                            .map(|n| n.mass_fraction);
+                        let Some(base_fraction) = base_fraction else {
+                            return Err(OpenMcInputError::InvalidAssignment(format!(
+                                "region {} introduces nuclide {} absent from the base material; response tables cannot cover it",
+                                region.name, nuclide.name
+                            )));
+                        };
+                        if !covered_nuclides.contains(&nuclide.name.as_str())
+                            && (nuclide.mass_fraction - base_fraction).abs() > 1.0e-12
+                        {
+                            return Err(OpenMcInputError::InvalidAssignment(format!(
+                                "region {} changes uncovered nuclide {} ({} vs base {}); only response-covered nuclide fractions may differ",
+                                region.name, nuclide.name, nuclide.mass_fraction, base_fraction
+                            )));
+                        }
+                    }
+                    for base in &material.nuclides {
+                        if covered_nuclides.contains(&base.name.as_str()) {
+                            continue;
+                        }
+                        let region_fraction = region
+                            .material
+                            .nuclides
+                            .iter()
+                            .find(|n| n.name == base.name)
+                            .map(|n| n.mass_fraction)
+                            .unwrap_or(0.0);
+                        if (region_fraction - base.mass_fraction).abs() > 1.0e-12 {
+                            return Err(OpenMcInputError::InvalidAssignment(format!(
+                                "region {} drops or changes uncovered nuclide {} ({} vs base {}); residual response tables assume base fractions",
+                                region.name, base.name, region_fraction, base.mass_fraction
+                            )));
+                        }
+                    }
+                }
+                Some(assignment)
+            }
+            None => None,
+        };
+
         let component_reference =
             content_reference(&component_profile.id, artifacts.component_profile_json);
         let material_reference = content_reference(&material.id, artifacts.material_json);
@@ -764,8 +865,8 @@ impl OpenMcInputDeck {
             }
         }
 
-        let geometry_xml = geometry_xml(case, &scoring_mesh)?;
-        let materials_xml = materials_xml(&material)?;
+        let geometry_xml = geometry_xml(case, &scoring_mesh, material_assignment.as_ref())?;
+        let materials_xml = materials_xml(&material, material_assignment.as_ref())?;
         let settings_xml = settings_xml(
             &source,
             &execution_profile,
@@ -785,9 +886,25 @@ impl OpenMcInputDeck {
             generated_file("settings.xml", XML_MEDIA_TYPE, settings_xml),
             generated_file("tallies.xml", XML_MEDIA_TYPE, tallies_xml),
         ];
+        // The component profile rides with the deck so collection can map
+        // components to their covered nuclides for region-density correction.
+        if material_assignment.is_some() {
+            files.push(generated_file(
+                "nctforge-component-profile.json",
+                JSON_MEDIA_TYPE,
+                artifacts.component_profile_json.to_vec(),
+            ));
+        }
         if let Some(bytes) = artifacts.acceptance_json {
             files.push(generated_file(
                 "nctforge-acceptance-contract.json",
+                JSON_MEDIA_TYPE,
+                bytes.to_vec(),
+            ));
+        }
+        if let Some(bytes) = artifacts.material_assignment_json {
+            files.push(generated_file(
+                "nctforge-material-assignment.json",
                 JSON_MEDIA_TYPE,
                 bytes.to_vec(),
             ));
@@ -805,7 +922,7 @@ impl OpenMcInputDeck {
             .clone()
             .expect("folding validation requires independent review");
         let manifest = OpenMcInputManifest {
-            schema_version: if acceptance.is_some() {
+            schema_version: if acceptance.is_some() || material_assignment.is_some() {
                 INPUT_MANIFEST_SCHEMA_V2
             } else {
                 INPUT_MANIFEST_SCHEMA
@@ -826,6 +943,12 @@ impl OpenMcInputDeck {
                 execution_profile: execution_reference,
                 acceptance: acceptance.as_ref().map(|contract| {
                     content_reference(&contract.id, artifacts.acceptance_json.unwrap())
+                }),
+                material_assignment: material_assignment.as_ref().map(|_| {
+                    content_reference(
+                        MATERIAL_ASSIGNMENT_SCHEMA,
+                        artifacts.material_assignment_json.unwrap(),
+                    )
                 }),
             },
             execution: OpenMcRunControls {
@@ -1033,33 +1156,107 @@ fn validate_source_containment(
     Ok(())
 }
 
+/// Region-box surface IDs start at `REGION_SURFACE_BASE + 6 * region_index`;
+/// cells and materials follow the same ordering (`2 + index`).
+const REGION_SURFACE_BASE: u32 = 101;
+
+/// Each region's material gets an OpenMC material ID — identical region
+/// materials share one material element.
+fn region_material_ids(assignment: Option<&MaterialAssignment>) -> Vec<u32> {
+    let mut ids = Vec::new();
+    let mut materials: Vec<&MaterialDefinition> = Vec::new();
+    if let Some(assignment) = assignment {
+        for region in &assignment.regions {
+            let index = materials
+                .iter()
+                .position(|existing| **existing == region.material)
+                .unwrap_or_else(|| {
+                    materials.push(&region.material);
+                    materials.len() - 1
+                });
+            ids.push(2 + index as u32);
+        }
+    }
+    ids
+}
+
 fn geometry_xml(
     case: &TransportCase,
     mesh: &OpenMcScoringMesh,
+    assignment: Option<&MaterialAssignment>,
 ) -> Result<Vec<u8>, OpenMcInputError> {
     xml_document("geometry", |writer| {
+        // Base cell: outer box with every region box subtracted.
+        let mut base_region = "1 -2 3 -4 5 -6".to_owned();
+        let mut cells = Vec::new();
+        if let Some(assignment) = assignment {
+            let material_ids = region_material_ids(Some(assignment));
+            for (index, region) in assignment.regions.iter().enumerate() {
+                let first_surface = REGION_SURFACE_BASE + 6 * index as u32;
+                let halfspaces = format!(
+                    "{first} -{second} {third} -{fourth} {fifth} -{sixth}",
+                    first = first_surface,
+                    second = first_surface + 1,
+                    third = first_surface + 2,
+                    fourth = first_surface + 3,
+                    fifth = first_surface + 4,
+                    sixth = first_surface + 5,
+                );
+                base_region.push_str(&format!(" ~({halfspaces})"));
+                cells.push((2 + index as u32, region, material_ids[index], halfspaces));
+            }
+        }
+
         let mut cell = BytesStart::new("cell");
         cell.push_attribute(("id", "1"));
         cell.push_attribute(("name", case.case_id.as_str()));
         cell.push_attribute(("material", "1"));
-        cell.push_attribute(("region", "1 -2 3 -4 5 -6"));
+        cell.push_attribute(("region", base_region.as_str()));
         cell.push_attribute(("universe", "1"));
         writer.write_event(Event::Empty(cell))?;
+        for (cell_id, region, material_id, halfspaces) in &cells {
+            let mut element = BytesStart::new("cell");
+            element.push_attribute(("id", cell_id.to_string().as_str()));
+            element.push_attribute(("name", region.name.as_str()));
+            element.push_attribute(("material", material_id.to_string().as_str()));
+            element.push_attribute(("region", halfspaces.as_str()));
+            element.push_attribute(("universe", "1"));
+            writer.write_event(Event::Empty(element))?;
+        }
 
-        for (id, kind, coefficient) in [
-            (1_u32, "x-plane", mesh.lower_left_cm[0]),
-            (2, "x-plane", mesh.upper_right_cm[0]),
-            (3, "y-plane", mesh.lower_left_cm[1]),
-            (4, "y-plane", mesh.upper_right_cm[1]),
-            (5, "z-plane", mesh.lower_left_cm[2]),
-            (6, "z-plane", mesh.upper_right_cm[2]),
-        ] {
+        let mut surfaces = vec![
+            (1_u32, "x-plane", mesh.lower_left_cm[0], true),
+            (2, "x-plane", mesh.upper_right_cm[0], true),
+            (3, "y-plane", mesh.lower_left_cm[1], true),
+            (4, "y-plane", mesh.upper_right_cm[1], true),
+            (5, "z-plane", mesh.lower_left_cm[2], true),
+            (6, "z-plane", mesh.upper_right_cm[2], true),
+        ];
+        if let Some(assignment) = assignment {
+            for (index, region) in assignment.regions.iter().enumerate() {
+                let (lower_mm, upper_mm) = region.world_bounds_mm(&case.geometry);
+                let first = REGION_SURFACE_BASE + 6 * index as u32;
+                surfaces.extend([
+                    (first, "x-plane", lower_mm[0] / 10.0, false),
+                    (first + 1, "x-plane", upper_mm[0] / 10.0, false),
+                    (first + 2, "y-plane", lower_mm[1] / 10.0, false),
+                    (first + 3, "y-plane", upper_mm[1] / 10.0, false),
+                    (first + 4, "z-plane", lower_mm[2] / 10.0, false),
+                    (first + 5, "z-plane", upper_mm[2] / 10.0, false),
+                ]);
+            }
+        }
+        for (id, kind, coefficient, boundary) in surfaces {
             let id = id.to_string();
             let coefficient = format_float(coefficient);
             let mut surface = BytesStart::new("surface");
             surface.push_attribute(("id", id.as_str()));
             surface.push_attribute(("type", kind));
-            surface.push_attribute(("boundary", "vacuum"));
+            // Vacuum boundary belongs on the outer envelope only; region
+            // surfaces are interior interfaces.
+            if boundary {
+                surface.push_attribute(("boundary", "vacuum"));
+            }
             surface.push_attribute(("coeffs", coefficient.as_str()));
             writer.write_event(Event::Empty(surface))?;
         }
@@ -1067,29 +1264,48 @@ fn geometry_xml(
     })
 }
 
-fn materials_xml(material: &MaterialDefinition) -> Result<Vec<u8>, OpenMcInputError> {
+fn materials_xml(
+    material: &MaterialDefinition,
+    assignment: Option<&MaterialAssignment>,
+) -> Result<Vec<u8>, OpenMcInputError> {
     xml_document("materials", |writer| {
-        let temperature = format_float(material.temperature_k);
-        let mut material_element = BytesStart::new("material");
-        material_element.push_attribute(("id", "1"));
-        material_element.push_attribute(("name", material.id.as_str()));
-        material_element.push_attribute(("temperature", temperature.as_str()));
-        writer.write_event(Event::Start(material_element))?;
-
-        let density = format_float(material.density_g_cm3);
-        let mut density_element = BytesStart::new("density");
-        density_element.push_attribute(("value", density.as_str()));
-        density_element.push_attribute(("units", "g/cm3"));
-        writer.write_event(Event::Empty(density_element))?;
-
-        for nuclide in &material.nuclides {
-            let fraction = format_float(nuclide.mass_fraction);
-            let mut element = BytesStart::new("nuclide");
-            element.push_attribute(("name", nuclide.name.as_str()));
-            element.push_attribute(("wo", fraction.as_str()));
-            writer.write_event(Event::Empty(element))?;
+        let mut emitted: Vec<&MaterialDefinition> = Vec::new();
+        let mut queue: Vec<(u32, &MaterialDefinition)> = vec![(1, material)];
+        if let Some(assignment) = assignment {
+            for region in &assignment.regions {
+                if !emitted.iter().any(|existing| **existing == region.material)
+                    && region.material != *material
+                {
+                    emitted.push(&region.material);
+                }
+            }
+            for (index, material) in emitted.iter().enumerate() {
+                queue.push((2 + index as u32, material));
+            }
         }
-        writer.write_event(Event::End(BytesEnd::new("material")))?;
+        for (id, material) in queue {
+            let temperature = format_float(material.temperature_k);
+            let mut material_element = BytesStart::new("material");
+            material_element.push_attribute(("id", id.to_string().as_str()));
+            material_element.push_attribute(("name", material.id.as_str()));
+            material_element.push_attribute(("temperature", temperature.as_str()));
+            writer.write_event(Event::Start(material_element))?;
+
+            let density = format_float(material.density_g_cm3);
+            let mut density_element = BytesStart::new("density");
+            density_element.push_attribute(("value", density.as_str()));
+            density_element.push_attribute(("units", "g/cm3"));
+            writer.write_event(Event::Empty(density_element))?;
+
+            for nuclide in &material.nuclides {
+                let fraction = format_float(nuclide.mass_fraction);
+                let mut element = BytesStart::new("nuclide");
+                element.push_attribute(("name", nuclide.name.as_str()));
+                element.push_attribute(("wo", fraction.as_str()));
+                writer.write_event(Event::Empty(element))?;
+            }
+            writer.write_event(Event::End(BytesEnd::new("material")))?;
+        }
         Ok(())
     })
 }
@@ -1952,6 +2168,12 @@ pub enum OpenMcInputError {
     UnsupportedAcceptanceSchema(String),
     #[error("acceptance contract is invalid: {0}")]
     InvalidAcceptance(String),
+    #[error("material assignment is invalid: {0}")]
+    InvalidAssignment(String),
+    #[error(
+        "material region {0:?} density differs from the base material; per-region voxel mass is not yet supported"
+    )]
+    AssignmentDensityMismatch(String),
     #[error("candidate-reference decks require a bound acceptance contract")]
     CandidateReferenceRequiresAcceptance,
     #[error("acceptance contracts may only bind candidate-reference decks")]
@@ -2197,6 +2419,7 @@ pub(crate) mod tests {
                 nuclear_data_manifest_json: &inputs.nuclear_data_json,
                 execution_profile_json: PROFILE_JSON,
                 acceptance_json: None,
+                material_assignment_json: None,
             },
         )
         .unwrap()
@@ -2263,6 +2486,7 @@ pub(crate) mod tests {
                 nuclear_data_manifest_json: &inputs.nuclear_data_json,
                 execution_profile_json: &profile,
                 acceptance_json: Some(&contract),
+                material_assignment_json: None,
             },
         )
         .unwrap()
@@ -2327,6 +2551,7 @@ pub(crate) mod tests {
                 nuclear_data_manifest_json: &inputs.nuclear_data_json,
                 execution_profile_json: PROFILE_JSON,
                 acceptance_json: Some(&contract),
+                material_assignment_json: None,
             },
         )
         .unwrap_err();
@@ -2351,6 +2576,7 @@ pub(crate) mod tests {
                 nuclear_data_manifest_json: &inputs.nuclear_data_json,
                 execution_profile_json: &profile,
                 acceptance_json: None,
+                material_assignment_json: None,
             },
         )
         .unwrap_err();
@@ -2382,6 +2608,161 @@ pub(crate) mod tests {
             serde_json::from_slice(&acceptance_contract_json()).unwrap();
         bad_seed.seeds = vec![1, 2, 3];
         assert!(bad_seed.validate().is_err());
+    }
+
+    /// A material-assignment fixture: CORE is boron-free with the mass moved
+    /// to N14 — both nuclides are covered by folded-response estimators.
+    fn assignment_json() -> Vec<u8> {
+        let base: serde_json::Value = serde_json::from_slice(MATERIAL_JSON).unwrap();
+        let mut region_material = base.clone();
+        region_material["id"] = serde_json::json!("nctforge.test.core-unloaded.v1");
+        let nuclides = region_material["nuclides"].as_array_mut().unwrap();
+        nuclides.retain(|n| n["name"] != "B10");
+        for n in nuclides.iter_mut() {
+            if n["name"] == "N14" {
+                // Base N14 0.02589697162573985 + removed B10 4e-5.
+                n["mass_fraction"] = serde_json::json!(0.02589697162573985 + 4.0e-5);
+            }
+        }
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "schema_version": "nctforge.material-assignment/0.1.0",
+            "case_id": "nf-bnct-001",
+            "base_material": base,
+            "regions": [{
+                "name": "core",
+                "material": region_material,
+                "voxel_lower": [16, 16, 16],
+                "voxel_upper": [23, 23, 23],
+            }],
+            "provenance_id": "case:sha256:test",
+        }))
+        .unwrap()
+    }
+
+    fn generate_assigned(assignment_json: &[u8]) -> Result<OpenMcInputDeck, OpenMcInputError> {
+        let inputs = input_bytes();
+        OpenMcInputDeck::generate(
+            &case(),
+            inputs.data_root.path(),
+            OpenMcInputArtifacts {
+                component_profile_json: COMPONENT_PROFILE_JSON,
+                material_json: MATERIAL_JSON,
+                source_json: SOURCE_JSON,
+                response_set_json: &inputs.response_set_json,
+                nuclear_data_manifest_json: &inputs.nuclear_data_json,
+                execution_profile_json: PROFILE_JSON,
+                acceptance_json: None,
+                material_assignment_json: Some(assignment_json),
+            },
+        )
+    }
+
+    #[test]
+    fn assigned_deck_carves_regions_and_binds_assignment() {
+        let deck = generate_assigned(&assignment_json()).unwrap();
+        let manifest = &deck.manifest;
+        assert_eq!(
+            manifest.schema_version,
+            "nctforge.openmc-input-manifest/0.2.0"
+        );
+        assert!(manifest.bindings.material_assignment.is_some());
+        assert!(deck.file("nctforge-material-assignment.json").is_some());
+        let materials = std::str::from_utf8(&deck.file("materials.xml").unwrap().bytes).unwrap();
+        assert!(materials.contains("<material id=\"1\""));
+        assert!(materials.contains("<material id=\"2\""));
+        assert!(!materials.contains("<material id=\"3\""));
+        let geometry = std::str::from_utf8(&deck.file("geometry.xml").unwrap().bytes).unwrap();
+        // Base cell carries the region complement; the region cell fills the box.
+        assert!(geometry.contains("material=\"1\""));
+        assert!(geometry.contains("material=\"2\""));
+        assert!(geometry.contains("~("));
+        // Six additional interior planes for the region box.
+        assert!(geometry.contains("<surface id=\"101\" type=\"x-plane\""));
+        assert!(geometry.contains("<surface id=\"106\" type=\"z-plane\""));
+        // Region planes are interior interfaces — no vacuum boundary.
+        assert!(!geometry.contains("<surface id=\"101\" type=\"x-plane\" boundary"));
+    }
+
+    #[test]
+    fn rejects_uncovered_nuclide_changes_in_assignment() {
+        // Moving the removed B10 mass to O16 — uncovered by the response
+        // profile — must be rejected.
+        let mut assignment: serde_json::Value = serde_json::from_slice(&assignment_json()).unwrap();
+        let nuclides = assignment["regions"][0]["material"]["nuclides"]
+            .as_array_mut()
+            .unwrap();
+        for n in nuclides.iter_mut() {
+            if n["name"] == "N14" {
+                n["mass_fraction"] = serde_json::json!(0.02589697162573985);
+            }
+            if n["name"] == "O16" {
+                n["mass_fraction"] =
+                    serde_json::json!(n["mass_fraction"].as_f64().unwrap() + 4.0e-5);
+            }
+        }
+        let error =
+            generate_assigned(&serde_json::to_vec_pretty(&assignment).unwrap()).unwrap_err();
+        assert!(matches!(error, OpenMcInputError::InvalidAssignment(_)));
+        assert!(error.to_string().contains("uncovered nuclide"));
+
+        // Dropping an uncovered nuclide entirely is equally invalid: the
+        // residual hydrogen estimator assumes base fractions.
+        let mut assignment: serde_json::Value = serde_json::from_slice(&assignment_json()).unwrap();
+        let nuclides = assignment["regions"][0]["material"]["nuclides"]
+            .as_array_mut()
+            .unwrap();
+        nuclides.retain(|n| n["name"] != "H1");
+        for n in nuclides.iter_mut() {
+            if n["name"] == "N14" {
+                n["mass_fraction"] =
+                    serde_json::json!(n["mass_fraction"].as_f64().unwrap() + 0.10113647042677168);
+            }
+        }
+        let error =
+            generate_assigned(&serde_json::to_vec_pretty(&assignment).unwrap()).unwrap_err();
+        assert!(matches!(error, OpenMcInputError::InvalidAssignment(_)));
+
+        // Introducing a nuclide absent from the base material is rejected.
+        let mut assignment: serde_json::Value = serde_json::from_slice(&assignment_json()).unwrap();
+        let nuclides = assignment["regions"][0]["material"]["nuclides"]
+            .as_array_mut()
+            .unwrap();
+        nuclides.push(serde_json::json!({"name": "Li6", "mass_fraction": 0.001}));
+        for n in nuclides.iter_mut() {
+            if n["name"] == "N14" {
+                n["mass_fraction"] =
+                    serde_json::json!(n["mass_fraction"].as_f64().unwrap() - 0.001);
+            }
+        }
+        let error =
+            generate_assigned(&serde_json::to_vec_pretty(&assignment).unwrap()).unwrap_err();
+        assert!(error.to_string().contains("absent from the base material"));
+    }
+
+    #[test]
+    fn rejects_assignment_case_and_base_mismatch() {
+        let mut assignment: serde_json::Value = serde_json::from_slice(&assignment_json()).unwrap();
+        assignment["case_id"] = serde_json::json!("other-case");
+        assert!(matches!(
+            generate_assigned(&serde_json::to_vec_pretty(&assignment).unwrap()),
+            Err(OpenMcInputError::InvalidAssignment(_))
+        ));
+
+        let mut assignment: serde_json::Value = serde_json::from_slice(&assignment_json()).unwrap();
+        assignment["base_material"]["density_g_cm3"] = serde_json::json!(0.5);
+        assert!(matches!(
+            generate_assigned(&serde_json::to_vec_pretty(&assignment).unwrap()),
+            Err(OpenMcInputError::InvalidAssignment(_))
+        ));
+
+        // Region density must equal the base density under the current
+        // single-voxel-mass collection model.
+        let mut assignment: serde_json::Value = serde_json::from_slice(&assignment_json()).unwrap();
+        assignment["regions"][0]["material"]["density_g_cm3"] = serde_json::json!(1.2);
+        assert!(matches!(
+            generate_assigned(&serde_json::to_vec_pretty(&assignment).unwrap()),
+            Err(OpenMcInputError::AssignmentDensityMismatch(_))
+        ));
     }
 
     #[test]
@@ -2468,6 +2849,7 @@ pub(crate) mod tests {
                 nuclear_data_manifest_json: &inputs.nuclear_data_json,
                 execution_profile_json: PROFILE_JSON,
                 acceptance_json: None,
+                material_assignment_json: None,
             },
         )
         .unwrap_err();
@@ -2495,6 +2877,7 @@ pub(crate) mod tests {
                 nuclear_data_manifest_json: &inputs.nuclear_data_json,
                 execution_profile_json: PROFILE_JSON,
                 acceptance_json: None,
+                material_assignment_json: None,
             },
         )
         .unwrap_err();
@@ -2524,6 +2907,7 @@ pub(crate) mod tests {
                 nuclear_data_manifest_json: &inputs.nuclear_data_json,
                 execution_profile_json: PROFILE_JSON,
                 acceptance_json: None,
+                material_assignment_json: None,
             },
         )
         .unwrap_err();
@@ -2549,6 +2933,7 @@ pub(crate) mod tests {
                 nuclear_data_manifest_json: &inputs.nuclear_data_json,
                 execution_profile_json: PROFILE_JSON,
                 acceptance_json: None,
+                material_assignment_json: None,
             },
         )
         .unwrap_err();
@@ -2574,6 +2959,7 @@ pub(crate) mod tests {
                 nuclear_data_manifest_json: &inputs.nuclear_data_json,
                 execution_profile_json: PROFILE_JSON,
                 acceptance_json: None,
+                material_assignment_json: None,
             },
         )
         .unwrap_err();
