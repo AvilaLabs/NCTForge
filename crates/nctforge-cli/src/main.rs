@@ -241,6 +241,11 @@ enum BenchmarkCommand {
         /// material paths resolve relative to this file's directory.
         #[arg(long)]
         map: PathBuf,
+        /// Region masks as `NAME=path` pairs (RegionMask JSON, e.g. from
+        /// `nifti to-mask`). When supplied, map keys name these masks
+        /// instead of RT Structure Set ROIs.
+        #[arg(long = "mask")]
+        masks: Vec<String>,
         /// New output path for the material-assignment JSON.
         #[arg(long)]
         output_assignment: PathBuf,
@@ -1330,6 +1335,7 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                 case,
                 base_material,
                 map,
+                masks,
                 output_assignment,
                 output_case,
             } => {
@@ -1343,6 +1349,38 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                     .into());
                 }
                 derived_case.material = base;
+                // External RegionMask files (e.g. from `nifti to-mask`)
+                // supplement or replace RT Structure Set ROIs when given.
+                let external_masks: std::collections::BTreeMap<String, nctforge_core::RegionMask> =
+                    masks
+                        .iter()
+                        .map(|binding| {
+                            let (name, path) = binding.split_once('=').ok_or_else(|| {
+                                io::Error::other("--mask entries must be NAME=path")
+                            })?;
+                            let mask: nctforge_core::RegionMask =
+                                serde_json::from_slice(&fs::read(path)?)?;
+                            if mask.name != name {
+                                return Err(io::Error::other(format!(
+                                    "--mask {name}: mask file names itself {:?}",
+                                    mask.name
+                                )));
+                            }
+                            let expected_voxels = verified
+                                .ct
+                                .geometry
+                                .voxel_count()
+                                .map_err(|error| io::Error::other(error.to_string()))?;
+                            if mask.voxels.len() != expected_voxels {
+                                return Err(io::Error::other(format!(
+                                    "--mask {name}: {} voxels, grid expects {}",
+                                    mask.voxels.len(),
+                                    expected_voxels,
+                                )));
+                            }
+                            Ok((name.to_owned(), mask))
+                        })
+                        .collect::<Result<_, io::Error>>()?;
                 let map_bytes = fs::read(&map)?;
                 let mapping: serde_json::Value = serde_json::from_slice(&map_bytes)?;
                 let regions = mapping
@@ -1366,10 +1404,18 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                         serde_json::from_slice(&fs::read(map_dir.join(material_path))?).map_err(
                             |error| io::Error::other(format!("region {name:?} material: {error}")),
                         )?;
-                    let mask = verified
-                        .structures
-                        .roi(name)
-                        .ok_or_else(|| io::Error::other(format!("no ROI named {name:?}")))?;
+                    let mask_voxels: &[bool] = if let Some(mask) = external_masks.get(name.as_str())
+                    {
+                        &mask.voxels
+                    } else if external_masks.is_empty() {
+                        &verified
+                            .structures
+                            .roi(name)
+                            .ok_or_else(|| io::Error::other(format!("no ROI named {name:?}")))?
+                            .voxels
+                    } else {
+                        return Err(io::Error::other(format!("no --mask named {name:?}")).into());
+                    };
 
                     // Rasterize the mask to voxel indices; when it fills its
                     // own bounding box exactly it becomes a CSG box region,
@@ -1378,7 +1424,7 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                     let mut lower = [u32::MAX; 3];
                     let mut upper = [0_u32; 3];
                     let mut indices = Vec::new();
-                    for (index, included) in mask.voxels.iter().copied().enumerate() {
+                    for (index, included) in mask_voxels.iter().copied().enumerate() {
                         if !included {
                             continue;
                         }

@@ -415,10 +415,14 @@ nctforge benchmark derive-materials \
 ```
 
 `--map` is a JSON object `{"regions": {"ROI_NAME": "material-file.json"}}`
-whose paths resolve relative to the map file. The derived transport case
-reuses the verified DICOM geometry and is written alongside the assignment.
-`examples/derived/` ships a runnable demonstration that unloads boron from
-the `CORE` box.
+whose paths resolve relative to the map file. By default region names are
+looked up in the case's RT Structure Set; `--mask NAME=path` (repeatable)
+instead binds names to external `RegionMask` JSON files — e.g. produced by
+`nctforge nifti to-mask` — whose voxel array must match the case grid
+exactly. When any `--mask` is supplied every mapped key must resolve to one
+of them. The derived transport case reuses the verified DICOM geometry and
+is written alongside the assignment. `examples/derived/` ships a runnable
+demonstration that unloads boron from the `CORE` box.
 
 `openmc generate --assignment` then builds a multi-cell deck: one OpenMC
 material per distinct region material plus, for box-only assignments, one
