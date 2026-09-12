@@ -2658,6 +2658,7 @@ dependencies = [
  "nctforge-transport",
  "serde",
  "serde_json",
+ "sha2",
  "thiserror 2.0.20",
 ]
 
@@ -2711,6 +2712,7 @@ dependencies = [
  "nctforge-core",
  "serde",
  "serde_json",
+ "sha2",
  "thiserror 2.0.20",
 ]
 

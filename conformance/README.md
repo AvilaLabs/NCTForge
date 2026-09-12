@@ -52,5 +52,32 @@ After an intentional importer change, regenerate the reference bundles with
 `NCTFORGE_UPDATE_CONFORMANCE=1` on the same command, review the diff, and
 commit the updated fixtures.
 
+## `adapters/0.1.0/` — producing-system parser outputs
+
+Covers the whole adapter path: producing-system file →
+`nctforge.component-dose-interchange/0.1.0` document →
+`nctforge.physical-dose-bundle/0.2.0` bundle. `manifest.json` names, per
+case, the input files, the component selections (`file`, MCNP `tally`,
+optional `energy_bin`), the declared `unit`/`normalization`/`case_id`, and
+byte-fixed `document` and `bundle` references.
+
+- `mcnp/` — one ASCII meshtal carrying four component tallies (energy
+  column, `Rel Error` → absolute sigmas) on a shared mesh.
+- `phits/` — per-component `xyz`-mesh `t-deposit` `.out` files with
+  `*_err.out` siblings; `axis=xy` z-slice pages; `unit = 0`.
+
+Input fixtures are authored to the documented file formats — they are
+parser fixtures, not real MCNP/PHITS executions. `sources[].file` is
+relative to the suite directory and is embedded verbatim in the generated
+document's normalization trail; run each crate's suite from anywhere, the
+test enters the suite directory itself.
+
+```text
+cargo test -p nctforge-mcnp --test adapter_conformance
+cargo test -p nctforge-phits --test adapter_conformance
+```
+
+Regeneration uses the same `NCTFORGE_UPDATE_CONFORMANCE=1` convention.
+
 Research only: conformance here means contract fidelity — it does not
 qualify any producer's physics or imply clinical suitability.

@@ -1,0 +1,71 @@
+mcnp   version 6.2 ld=01/01/20  probid =  01/01/20 00:00:00
+ conformance fixture: four component tallies on one 1x2x3 mesh
+ Number of histories used for normalizing tallies =    1000000.00
+
+ Mesh Tally Number        4
+ neutron  mesh tally.
+
+ Tally bin boundaries:
+    X direction:      -1.00      1.00
+    Y direction:      -1.00      0.00      1.00
+    Z direction:      -1.00      0.00      1.00      2.00
+    Energy bin boundaries: 0.00E+00 2.00E+01
+
+   Energy         X         Y         Z     Result     Rel Error
+  2.000E+01     0.000   -0.500    -0.500 1.00000E-03 1.00000E-02
+  2.000E+01     0.000   -0.500     0.500 2.00000E-03 5.00000E-03
+  2.000E+01     0.000   -0.500     1.500 3.00000E-03 2.00000E-02
+  2.000E+01     0.000    0.500    -0.500 4.00000E-03 1.50000E-02
+  2.000E+01     0.000    0.500     0.500 5.00000E-03 1.00000E-02
+  2.000E+01     0.000    0.500     1.500 6.00000E-03 5.00000E-03
+
+ Mesh Tally Number       14
+ neutron  mesh tally.
+
+ Tally bin boundaries:
+    X direction:      -1.00      1.00
+    Y direction:      -1.00      0.00      1.00
+    Z direction:      -1.00      0.00      1.00      2.00
+    Energy bin boundaries: 0.00E+00 2.00E+01
+
+   Energy         X         Y         Z     Result     Rel Error
+  2.000E+01     0.000   -0.500    -0.500 2.00000E-04 2.00000E-02
+  2.000E+01     0.000   -0.500     0.500 4.00000E-04 1.00000E-02
+  2.000E+01     0.000   -0.500     1.500 6.00000E-04 4.00000E-02
+  2.000E+01     0.000    0.500    -0.500 8.00000E-04 3.00000E-02
+  2.000E+01     0.000    0.500     0.500 1.00000E-03 2.00000E-02
+  2.000E+01     0.000    0.500     1.500 1.20000E-03 1.00000E-02
+
+ Mesh Tally Number       24
+ neutron  mesh tally.
+
+ Tally bin boundaries:
+    X direction:      -1.00      1.00
+    Y direction:      -1.00      0.00      1.00
+    Z direction:      -1.00      0.00      1.00      2.00
+    Energy bin boundaries: 0.00E+00 2.00E+01
+
+   Energy         X         Y         Z     Result     Rel Error
+  2.000E+01     0.000   -0.500    -0.500 5.00000E-05 1.00000E-01
+  2.000E+01     0.000   -0.500     0.500 1.00000E-04 5.00000E-02
+  2.000E+01     0.000   -0.500     1.500 1.50000E-04 4.00000E-02
+  2.000E+01     0.000    0.500    -0.500 2.00000E-04 3.00000E-02
+  2.000E+01     0.000    0.500     0.500 2.50000E-04 2.00000E-02
+  2.000E+01     0.000    0.500     1.500 3.00000E-04 2.00000E-02
+
+ Mesh Tally Number       34
+ photon  mesh tally.
+
+ Tally bin boundaries:
+    X direction:      -1.00      1.00
+    Y direction:      -1.00      0.00      1.00
+    Z direction:      -1.00      0.00      1.00      2.00
+    Energy bin boundaries: 0.00E+00 2.00E+01
+
+   Energy         X         Y         Z     Result     Rel Error
+  2.000E+01     0.000   -0.500    -0.500 1.00000E-04 1.00000E-01
+  2.000E+01     0.000   -0.500     0.500 1.10000E-04 1.00000E-01
+  2.000E+01     0.000   -0.500     1.500 1.20000E-04 1.00000E-01
+  2.000E+01     0.000    0.500    -0.500 1.30000E-04 1.00000E-01
+  2.000E+01     0.000    0.500     0.500 1.40000E-04 1.00000E-01
+  2.000E+01     0.000    0.500     1.500 1.50000E-04 1.00000E-01

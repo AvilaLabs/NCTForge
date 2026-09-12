@@ -1,0 +1,137 @@
+{
+  "schema_version": "nctforge.physical-dose-bundle/0.2.0",
+  "case_id": "adapter-conformance",
+  "frame_of_reference_uid": null,
+  "geometry": {
+    "shape": [
+      1,
+      2,
+      3
+    ],
+    "spacing_mm": [
+      20.0,
+      10.0,
+      10.0
+    ],
+    "origin_mm": [
+      0.0,
+      -5.0,
+      -5.0
+    ],
+    "direction": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  },
+  "component_profile": {
+    "id": "external:mcnp",
+    "sha256": "40ac5743194d7c10a8ad44d5b0f431d4ee9314aae38bcfd54db225e212f9483d"
+  },
+  "response_set": {
+    "id": "external:mcnp",
+    "sha256": "40ac5743194d7c10a8ad44d5b0f431d4ee9314aae38bcfd54db225e212f9483d"
+  },
+  "components": [
+    {
+      "component": "boron",
+      "unit": "gray_per_source_particle",
+      "values": [
+        0.001,
+        0.004,
+        0.002,
+        0.005,
+        0.003,
+        0.006
+      ],
+      "absolute_standard_uncertainty": [
+        0.00001,
+        0.00006,
+        0.00001,
+        0.00005,
+        0.00006,
+        0.00003
+      ]
+    },
+    {
+      "component": "nitrogen",
+      "unit": "gray_per_source_particle",
+      "values": [
+        0.0002,
+        0.0008,
+        0.0004,
+        0.001,
+        0.0006,
+        0.0012
+      ],
+      "absolute_standard_uncertainty": [
+        4.000000000000001e-6,
+        0.000024,
+        4.000000000000001e-6,
+        0.00002,
+        0.000023999999999999997,
+        0.000011999999999999999
+      ]
+    },
+    {
+      "component": "hydrogen",
+      "unit": "gray_per_source_particle",
+      "values": [
+        0.00005,
+        0.0002,
+        0.0001,
+        0.00025,
+        0.00015,
+        0.0003
+      ],
+      "absolute_standard_uncertainty": [
+        5e-6,
+        6e-6,
+        5e-6,
+        5e-6,
+        5.999999999999999e-6,
+        5.999999999999999e-6
+      ]
+    },
+    {
+      "component": "photon",
+      "unit": "gray_per_source_particle",
+      "values": [
+        0.0001,
+        0.00013,
+        0.00011,
+        0.00014,
+        0.00012,
+        0.00015
+      ],
+      "absolute_standard_uncertainty": [
+        0.00001,
+        0.000013,
+        0.000011000000000000001,
+        0.000014,
+        0.000012,
+        0.000014999999999999999
+      ]
+    }
+  ],
+  "physical_total": {
+    "unit": "gray_per_source_particle",
+    "values": [
+      0.00135,
+      0.00513,
+      0.00261,
+      0.006390000000000001,
+      0.0038699999999999997,
+      0.00765
+    ],
+    "absolute_standard_uncertainty": null,
+    "uncertainty_method": "unavailable"
+  },
+  "provenance_id": "interchange:mcnp:sha256:40ac5743194d7c10a8ad44d5b0f431d4ee9314aae38bcfd54db225e212f9483d"
+}

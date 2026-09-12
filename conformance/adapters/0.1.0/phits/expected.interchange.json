@@ -1,0 +1,141 @@
+{
+  "schema_version": "nctforge.component-dose-interchange/0.1.0",
+  "case_id": "adapter-conformance",
+  "frame_of_reference_uid": null,
+  "geometry": {
+    "shape": [
+      2,
+      2,
+      2
+    ],
+    "spacing_mm": [
+      10.0,
+      10.0,
+      10.0
+    ],
+    "origin_mm": [
+      -5.0,
+      -5.0,
+      5.0
+    ],
+    "direction": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  },
+  "producer": {
+    "system": "phits",
+    "version": "3.33",
+    "normalization": "t-deposit unit=0 taken as Gy per source particle; phits .out files [Boron=phits/dep-boron.out,Nitrogen=phits/dep-nitrogen.out,Hydrogen=phits/dep-hydrogen.out,Photon=phits/dep-photon.out]"
+  },
+  "components": [
+    {
+      "component": "boron",
+      "unit": "gray_per_source_particle",
+      "values": [
+        0.001,
+        0.002,
+        0.004,
+        0.005,
+        0.007,
+        0.008,
+        0.009,
+        0.01
+      ],
+      "absolute_standard_uncertainty": [
+        0.00001,
+        0.00002,
+        0.00004,
+        0.00005,
+        0.00007000000000000001,
+        0.00008,
+        0.00008999999999999999,
+        0.0001
+      ]
+    },
+    {
+      "component": "nitrogen",
+      "unit": "gray_per_source_particle",
+      "values": [
+        0.0005,
+        0.001,
+        0.002,
+        0.0025,
+        0.0035,
+        0.004,
+        0.0045,
+        0.005
+      ],
+      "absolute_standard_uncertainty": [
+        5e-6,
+        0.00001,
+        0.00002,
+        0.000025,
+        0.000035000000000000004,
+        0.00004,
+        0.000044999999999999996,
+        0.00005
+      ]
+    },
+    {
+      "component": "hydrogen",
+      "unit": "gray_per_source_particle",
+      "values": [
+        0.0002,
+        0.0004,
+        0.0006,
+        0.0008,
+        0.001,
+        0.0012,
+        0.0014,
+        0.0016
+      ],
+      "absolute_standard_uncertainty": [
+        4.000000000000001e-6,
+        8.000000000000001e-6,
+        0.000011999999999999999,
+        0.000016000000000000003,
+        0.00002,
+        0.000023999999999999997,
+        0.000028,
+        0.000032000000000000005
+      ]
+    },
+    {
+      "component": "photon",
+      "unit": "gray_per_source_particle",
+      "values": [
+        0.0001,
+        0.00011,
+        0.00012,
+        0.00013,
+        0.00014,
+        0.00015,
+        0.00016,
+        0.00017
+      ],
+      "absolute_standard_uncertainty": [
+        0.00001,
+        0.000011000000000000001,
+        0.000012,
+        0.000013,
+        0.000014,
+        0.000014999999999999999,
+        0.000016000000000000003,
+        0.000017000000000000003
+      ]
+    }
+  ],
+  "component_profile": null,
+  "response_set": null,
+  "total": {
+    "mode": "component_sum"
+  }
+}

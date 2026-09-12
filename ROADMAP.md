@@ -477,6 +477,11 @@ Implementation status:
   valid documents with byte-fixed golden bundles, 15 rejection cases with
   stable error tokens) exercised by
   `cargo test -p nctforge-core --test interchange_conformance`;
+  `conformance/adapters/0.1.0/` extends coverage end-to-end — documented
+  MCNP meshtal and PHITS `xyz`-mesh inputs replay through each adapter into
+  byte-fixed interchange documents and bundles
+  (`cargo test -p nctforge-mcnp|nctforge-phits --test adapter_conformance`,
+  same `NCTFORGE_UPDATE_CONFORMANCE` regeneration convention);
 - complete (documented-format slice): MCNP/PHITS import adapters — the
   `nctforge-mcnp` crate parses ASCII `meshtal` files (tally + optional
   energy-bin selection, `Rel Error` → absolute sigmas) and the
