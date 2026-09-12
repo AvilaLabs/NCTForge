@@ -122,13 +122,10 @@ fn component_name(component: DoseComponent) -> &'static str {
     }
 }
 
-/// Named voxel mask in the bundle's grid order.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct RegionMask {
-    pub name: String,
-    pub voxels: Vec<bool>,
-}
+/// Named voxel mask in the bundle's grid order — re-exported from
+/// `nctforge-core`, where the type now lives so imaging imports can produce
+/// masks without depending on the biological layer.
+pub use nctforge_core::RegionMask;
 
 /// One component's biologically weighted dose volume.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

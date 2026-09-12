@@ -526,6 +526,36 @@ nctforge accumulate \
 
 `examples/exposure/` ships a two-field demonstration plan.
 
+### NIfTI imaging I/O
+
+`nctforge nifti` provides a strict NIfTI-1 boundary alongside DICOM for
+imaging-driven research workflows. The reader accepts single-file `.nii` and
+gzip-compressed `.nii.gz` volumes: 3-D scalar data (`u8`, `i16`, `i32`, `f32`,
+`f64`), sform preferred over qform, explicit millimeter units or the common
+`xyzt_units == 0` "unspecified" convention (recorded as an assumed-mm
+provenance note). NIfTI's RAS+ world frame is converted to NCTForge's
+patient-LPS `GridGeometry` on import and back on export; the conversion and
+transform source are recorded in provenance. Unsupported dimensions,
+datatypes, transforms, endianness, and declared non-millimeter units are
+rejected rather than approximated:
+
+```text
+nctforge nifti info --input image.nii.gz
+nctforge nifti to-mask --input seg.nii.gz --name ROI --output NEW-MASK.json
+nctforge nifti export-dose \
+  --dose DOSE-BUNDLE.json --quantity component:boron \
+  --output NEW-BORON-DOSE.nii.gz
+nctforge nifti resample \
+  --input map.nii.gz --target DOSE-BUNDLE.json \
+  --interpolation nearest --output NEW-RESAMPLED.nii.gz
+```
+
+`export-dose` writes any component or the physical total as a NIfTI image on
+the bundle's grid; `resample` interpolates an external image onto a dose
+bundle's grid (nearest-neighbor or trilinear). The affine handling is
+regression-tested against independent `nibabel` output including oblique
+sforms, and `.nii.gz` round-trips are verified in both directions.
+
 `nctforge dvh` computes a deterministic `nctforge.dose-volume-histogram/0.1.0`
 over a named voxel mask for any component or total in a physical or
 biological bundle — equal-width dose bins, differential volume fractions that

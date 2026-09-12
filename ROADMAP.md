@@ -367,6 +367,15 @@ Implementation status:
 - in progress: candidate-reference execution — three frozen-seed 300M-history
   runs are executing under the predeclared acceptance contract; the report
   and reference-status decision follow when the runs complete;
+- in progress (OP-01): NIfTI imaging I/O — `nctforge-nifti` reads and writes
+  NIfTI-1 `.nii`/`.nii.gz` 3-D scalar volumes (`u8`–`f64`), prefers sform
+  over qform, converts RAS+ to patient LPS with transform provenance,
+  accepts explicit-mm or unspecified units, and rejects unsupported
+  dimensions/datatypes/transforms/non-mm units. `nctforge nifti` provides
+  `info`, `to-mask`, `export-dose`, and `resample` (nearest/trilinear);
+  affine handling is regression-tested against independent `nibabel`
+  output including an oblique sform. Remaining parity work: broader
+  convergence evidence, CT-aligned mesh conversion, and GUI surfaces;
 - complete (OP-06): weighted exposure/fraction aggregation — the
   `nctforge.exposure-plan/0.1.0` contract binds each exposure's dose bundle
   by SHA-256 with an explicit weight, weight basis, duration, and boron

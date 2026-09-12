@@ -13,6 +13,7 @@ use nctforge_bio::{BiologicalModel, RegionMask, apply_biological_model};
 use nctforge_core::{ExposurePlan, PhysicalDoseBundle, accumulate_exposures};
 use nctforge_dicom::synthetic::generate_nf_bnct_001;
 use nctforge_dicom::{load_nf_bnct_001, verify_nf_bnct_001};
+use nctforge_nifti::read_nifti_file;
 use nctforge_njoy::{
     DEFAULT_CAPTURE_ENERGY_BALANCE_RELATIVE_TOLERANCE,
     DEFAULT_LAW7_BREAKUP_NORMALIZATION_TOLERANCE, DEFAULT_LAW7_BREAKUP_RELATIVE_ENERGY_TOLERANCE,
@@ -98,6 +99,8 @@ enum Command {
         #[arg(long)]
         output: PathBuf,
     },
+    /// Import, inspect, and export NIfTI-1 volumes on the patient grid.
+    Nifti(NiftiArgs),
     /// Accumulate weighted exposures (fields/fractions) into one physical
     /// dose bundle under a declared exposure plan.
     Accumulate {
@@ -111,6 +114,61 @@ enum Command {
     },
     /// Export or verify a deterministic evidence bundle.
     Evidence(EvidenceArgs),
+}
+
+#[derive(Debug, Args)]
+struct NiftiArgs {
+    #[command(subcommand)]
+    command: NiftiCommand,
+}
+
+#[derive(Debug, Subcommand)]
+enum NiftiCommand {
+    /// Print a NIfTI file's grid, transform provenance, and datatype.
+    Info {
+        /// `.nii` or gzip-compressed `.nii.gz` file.
+        #[arg(long)]
+        input: PathBuf,
+    },
+    /// Convert a NIfTI volume to a RegionMask (nonzero voxels included).
+    ToMask {
+        /// `.nii` or gzip-compressed `.nii.gz` file.
+        #[arg(long)]
+        input: PathBuf,
+        /// Mask name recorded in the RegionMask JSON.
+        #[arg(long)]
+        name: String,
+        /// New output path for the mask JSON.
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Export a dose-bundle component or total as a float64 `.nii` volume.
+    ExportDose {
+        /// Physical dose bundle JSON.
+        #[arg(long)]
+        dose: PathBuf,
+        /// `component:boron|nitrogen|hydrogen|photon` or `physical_total`.
+        #[arg(long)]
+        quantity: String,
+        /// New output path (`.nii`, or `.nii.gz` for gzip).
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Resample a NIfTI volume onto a dose bundle's grid.
+    Resample {
+        /// `.nii` or gzip-compressed `.nii.gz` file.
+        #[arg(long)]
+        input: PathBuf,
+        /// Physical dose bundle JSON supplying the target grid.
+        #[arg(long)]
+        target: PathBuf,
+        /// `nearest` (masks/labels) or `trilinear` (dose/intensity).
+        #[arg(long)]
+        interpolation: String,
+        /// New output path for the resampled `.nii` file.
+        #[arg(long)]
+        output: PathBuf,
+    },
 }
 
 #[derive(Debug, Args)]
@@ -3605,6 +3663,97 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
             );
             println!("quantity: {} [{}]", histogram.quantity, histogram.unit);
         }
+        Some(Command::Nifti(args)) => match args.command {
+            NiftiCommand::Info { input } => {
+                let image = read_nifti_file(&input)
+                    .map_err(|error| io::Error::other(format!("nifti: {error}")))?;
+                let g = &image.geometry;
+                println!("shape: {} x {} x {}", g.shape[0], g.shape[1], g.shape[2]);
+                println!(
+                    "spacing_mm: [{}, {}, {}]",
+                    g.spacing_mm[0], g.spacing_mm[1], g.spacing_mm[2]
+                );
+                println!(
+                    "origin_mm: [{}, {}, {}]",
+                    g.origin_mm[0], g.origin_mm[1], g.origin_mm[2]
+                );
+                println!("direction: {:?}", g.direction);
+                println!("transform: {}", image.transform_source);
+                println!(
+                    "datatype: {} description: {:?}",
+                    image.datatype, image.description
+                );
+            }
+            NiftiCommand::ToMask {
+                input,
+                name,
+                output,
+            } => {
+                let image = read_nifti_file(&input)
+                    .map_err(|error| io::Error::other(format!("nifti: {error}")))?;
+                let mask = nctforge_nifti::to_mask(&image, name);
+                write_new_json(&output, &mask)?;
+                println!(
+                    "mask {} written ({} voxels included)",
+                    mask.name,
+                    mask.voxels.iter().filter(|v| **v).count()
+                );
+            }
+            NiftiCommand::ExportDose {
+                dose,
+                quantity,
+                output,
+            } => {
+                let bundle: PhysicalDoseBundle = serde_json::from_slice(&fs::read(&dose)?)?;
+                let (values, _unit) = dose_values(&bundle, &quantity)?;
+                let image = nctforge_nifti::NiftiImage {
+                    geometry: bundle.geometry.clone(),
+                    values: values.to_vec(),
+                    datatype: 64,
+                    transform_source: "sform",
+                    description: format!("nctforge {} {}", bundle.case_id, quantity),
+                    intent_name: String::new(),
+                    units_declared_mm: true,
+                };
+                nctforge_nifti::write_nifti(&image, &output)?;
+                println!("wrote {}", output.display());
+            }
+            NiftiCommand::Resample {
+                input,
+                target,
+                interpolation,
+                output,
+            } => {
+                let image = read_nifti_file(&input)
+                    .map_err(|error| io::Error::other(format!("nifti: {error}")))?;
+                let bundle: PhysicalDoseBundle = serde_json::from_slice(&fs::read(&target)?)?;
+                let interpolation = match interpolation.as_str() {
+                    "nearest" => nctforge_nifti::Interpolation::Nearest,
+                    "trilinear" => nctforge_nifti::Interpolation::Trilinear,
+                    other => {
+                        return Err(io::Error::other(format!(
+                            "unknown interpolation {other:?}; use nearest or trilinear"
+                        ))
+                        .into());
+                    }
+                };
+                let resampled = nctforge_nifti::NiftiImage {
+                    geometry: bundle.geometry.clone(),
+                    values: nctforge_nifti::resample_to_grid(
+                        &image,
+                        &bundle.geometry,
+                        interpolation,
+                    ),
+                    datatype: 64,
+                    transform_source: "sform",
+                    description: "nctforge resampled".into(),
+                    intent_name: String::new(),
+                    units_declared_mm: true,
+                };
+                nctforge_nifti::write_nifti(&resampled, &output)?;
+                println!("wrote {}", output.display());
+            }
+        },
         Some(Command::Accumulate { plan, output }) => {
             let plan_bytes = fs::read(&plan)?;
             let plan_sha256 = nctforge_evidence::sha256_hex(&plan_bytes);
@@ -3715,6 +3864,16 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
         }
     }
     Ok(())
+}
+
+fn write_new_json<T: serde::Serialize>(path: &Path, value: &T) -> io::Result<()> {
+    let mut file = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)?;
+    serde_json::to_writer_pretty(&mut file, value)?;
+    file.write_all(b"\n")?;
+    file.sync_all()
 }
 
 fn dose_values<'a>(

@@ -19,7 +19,9 @@ nctforge-bio = { path = "../nctforge-bio" }
 nctforge-core = { path = "../nctforge-core" }
 nctforge-dicom = { path = "../nctforge-dicom" }
 nctforge-evidence = { path = "../nctforge-evidence" }
+nctforge-nifti = { path = "../nctforge-nifti" }
 nctforge-njoy = { path = "../nctforge-njoy" }
 nctforge-openmc = { path = "../nctforge-openmc" }
 nctforge-transport = { path = "../nctforge-transport" }
+serde.workspace = true
 serde_json.workspace = true

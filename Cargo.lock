@@ -2447,9 +2447,11 @@ dependencies = [
  "nctforge-core",
  "nctforge-dicom",
  "nctforge-evidence",
+ "nctforge-nifti",
  "nctforge-njoy",
  "nctforge-openmc",
  "nctforge-transport",
+ "serde",
  "serde_json",
 ]
 
@@ -2505,6 +2507,18 @@ dependencies = [
  "nctforge-view",
  "serde_json",
  "tempfile",
+]
+
+[[package]]
+name = "nctforge-nifti"
+version = "0.1.0"
+dependencies = [
+ "flate2",
+ "nctforge-core",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.20",
 ]
 
 [[package]]

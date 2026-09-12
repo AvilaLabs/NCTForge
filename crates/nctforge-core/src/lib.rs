@@ -224,6 +224,14 @@ pub struct PhysicalTotalDoseVolume {
     pub uncertainty_method: TotalUncertaintyMethod,
 }
 
+/// Named voxel mask in grid order (`i + nx*j + nx*ny*k`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RegionMask {
+    pub name: String,
+    pub voxels: Vec<bool>,
+}
+
 /// Schema identifier carried by every `PhysicalDoseBundle`.
 pub const PHYSICAL_DOSE_BUNDLE_SCHEMA: &str = "nctforge.physical-dose-bundle/0.2.0";
 
