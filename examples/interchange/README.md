@@ -9,8 +9,8 @@ This fixture is **synthetic** — analytic stand-in values on the NF-BNCT-001
 grid labeled `system: phits` for demonstration; it is not PHITS output.
 
 ```text
-nctforge import \
-  --interchange examples/interchange/phits-synthetic-dose.json \
+nctforge import interchange \
+  --file examples/interchange/phits-synthetic-dose.json \
   --output imported-dose.json
 ```
 

@@ -1124,6 +1124,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "nctforge-mcnp"
+version = "0.1.0"
+dependencies = [
+ "nctforge-core",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "nctforge-openmc"
 version = "0.1.0"
 dependencies = [
@@ -1136,6 +1146,16 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "thiserror",
+]
+
+[[package]]
+name = "nctforge-phits"
+version = "0.1.0"
+dependencies = [
+ "nctforge-core",
+ "serde",
+ "serde_json",
  "thiserror",
 ]
 
@@ -1161,7 +1181,9 @@ dependencies = [
  "nctforge-core",
  "nctforge-dicom",
  "nctforge-evidence",
+ "nctforge-mcnp",
  "nctforge-openmc",
+ "nctforge-phits",
  "nctforge-plan",
  "nctforge-transport",
  "pyo3",

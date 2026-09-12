@@ -7,6 +7,7 @@
 //! contracts used by the CLI and GUI so Python users observe identical
 //! acceptance, rejection, serialization, and content-identity behavior.
 
+use std::collections::HashMap;
 use std::fmt::Display;
 use std::fs;
 use std::path::PathBuf;
@@ -27,7 +28,7 @@ use nctforge_transport::{
     MaterialDefinition, NeutronResponseSet, ResponseGenerationMethod, TransportBackend,
 };
 use pyo3::create_exception;
-use pyo3::exceptions::PyException;
+use pyo3::exceptions::{PyException, PyValueError};
 use pyo3::prelude::*;
 use serde::de::DeserializeOwned;
 
@@ -1072,12 +1073,135 @@ fn plan_table_write(plan: PathBuf, output: PathBuf) -> PyResult<()> {
 
 /// Import a `nctforge.component-dose-interchange/0.1.0` document produced by
 /// an external transport pipeline into a validated physical dose bundle
-/// (same path as `nctforge import`).
+/// (same path as `nctforge import interchange`).
 #[pyfunction]
 fn import_component_dose(interchange: PathBuf) -> PyResult<PyPhysicalDoseBundle> {
     let bytes = fs::read(&interchange).map_err(reject)?;
     let document: nctforge_core::ComponentDoseInterchange =
         serde_json::from_slice(&bytes).map_err(reject)?;
+    use sha2::Digest;
+    let sha256 = format!("{:x}", sha2::Sha256::digest(&bytes));
+    Ok(PyPhysicalDoseBundle {
+        inner: nctforge_core::import_component_dose(&document, &sha256).map_err(reject)?,
+    })
+}
+
+fn dose_unit(unit: &str) -> PyResult<nctforge_core::DoseUnit> {
+    match unit {
+        "gray" => Ok(nctforge_core::DoseUnit::Gray),
+        "gray_per_source_particle" => Ok(nctforge_core::DoseUnit::GrayPerSourceParticle),
+        other => Err(PyValueError::new_err(format!("unknown dose unit {other:?}"))),
+    }
+}
+
+fn dose_component(name: &str) -> PyResult<nctforge_core::DoseComponent> {
+    match name {
+        "boron" => Ok(nctforge_core::DoseComponent::Boron),
+        "nitrogen" => Ok(nctforge_core::DoseComponent::Nitrogen),
+        "hydrogen" => Ok(nctforge_core::DoseComponent::Hydrogen),
+        "photon" => Ok(nctforge_core::DoseComponent::Photon),
+        other => Err(PyValueError::new_err(format!(
+            "unknown dose component {other:?}"
+        ))),
+    }
+}
+
+/// Lift MCNP meshtal component tallies into a physical dose bundle (same
+/// path as `nctforge import mcnp`). `components` maps each component name to
+/// `(meshtal_path, tally_number)` or `(meshtal_path, tally_number,
+/// energy_bin)`.
+#[pyfunction]
+#[pyo3(signature = (components, case_id, unit, normalization, producer_version=None, frame_of_reference_uid=None))]
+fn import_mcnp_meshtal(
+    components: HashMap<String, Vec<Bound<'_, PyAny>>>,
+    case_id: &str,
+    unit: &str,
+    normalization: &str,
+    producer_version: Option<String>,
+    frame_of_reference_uid: Option<String>,
+) -> PyResult<PyPhysicalDoseBundle> {
+    let mut sources = Vec::new();
+    for (name, fields) in components {
+        let bad = || {
+            PyValueError::new_err(format!(
+                "component {name:?}: expected (file, tally[, energy_bin])"
+            ))
+        };
+        if fields.len() < 2 || fields.len() > 3 {
+            return Err(bad());
+        }
+        sources.push(nctforge_mcnp::ComponentSource {
+            component: dose_component(&name)?,
+            file: fields[0].extract::<PathBuf>().map_err(|_| bad())?,
+            tally: fields[1].extract::<u32>().map_err(|_| bad())?,
+            energy_bin: if fields.len() == 3 {
+                Some(fields[2].extract::<usize>().map_err(|_| bad())?)
+            } else {
+                None
+            },
+        });
+    }
+    let document = nctforge_mcnp::interchange_from_meshtals(
+        &sources,
+        case_id,
+        dose_unit(unit)?,
+        normalization,
+        frame_of_reference_uid,
+        producer_version,
+    )
+    .map_err(reject)?;
+    let bytes = serde_json::to_vec_pretty(&document).map_err(reject)?;
+    use sha2::Digest;
+    let sha256 = format!("{:x}", sha2::Sha256::digest(&bytes));
+    Ok(PyPhysicalDoseBundle {
+        inner: nctforge_core::import_component_dose(&document, &sha256).map_err(reject)?,
+    })
+}
+
+/// Lift PHITS xyz-mesh tally files into a physical dose bundle (same path as
+/// `nctforge import phits`). `components` maps each component name to a file
+/// path or `(path, energy_index)` tuple; `FILE_err.ext` siblings supply
+/// relative errors when present. `producer_version` is required.
+#[pyfunction]
+#[pyo3(signature = (components, case_id, unit, normalization, producer_version, frame_of_reference_uid=None))]
+fn import_phits(
+    components: HashMap<String, Bound<'_, PyAny>>,
+    case_id: &str,
+    unit: &str,
+    normalization: &str,
+    producer_version: &str,
+    frame_of_reference_uid: Option<String>,
+) -> PyResult<PyPhysicalDoseBundle> {
+    let mut sources = Vec::new();
+    for (name, spec) in components {
+        let bad = || {
+            PyValueError::new_err(format!(
+                "component {name:?}: expected file path or (path, energy_index)"
+            ))
+        };
+        let (file, energy_bin) = if let Ok(path) = spec.extract::<PathBuf>() {
+            (path, None)
+        } else if let Ok((path, ebin)) = spec.extract::<(PathBuf, usize)>() {
+            (path, Some(ebin))
+        } else {
+            return Err(bad());
+        };
+        sources.push(nctforge_phits::ComponentSource {
+            component: dose_component(&name)?,
+            file,
+            energy_bin,
+        });
+    }
+    let document = nctforge_phits::interchange_from_phits(
+        &sources,
+        case_id,
+        dose_unit(unit)?,
+        normalization,
+        frame_of_reference_uid,
+        producer_version,
+    )
+    .map_err(reject)?;
+    let bytes = serde_json::to_vec_pretty(&document).map_err(reject)?;
     use sha2::Digest;
     let sha256 = format!("{:x}", sha2::Sha256::digest(&bytes));
     Ok(PyPhysicalDoseBundle {
@@ -2032,5 +2156,7 @@ fn _nctforge(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(plan_table_read, m)?)?;
     m.add_function(wrap_pyfunction!(plan_table_write, m)?)?;
     m.add_function(wrap_pyfunction!(import_component_dose, m)?)?;
+    m.add_function(wrap_pyfunction!(import_mcnp_meshtal, m)?)?;
+    m.add_function(wrap_pyfunction!(import_phits, m)?)?;
     Ok(())
 }

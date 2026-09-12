@@ -201,6 +201,29 @@ impl ComponentDoseInterchange {
     }
 }
 
+/// Loose grid comparison for producers that print identical meshes at finite
+/// precision: exact shape equality plus a tight relative tolerance on spacing,
+/// origin, and direction. Importers must use this rather than `==` on f64
+/// fields, and must never resample disagreeing meshes into agreement.
+pub fn grid_geometry_equivalent(a: &GridGeometry, b: &GridGeometry) -> bool {
+    if a.shape != b.shape {
+        return false;
+    }
+    let close = |x: f64, y: f64| (x - y).abs() <= 1e-6 * x.abs().max(y.abs()).max(1e-12);
+    a.spacing_mm
+        .iter()
+        .zip(&b.spacing_mm)
+        .all(|(x, y)| close(*x, *y))
+        && a.origin_mm
+            .iter()
+            .zip(&b.origin_mm)
+            .all(|(x, y)| close(*x, *y))
+        && a.direction
+            .iter()
+            .zip(&b.direction)
+            .all(|(x, y)| close(*x, *y))
+}
+
 /// Import an interchange document into a validated `PhysicalDoseBundle`.
 ///
 /// `document_sha256` is the SHA-256 of the interchange document's bytes; it

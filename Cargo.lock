@@ -2583,9 +2583,11 @@ dependencies = [
  "nctforge-core",
  "nctforge-dicom",
  "nctforge-evidence",
+ "nctforge-mcnp",
  "nctforge-nifti",
  "nctforge-njoy",
  "nctforge-openmc",
+ "nctforge-phits",
  "nctforge-plan",
  "nctforge-transport",
  "serde",
@@ -2649,6 +2651,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "nctforge-mcnp"
+version = "0.1.0"
+dependencies = [
+ "nctforge-core",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.20",
+]
+
+[[package]]
 name = "nctforge-nifti"
 version = "0.1.0"
 dependencies = [
@@ -2688,6 +2700,16 @@ dependencies = [
  "serde_json",
  "sha2",
  "tempfile",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "nctforge-phits"
+version = "0.1.0"
+dependencies = [
+ "nctforge-core",
+ "serde",
+ "serde_json",
  "thiserror 2.0.20",
 ]
 

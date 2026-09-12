@@ -17,7 +17,7 @@ pub use exposure::{
 };
 pub use interchange::{
     COMPONENT_DOSE_INTERCHANGE_SCHEMA, ComponentDoseInterchange, ExternalProducer, ExternalTotal,
-    InterchangeError, import_component_dose,
+    InterchangeError, grid_geometry_equivalent, import_component_dose,
 };
 pub use stats::{
     dose_covering_percent, equivalent_uniform_dose, masked_values, mean, volume_at_least,

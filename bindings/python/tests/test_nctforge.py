@@ -643,6 +643,125 @@ class InterchangeTest(unittest.TestCase):
                 nctforge.import_component_dose(path)
 
 
+MESHTAL_FIXTURE = """mcnp   version 6.2 ld=01/01/20  probid =  01/01/20 00:00:00
+ parity fixture
+ Number of histories used for normalizing tallies =    1000.00
+
+ Mesh Tally Number        4
+ neutron  mesh tally.
+
+ Tally bin boundaries:
+    X direction:      -1.00      1.00
+    Y direction:      -1.00      0.00      1.00
+    Z direction:      -1.00      1.00
+    Energy bin boundaries: 0.00E+00 2.00E+01
+
+   Energy         X         Y         Z     Result     Rel Error
+  2.000E+01     0.000   -0.500     0.000 1.00000E-03 1.00000E-02
+  2.000E+01     0.000    0.500     0.000 2.00000E-03 1.00000E-02
+"""
+
+PHITS_FIXTURE = """[ T - D e p o s i t ]
+    mesh =  xyz
+  x-type =    2
+    xmin =  -1.0
+    xmax =   1.0
+      nx =    2
+  y-type =    2
+    ymin =  -1.0
+    ymax =   1.0
+      ny =    2
+  z-type =    2
+    zmin =  -1.0
+    zmax =   1.0
+      nz =    2
+    unit =    0
+    axis =   xy
+    file = d.out
+   output =  dose
+
+#newpage:
+# no. = 1  iz = 1
+x: x [cm]
+y: y [cm]
+h: x n n y n y(all),hh0l n
+# x-lower      x-upper      y-lower      y-upper      all        r.err
+ -1.0000E+00   0.0000E+00  -1.0000E+00   0.0000E+00   1.0000E-03 1.0000E-02
+  0.0000E+00   1.0000E+00  -1.0000E+00   0.0000E+00   2.0000E-03 1.0000E-02
+ -1.0000E+00   0.0000E+00   0.0000E+00   1.0000E+00   4.0000E-03 1.0000E-02
+  0.0000E+00   1.0000E+00   0.0000E+00   1.0000E+00   5.0000E-03 1.0000E-02
+
+#newpage:
+# no. = 2  iz = 2
+x: x [cm]
+y: y [cm]
+h: x n n y n y(all),hh0l n
+# x-lower      x-upper      y-lower      y-upper      all        r.err
+ -1.0000E+00   0.0000E+00  -1.0000E+00   0.0000E+00   7.0000E-03 2.0000E-02
+  0.0000E+00   1.0000E+00  -1.0000E+00   0.0000E+00   8.0000E-03 2.0000E-02
+ -1.0000E+00   0.0000E+00   0.0000E+00   1.0000E+00   9.0000E-03 2.0000E-02
+  0.0000E+00   1.0000E+00   0.0000E+00   1.0000E+00   1.0000E-02 2.0000E-02
+"""
+
+
+class ExternalAdapterTest(unittest.TestCase):
+    def test_mcnp_meshtal_import(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = _write(tmp, "meshtal", MESHTAL_FIXTURE)
+            bundle = nctforge.import_mcnp_meshtal(
+                {
+                    "boron": (path, 4),
+                    "nitrogen": (path, 4),
+                    "hydrogen": (path, 4),
+                    "photon": (path, 4),
+                },
+                case_id="py-mcnp",
+                unit="gray_per_source_particle",
+                normalization="per source particle; fixture",
+            )
+            self.assertEqual(bundle.case_id, "py-mcnp")
+            self.assertIn("interchange:mcnp:sha256:", bundle.provenance_id)
+            # 1x2x1 grid: values = 4 x 1e-3 at index 0, 4 x 2e-3 at index 1.
+            self.assertAlmostEqual(bundle.physical_total.values[0], 4.0e-3)
+            self.assertAlmostEqual(bundle.physical_total.values[1], 8.0e-3)
+            self.assertIsNone(bundle.physical_total.absolute_standard_uncertainty)
+
+    def test_phits_import(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = _write(tmp, "d.out", PHITS_FIXTURE)
+            bundle = nctforge.import_phits(
+                {
+                    "boron": path,
+                    "nitrogen": path,
+                    "hydrogen": path,
+                    "photon": path,
+                },
+                case_id="py-phits",
+                unit="gray_per_source_particle",
+                normalization="unit=0; fixture",
+                producer_version="3.34",
+            )
+            self.assertIn("interchange:phits:sha256:", bundle.provenance_id)
+            # 2x2x2: index 7 = (1,1,1) = 4 x 1e-2.
+            self.assertAlmostEqual(bundle.physical_total.values[7], 4.0e-2)
+
+    def test_adapters_reject_bad_specs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = _write(tmp, "meshtal", MESHTAL_FIXTURE)
+            with self.assertRaises(NctForgeError):
+                nctforge.import_mcnp_meshtal(
+                    {"boron": (path, 99), "nitrogen": (path, 4),
+                     "hydrogen": (path, 4), "photon": (path, 4)},
+                    "c", "gray_per_source_particle", "x",
+                )
+            with self.assertRaises(NctForgeError):
+                nctforge.import_phits(
+                    {"boron": path, "nitrogen": path,
+                     "hydrogen": path, "photon": path},
+                    "c", "gray_per_source_particle", "x", " ",
+                )
+
+
 class EvidenceBundleTest(unittest.TestCase):
     def test_verify_detects_tampering(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

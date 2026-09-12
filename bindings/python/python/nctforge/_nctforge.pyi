@@ -540,4 +540,29 @@ def plan_table_write(plan: str | PathLike[str], output: str | PathLike[str]) -> 
     table (same path as ``nctforge plan export``)."""
 def import_component_dose(interchange: str | PathLike[str]) -> PhysicalDoseBundle:
     """Import a ``nctforge.component-dose-interchange/0.1.0`` document into a
-    validated physical dose bundle (same path as ``nctforge import``)."""
+    validated physical dose bundle (same path as ``nctforge import
+    interchange``)."""
+def import_mcnp_meshtal(
+    components: dict[str, tuple[str | PathLike[str], int] | tuple[str | PathLike[str], int, int]],
+    case_id: str,
+    unit: str,
+    normalization: str,
+    producer_version: str | None = None,
+    frame_of_reference_uid: str | None = None,
+) -> PhysicalDoseBundle:
+    """Lift MCNP meshtal component tallies into a physical dose bundle (same
+    path as ``nctforge import mcnp``). ``components`` maps each of
+    ``boron``/``nitrogen``/``hydrogen``/``photon`` to ``(file, tally)`` or
+    ``(file, tally, energy_bin)``."""
+def import_phits(
+    components: dict[str, str | PathLike[str] | tuple[str | PathLike[str], int]],
+    case_id: str,
+    unit: str,
+    normalization: str,
+    producer_version: str,
+    frame_of_reference_uid: str | None = None,
+) -> PhysicalDoseBundle:
+    """Lift PHITS xyz-mesh tally files into a physical dose bundle (same path
+    as ``nctforge import phits``). ``components`` maps each component to a
+    file path or ``(path, energy_index)``; ``FILE_err.ext`` siblings supply
+    relative errors when present. ``producer_version`` is required."""

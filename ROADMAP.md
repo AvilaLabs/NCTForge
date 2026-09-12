@@ -461,21 +461,32 @@ Implementation status:
   `nctforge.component-dose-interchange/0.1.0` records the producing system,
   version, and normalization, the transport-neutral grid, and the four
   physical component volumes with optional per-voxel sigmas. `nctforge
-  import` and Python `import_component_dose` share one Rust path validating
-  it into `nctforge.physical-dose-bundle/0.2.0`. `dedicated` totals keep
-  their estimator sigmas; `component_sum` totals record `unavailable`
-  uncertainty rather than claiming a dedicated estimator. Bundle provenance
-  binds the document SHA-256 (`interchange:<system>:sha256:<hash>`) and
-  threads through `dvh`/`metrics`/`bio apply` — verified end-to-end on a
-  synthetic PHITS-labeled fixture in `examples/interchange/` (analytic
-  stand-in values, not PHITS output);
+  import interchange` and Python `import_component_dose` share one Rust
+  path validating it into `nctforge.physical-dose-bundle/0.2.0`.
+  `dedicated` totals keep their estimator sigmas; `component_sum` totals
+  record `unavailable` uncertainty rather than claiming a dedicated
+  estimator. Bundle provenance binds the document SHA-256
+  (`interchange:<system>:sha256:<hash>`) and threads through
+  `dvh`/`metrics`/`bio apply` — verified end-to-end on a synthetic
+  PHITS-labeled fixture in `examples/interchange/` (analytic stand-in
+  values, not PHITS output);
 - complete (first slice): public conformance suite —
   `conformance/interchange/0.1.0/` ships a manifest-driven fixture set (4
   valid documents with byte-fixed golden bundles, 15 rejection cases with
   stable error tokens) exercised by
   `cargo test -p nctforge-core --test interchange_conformance`;
-- pending: committed parser fixtures per producing system and real-engine
-  examples for OP-04;
+- complete (documented-format slice): MCNP/PHITS import adapters — the
+  `nctforge-mcnp` crate parses ASCII `meshtal` files (tally + optional
+  energy-bin selection, `Rel Error` → absolute sigmas) and the
+  `nctforge-phits` crate parses `xyz`-mesh `.out` files (echo-parsed grid,
+  `#newpage` axis pages, inline `r.err` preferred over `_err` siblings,
+  incomplete error coverage rejected). Both emit the interchange document
+  and validate through the shared importer; `nctforge import mcnp|phits`
+  and Python `import_mcnp_meshtal`/`import_phits` are parity surfaces with
+  document-hash provenance. Parser fixtures are authored to documented
+  formats — real-engine acceptance remains the open gate;
+- pending: committed real-engine parser fixtures per producing system for
+  OP-04;
 - pending: OP-05 MCNP deck export, OP-10 external-dose/BED combined
   analysis, and the cross-code frozen-case comparison.
 

@@ -10,6 +10,8 @@ members = [
   "crates/nctforge-nifti",
   "crates/nctforge-njoy",
   "crates/nctforge-plan",
+  "crates/nctforge-mcnp",
+  "crates/nctforge-phits",
   "crates/nctforge-cli",
   "crates/nctforge-gui",
 ]

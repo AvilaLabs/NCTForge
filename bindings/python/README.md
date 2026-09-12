@@ -18,15 +18,20 @@ bindings/python/
   tests/                     cross-language parity suite
 ```
 
-The first bounded API covers case generation, verification, and gated loading
-for `NF-BNCT-001`; geometry, ROI, and CT inspection; `case.json` manifest
+The API covers case generation, verification, and gated loading for
+`NF-BNCT-001`; geometry, ROI, and CT inspection; `case.json` manifest
 reading and artifact re-verification; validated material, source, component
 profile, response-generation method, and response-set contract readers with
 canonical `to_json` serialization; the response-set `folding_ready` review
-gate; backend capability flags; and `file_sha256`. Every load runs the same
-Rust `validate()` as the CLI, and every rejection raises `NctForgeError`.
-Transport actions stay unavailable until the Rust capability and evidence
-gates pass; `backends()` reports those flags honestly.
+gate; statepoint collection; DVH and dose-volume metrics; biological-model
+application and TCP/NTCP/UTCP endpoint evaluation; exposure-plan table
+import/export and weighted accumulation; and external component-dose import
+(`import_component_dose`, `import_mcnp_meshtal`, `import_phits`). Every load
+runs the same Rust `validate()` as the CLI, every rejection raises
+`NctForgeError`, and adapter provenance binds the generated interchange
+document's SHA-256 exactly as the CLI does. Transport actions stay
+unavailable until the Rust capability and evidence gates pass;
+`backends()` reports those flags honestly.
 
 Local development:
 

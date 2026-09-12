@@ -552,14 +552,14 @@ nctforge accumulate \
 
 ### External component-dose import
 
-`nctforge import` ingests a `nctforge.component-dose-interchange/0.1.0`
-document — a transport-neutral record an external pipeline (MCNP, PHITS,
-Geant4, or a custom tool) emits — and validates it into an ordinary
-`nctforge.physical-dose-bundle/0.2.0`:
+`nctforge import interchange` ingests a
+`nctforge.component-dose-interchange/0.1.0` document — a transport-neutral
+record an external pipeline (MCNP, PHITS, Geant4, or a custom tool) emits —
+and validates it into an ordinary `nctforge.physical-dose-bundle/0.2.0`:
 
 ```text
-nctforge import \
-  --interchange examples/interchange/phits-synthetic-dose.json \
+nctforge import interchange \
+  --file examples/interchange/phits-synthetic-dose.json \
   --output imported-dose.json
 ```
 
@@ -576,6 +576,50 @@ external identity downstream through `dvh`, `metrics`, `bio apply`,
 evidence bundles, and the Python `import_component_dose` parity surface.
 `examples/interchange/` ships a synthetic PHITS-labeled fixture (analytic
 stand-in values, not PHITS output) demonstrating the format.
+
+Two native adapters generate that document directly. `nctforge import
+mcnp` reads ASCII `meshtal` files — each component mapping names a file,
+tally number, and optional energy bin (`file:tally[:energy-bin]`), and MCNP
+relative errors import as absolute per-voxel sigmas:
+
+```text
+nctforge import mcnp \
+  --case-id my-case \
+  --unit gray_per_source_particle \
+  --normalization "per source particle; F4 flux-to-dose fold" \
+  --component boron=meshtal:14 \
+  --component nitrogen=meshtal:24 \
+  --component hydrogen=meshtal:34 \
+  --component photon=meshtal:44 \
+  --output mcnp-dose.json
+```
+
+`nctforge import phits` reads PHITS `xyz`-mesh output (e.g. `t-deposit`
+`.out` files) — each mapping names a file with an optional energy index
+(`file[:energy-index]`); inline `r.err` columns are preferred, otherwise a
+sibling `*_err` file supplies relative errors (partial or mismatched error
+coverage is rejected). PHITS tally files do not reliably record the code
+version, so `--producer-version` is required:
+
+```text
+nctforge import phits \
+  --case-id my-case \
+  --unit gray_per_source_particle \
+  --normalization "unit=0 deposit dose per source" \
+  --producer-version 3.34 \
+  --component boron=d_boron.out \
+  --component nitrogen=d_nitrogen.out \
+  --component hydrogen=d_hydrogen.out \
+  --component photon=d_photon.out \
+  --output phits-dose.json
+```
+
+Both adapters emit the same interchange document and pass it through the
+shared validator, so the resulting bundle is identical in kind to the
+interchange path above — the Python `import_mcnp_meshtal` and
+`import_phits` functions are parity surfaces. The parsers are built
+against documented formats; acceptance against real MCNP/PHITS-produced
+files is an open R4 gate.
 
 ### Exposure-plan tables and diagnostics
 

@@ -26,3 +26,5 @@ nctforge-plan = { path = "../nctforge-plan" }
 nctforge-transport = { path = "../nctforge-transport" }
 serde.workspace = true
 serde_json.workspace = true
+nctforge-mcnp = { path = "../nctforge-mcnp" }
+nctforge-phits = { path = "../nctforge-phits" }

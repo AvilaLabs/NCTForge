@@ -123,16 +123,9 @@ enum Command {
     /// Aim a fixed source at a region centroid or rotate a source about a
     /// patient axis (research positioning helpers).
     Position(PositionArgs),
-    /// Import a `nctforge.component-dose-interchange/0.1.0` document into a
-    /// validated physical dose bundle.
-    Import {
-        /// Interchange document produced by an external transport pipeline.
-        #[arg(long)]
-        interchange: PathBuf,
-        /// New output path for the physical dose bundle.
-        #[arg(long)]
-        output: PathBuf,
-    },
+    /// Import external transport results into a validated physical dose
+    /// bundle (interchange document, MCNP meshtal, or PHITS tally output).
+    Import(ImportArgs),
     /// Compute exact dose-volume metrics (D_x, V_x, min/mean/max, EUD)
     /// over a named voxel mask.
     Metrics {
@@ -415,6 +408,87 @@ enum MaskCommand {
         #[arg(long)]
         name: String,
         /// New output path for the mask JSON.
+        #[arg(long)]
+        output: PathBuf,
+    },
+}
+
+#[derive(Debug, Args)]
+struct ImportArgs {
+    #[command(subcommand)]
+    command: ImportCommand,
+}
+
+#[derive(Debug, Subcommand)]
+enum ImportCommand {
+    /// Import a `nctforge.component-dose-interchange/0.1.0` document.
+    Interchange {
+        /// Interchange document produced by an external transport pipeline.
+        #[arg(long)]
+        file: PathBuf,
+        /// New output path for the physical dose bundle.
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Lift MCNP meshtal component tallies into a physical dose bundle.
+    ///
+    /// Each `--component NAME=FILE:TALLY[:ENERGY_BIN]` selects one
+    /// rectangular-mesh tally (column layout, `Result`/`Rel Error` rows) for
+    /// that dose component. All four components are required; the selected
+    /// tallies must share one uniform mesh.
+    Mcnp {
+        /// `component=meshtal-path:tally-number[:energy-bin]`; repeatable,
+        /// once per component (boron/nitrogen/hydrogen/photon).
+        #[arg(long = "component")]
+        components: Vec<String>,
+        /// Accumulated case identifier.
+        #[arg(long)]
+        case_id: String,
+        /// `gray_per_source_particle` or `gray`.
+        #[arg(long)]
+        unit: String,
+        /// Declared dose semantics: normalization basis and any folding or
+        /// kerma-response treatment applied by the producer.
+        #[arg(long)]
+        normalization: String,
+        /// MCNP version label; must match the file banner when both exist.
+        #[arg(long)]
+        producer_version: Option<String>,
+        /// Optional DICOM frame-of-reference UID carried into the bundle.
+        #[arg(long)]
+        frame_of_reference_uid: Option<String>,
+        /// New output path for the physical dose bundle.
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Lift PHITS xyz-mesh tally files into a physical dose bundle.
+    ///
+    /// Each `--component NAME=FILE[:ENERGY_INDEX]` selects one PHITS tally
+    /// output file (`mesh = xyz`, two-dimensional `axis`); a `FILE_err.ext`
+    /// sibling supplies relative errors when present.
+    Phits {
+        /// `component=phits-output-path[:energy-index]`; repeatable, once per
+        /// component (boron/nitrogen/hydrogen/photon).
+        #[arg(long = "component")]
+        components: Vec<String>,
+        /// Accumulated case identifier.
+        #[arg(long)]
+        case_id: String,
+        /// `gray_per_source_particle` or `gray`; must agree with each file's
+        /// `unit =` code (0 = Gy/source).
+        #[arg(long)]
+        unit: String,
+        /// Declared dose semantics: normalization basis and any folding or
+        /// kerma-response treatment applied by the producer.
+        #[arg(long)]
+        normalization: String,
+        /// PHITS version label (required; tally files do not record it).
+        #[arg(long)]
+        producer_version: String,
+        /// Optional DICOM frame-of-reference UID carried into the bundle.
+        #[arg(long)]
+        frame_of_reference_uid: Option<String>,
+        /// New output path for the physical dose bundle.
         #[arg(long)]
         output: PathBuf,
     },
@@ -4114,24 +4188,88 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
             file.sync_all()?;
             println!("accumulated dose bundle at {}", output.display());
         }
-        Some(Command::Import {
-            interchange,
-            output,
-        }) => {
-            let bytes = fs::read(&interchange)?;
-            let document: nctforge_core::ComponentDoseInterchange = serde_json::from_slice(&bytes)?;
-            let sha256 = nctforge_evidence::sha256_hex(&bytes);
-            let bundle = nctforge_core::import_component_dose(&document, &sha256)
-                .map_err(|error| io::Error::other(format!("interchange import: {error}")))?;
-            write_new_json(&output, &bundle)?;
-            println!("imported dose bundle at {}", output.display());
-            println!(
-                "producer: {} {} ({})",
-                document.producer.system,
-                document.producer.version,
-                document.producer.normalization
-            );
-        }
+        Some(Command::Import(args)) => match args.command {
+            ImportCommand::Interchange { file, output } => {
+                let bytes = fs::read(&file)?;
+                let document: nctforge_core::ComponentDoseInterchange =
+                    serde_json::from_slice(&bytes)?;
+                let sha256 = nctforge_evidence::sha256_hex(&bytes);
+                let bundle = nctforge_core::import_component_dose(&document, &sha256)
+                    .map_err(|error| io::Error::other(format!("interchange import: {error}")))?;
+                write_new_json(&output, &bundle)?;
+                println!("imported dose bundle at {}", output.display());
+                println!(
+                    "producer: {} {} ({})",
+                    document.producer.system,
+                    document.producer.version,
+                    document.producer.normalization
+                );
+            }
+            ImportCommand::Mcnp {
+                components,
+                case_id,
+                unit,
+                normalization,
+                producer_version,
+                frame_of_reference_uid,
+                output,
+            } => {
+                let sources = parse_mcnp_components(&components)?;
+                let document = nctforge_mcnp::interchange_from_meshtals(
+                    &sources,
+                    &case_id,
+                    parse_dose_unit(&unit)?,
+                    &normalization,
+                    frame_of_reference_uid,
+                    producer_version,
+                )
+                .map_err(|error| io::Error::other(format!("mcnp import: {error}")))?;
+                let bytes = serde_json::to_vec_pretty(&document)?;
+                let sha256 = nctforge_evidence::sha256_hex(&bytes);
+                let bundle = nctforge_core::import_component_dose(&document, &sha256)
+                    .map_err(|error| io::Error::other(format!("interchange import: {error}")))?;
+                write_new_json(&output, &bundle)?;
+                println!("imported dose bundle at {}", output.display());
+                println!(
+                    "producer: {} {} ({})",
+                    document.producer.system,
+                    document.producer.version,
+                    document.producer.normalization
+                );
+            }
+            ImportCommand::Phits {
+                components,
+                case_id,
+                unit,
+                normalization,
+                producer_version,
+                frame_of_reference_uid,
+                output,
+            } => {
+                let sources = parse_phits_components(&components)?;
+                let document = nctforge_phits::interchange_from_phits(
+                    &sources,
+                    &case_id,
+                    parse_dose_unit(&unit)?,
+                    &normalization,
+                    frame_of_reference_uid,
+                    &producer_version,
+                )
+                .map_err(|error| io::Error::other(format!("phits import: {error}")))?;
+                let bytes = serde_json::to_vec_pretty(&document)?;
+                let sha256 = nctforge_evidence::sha256_hex(&bytes);
+                let bundle = nctforge_core::import_component_dose(&document, &sha256)
+                    .map_err(|error| io::Error::other(format!("interchange import: {error}")))?;
+                write_new_json(&output, &bundle)?;
+                println!("imported dose bundle at {}", output.display());
+                println!(
+                    "producer: {} {} ({})",
+                    document.producer.system,
+                    document.producer.version,
+                    document.producer.normalization
+                );
+            }
+        },
         Some(Command::Plan(args)) => match args.command {
             PlanCommand::Import {
                 table,
@@ -4821,6 +4959,93 @@ fn biological_dose_values<'a>(
 
 fn bytes_to_gib(bytes: u64) -> f64 {
     bytes as f64 / 1024.0_f64.powi(3)
+}
+
+fn parse_dose_unit(token: &str) -> Result<nctforge_core::DoseUnit, Box<dyn Error>> {
+    match token {
+        "gray" => Ok(nctforge_core::DoseUnit::Gray),
+        "gray_per_source_particle" => Ok(nctforge_core::DoseUnit::GrayPerSourceParticle),
+        other => Err(io::Error::other(format!("unknown dose unit {other:?}")).into()),
+    }
+}
+
+fn parse_component_name(name: &str) -> Result<nctforge_core::DoseComponent, Box<dyn Error>> {
+    match name {
+        "boron" => Ok(nctforge_core::DoseComponent::Boron),
+        "nitrogen" => Ok(nctforge_core::DoseComponent::Nitrogen),
+        "hydrogen" => Ok(nctforge_core::DoseComponent::Hydrogen),
+        "photon" => Ok(nctforge_core::DoseComponent::Photon),
+        other => Err(io::Error::other(format!("unknown dose component {other:?}")).into()),
+    }
+}
+
+/// `name=meshtal-path:tally[:energy-bin]` — fields split off the right so
+/// paths may contain colons; with two trailing numeric fields the last is the
+/// energy bin.
+fn parse_mcnp_components(
+    specs: &[String],
+) -> Result<Vec<nctforge_mcnp::ComponentSource>, Box<dyn Error>> {
+    let mut sources = Vec::new();
+    for spec in specs {
+        let (name, rest) = spec
+            .split_once('=')
+            .ok_or_else(|| io::Error::other(format!("component spec {spec:?} lacks `=`")))?;
+        let component = parse_component_name(name)?;
+        let (rest, last) = rest
+            .rsplit_once(':')
+            .ok_or_else(|| io::Error::other(format!("component spec {spec:?} lacks :TALLY")))?;
+        let (file, tally, energy_bin) = match rest.rsplit_once(':') {
+            Some((path, mid))
+                if mid.parse::<u32>().is_ok()
+                    && !path.is_empty()
+                    && last.parse::<usize>().is_ok() =>
+            {
+                (
+                    PathBuf::from(path),
+                    mid.parse::<u32>().unwrap(),
+                    last.parse::<usize>().ok(),
+                )
+            }
+            _ => {
+                let tally = last
+                    .parse::<u32>()
+                    .map_err(|_| io::Error::other(format!("{spec:?}: tally is not a number")))?;
+                (PathBuf::from(rest), tally, None)
+            }
+        };
+        sources.push(nctforge_mcnp::ComponentSource {
+            component,
+            file,
+            tally,
+            energy_bin,
+        });
+    }
+    Ok(sources)
+}
+
+/// `name=phits-output-path[:energy-index]`.
+fn parse_phits_components(
+    specs: &[String],
+) -> Result<Vec<nctforge_phits::ComponentSource>, Box<dyn Error>> {
+    let mut sources = Vec::new();
+    for spec in specs {
+        let (name, rest) = spec
+            .split_once('=')
+            .ok_or_else(|| io::Error::other(format!("component spec {spec:?} lacks `=`")))?;
+        let component = parse_component_name(name)?;
+        let (file, energy_bin) = match rest.rsplit_once(':') {
+            Some((path, tail)) if tail.parse::<usize>().is_ok() && !path.is_empty() => {
+                (PathBuf::from(path), tail.parse::<usize>().ok())
+            }
+            _ => (PathBuf::from(rest), None),
+        };
+        sources.push(nctforge_phits::ComponentSource {
+            component,
+            file,
+            energy_bin,
+        });
+    }
+    Ok(sources)
 }
 
 fn qualification_name(qualification: EndfMf6CapturePhotonBalanceQualification) -> &'static str {
