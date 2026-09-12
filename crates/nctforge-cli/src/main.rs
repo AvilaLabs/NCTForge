@@ -123,6 +123,16 @@ enum Command {
     /// Aim a fixed source at a region centroid or rotate a source about a
     /// patient axis (research positioning helpers).
     Position(PositionArgs),
+    /// Import a `nctforge.component-dose-interchange/0.1.0` document into a
+    /// validated physical dose bundle.
+    Import {
+        /// Interchange document produced by an external transport pipeline.
+        #[arg(long)]
+        interchange: PathBuf,
+        /// New output path for the physical dose bundle.
+        #[arg(long)]
+        output: PathBuf,
+    },
     /// Compute exact dose-volume metrics (D_x, V_x, min/mean/max, EUD)
     /// over a named voxel mask.
     Metrics {
@@ -4103,6 +4113,24 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
             file.write_all(b"\n")?;
             file.sync_all()?;
             println!("accumulated dose bundle at {}", output.display());
+        }
+        Some(Command::Import {
+            interchange,
+            output,
+        }) => {
+            let bytes = fs::read(&interchange)?;
+            let document: nctforge_core::ComponentDoseInterchange = serde_json::from_slice(&bytes)?;
+            let sha256 = nctforge_evidence::sha256_hex(&bytes);
+            let bundle = nctforge_core::import_component_dose(&document, &sha256)
+                .map_err(|error| io::Error::other(format!("interchange import: {error}")))?;
+            write_new_json(&output, &bundle)?;
+            println!("imported dose bundle at {}", output.display());
+            println!(
+                "producer: {} {} ({})",
+                document.producer.system,
+                document.producer.version,
+                document.producer.normalization
+            );
         }
         Some(Command::Plan(args)) => match args.command {
             PlanCommand::Import {

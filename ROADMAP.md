@@ -455,6 +455,25 @@ Exit evidence:
 - all R4 tasks in the OpenPINT capability matrix pass, including both MCNP and
   PHITS import, MCNP deck export, and external-dose research analysis.
 
+Implementation status:
+
+- complete (first slice): published interchange schema + generic importer —
+  `nctforge.component-dose-interchange/0.1.0` records the producing system,
+  version, and normalization, the transport-neutral grid, and the four
+  physical component volumes with optional per-voxel sigmas. `nctforge
+  import` and Python `import_component_dose` share one Rust path validating
+  it into `nctforge.physical-dose-bundle/0.2.0`. `dedicated` totals keep
+  their estimator sigmas; `component_sum` totals record `unavailable`
+  uncertainty rather than claiming a dedicated estimator. Bundle provenance
+  binds the document SHA-256 (`interchange:<system>:sha256:<hash>`) and
+  threads through `dvh`/`metrics`/`bio apply` — verified end-to-end on a
+  synthetic PHITS-labeled fixture in `examples/interchange/` (analytic
+  stand-in values, not PHITS output);
+- pending: committed parser fixtures and conformance suite per producing
+  system, versioned reference outputs, real-engine examples for OP-04;
+- pending: OP-05 MCNP deck export, OP-10 external-dose/BED combined
+  analysis, and the cross-code frozen-case comparison.
+
 ## Cross-cutting distribution
 
 The accepted distribution boundary is recorded in [ADR

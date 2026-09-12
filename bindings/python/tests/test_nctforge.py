@@ -606,6 +606,43 @@ class ExposurePlanTest(unittest.TestCase):
                 nctforge.load_exposure_plan(path)
 
 
+class InterchangeTest(unittest.TestCase):
+    def test_imports_external_component_dose(self) -> None:
+        document = (
+            REPO_ROOT / "examples" / "interchange" / "phits-synthetic-dose.json"
+        )
+        bundle = nctforge.import_component_dose(document)
+        self.assertEqual(bundle.case_id, "nf-bnct-001-phits-synthetic")
+        self.assertEqual(bundle.physical_total.unit, "gray_per_source_particle")
+        # component_sum imports never claim a total uncertainty.
+        self.assertIsNone(bundle.physical_total.absolute_standard_uncertainty)
+        self.assertIn("interchange:phits:sha256:", bundle.provenance_id)
+        self.assertEqual(len(bundle.components), 4)
+        # The component sum equals the physical total (tolerance for f64 sum).
+        for component in bundle.components:
+            self.assertEqual(len(component.values), 64000)
+        summed = [sum(c.values[i] for c in bundle.components) for i in (0, 1000)]
+        for index, expected in zip((0, 1000), summed):
+            self.assertAlmostEqual(
+                bundle.physical_total.values[index], expected, places=18
+            )
+
+    def test_rejects_malformed_interchange(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            doc = json.loads(
+                (
+                    REPO_ROOT
+                    / "examples"
+                    / "interchange"
+                    / "phits-synthetic-dose.json"
+                ).read_text()
+            )
+            doc["components"].pop()  # drop photon — a required component
+            path = _write(tmp, "broken.json", json.dumps(doc))
+            with self.assertRaises(NctForgeError):
+                nctforge.import_component_dose(path)
+
+
 class EvidenceBundleTest(unittest.TestCase):
     def test_verify_detects_tampering(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -538,3 +538,6 @@ def plan_table_read(
 def plan_table_write(plan: str | PathLike[str], output: str | PathLike[str]) -> None:
     """Export an exposure-plan JSON file to a ``.csv`` or ``.xlsx`` exposure
     table (same path as ``nctforge plan export``)."""
+def import_component_dose(interchange: str | PathLike[str]) -> PhysicalDoseBundle:
+    """Import a ``nctforge.component-dose-interchange/0.1.0`` document into a
+    validated physical dose bundle (same path as ``nctforge import``)."""

@@ -550,6 +550,33 @@ nctforge accumulate \
 
 `examples/exposure/` ships a two-field demonstration plan.
 
+### External component-dose import
+
+`nctforge import` ingests a `nctforge.component-dose-interchange/0.1.0`
+document — a transport-neutral record an external pipeline (MCNP, PHITS,
+Geant4, or a custom tool) emits — and validates it into an ordinary
+`nctforge.physical-dose-bundle/0.2.0`:
+
+```text
+nctforge import \
+  --interchange examples/interchange/phits-synthetic-dose.json \
+  --output imported-dose.json
+```
+
+The document declares the producing system, its version, and its
+normalization; carries the transport-neutral grid and all four physical
+component volumes (boron/nitrogen/hydrogen/photon) with optional per-voxel
+sigmas; and chooses a total mode. `dedicated` preserves a producer-tallied
+total and its estimator sigmas; `component_sum` sums the components and
+records `unavailable` total uncertainty — imported component sums never
+claim a dedicated-estimator uncertainty they do not have. The bundle's
+`provenance_id` binds the document's SHA-256
+(`interchange:<system>:sha256:<hash>`), so imported results keep their
+external identity downstream through `dvh`, `metrics`, `bio apply`,
+evidence bundles, and the Python `import_component_dose` parity surface.
+`examples/interchange/` ships a synthetic PHITS-labeled fixture (analytic
+stand-in values, not PHITS output) demonstrating the format.
+
 ### Exposure-plan tables and diagnostics
 
 The `nctforge plan` family bridges spreadsheet workflows and the JSON

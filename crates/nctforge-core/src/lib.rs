@@ -3,6 +3,7 @@
 #![forbid(unsafe_code)]
 
 mod exposure;
+mod interchange;
 mod stats;
 
 use std::collections::BTreeSet;
@@ -13,6 +14,10 @@ use thiserror::Error;
 pub use exposure::{
     BoundFileReference, EXPOSURE_PLAN_SCHEMA, Exposure, ExposureCovariance, ExposurePlan,
     ExposurePlanError, WeightBasis, accumulate_exposures,
+};
+pub use interchange::{
+    COMPONENT_DOSE_INTERCHANGE_SCHEMA, ComponentDoseInterchange, ExternalProducer, ExternalTotal,
+    InterchangeError, import_component_dose,
 };
 pub use stats::{
     dose_covering_percent, equivalent_uniform_dose, masked_values, mean, volume_at_least,

@@ -1070,6 +1070,21 @@ fn plan_table_write(plan: PathBuf, output: PathBuf) -> PyResult<()> {
     nctforge_plan::write_table(&output, &plan).map_err(reject)
 }
 
+/// Import a `nctforge.component-dose-interchange/0.1.0` document produced by
+/// an external transport pipeline into a validated physical dose bundle
+/// (same path as `nctforge import`).
+#[pyfunction]
+fn import_component_dose(interchange: PathBuf) -> PyResult<PyPhysicalDoseBundle> {
+    let bytes = fs::read(&interchange).map_err(reject)?;
+    let document: nctforge_core::ComponentDoseInterchange =
+        serde_json::from_slice(&bytes).map_err(reject)?;
+    use sha2::Digest;
+    let sha256 = format!("{:x}", sha2::Sha256::digest(&bytes));
+    Ok(PyPhysicalDoseBundle {
+        inner: nctforge_core::import_component_dose(&document, &sha256).map_err(reject)?,
+    })
+}
+
 /// A validated biological model contract.
 #[pyclass(frozen, name = "BiologicalModel")]
 struct PyBiologicalModel {
@@ -2016,5 +2031,6 @@ fn _nctforge(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(accumulate_exposures, m)?)?;
     m.add_function(wrap_pyfunction!(plan_table_read, m)?)?;
     m.add_function(wrap_pyfunction!(plan_table_write, m)?)?;
+    m.add_function(wrap_pyfunction!(import_component_dose, m)?)?;
     Ok(())
 }
