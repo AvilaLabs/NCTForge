@@ -46,10 +46,12 @@ use nctforge_njoy::{
 use nctforge_openmc::{
     DataAcquisitionClient, DataAcquisitionProfileDocument, DataAcquisitionReceiptDocument,
     EvaluatedNeutronSourceSelectionDocument, EvaluatedSourceQualification, NuclearDataManifest,
-    OpenMcBackend, OpenMcNeutronTransportDomain, OpenMcNeutronTransportDomainDocument,
+    OpenMcBackend, OpenMcInputArtifacts, OpenMcInputDeck, OpenMcNeutronTransportDomain,
+    OpenMcNeutronTransportDomainDocument,
 };
 use nctforge_transport::{
     ComponentDefinitionProfile, MaterialDefinition, ResponseGenerationMethod, TransportBackend,
+    TransportCase,
 };
 
 #[derive(Debug, Parser)]
@@ -105,6 +107,36 @@ struct OpenMcArgs {
 enum OpenMcCommand {
     /// Probe or acquire externally published nuclear data.
     Data(OpenMcDataArgs),
+    /// Generate a deterministic OpenMC input deck bound to a reviewed response set.
+    Generate {
+        /// Transport-case JSON embedding the frozen geometry, material, and source.
+        #[arg(long)]
+        case: PathBuf,
+        /// Component definition profile bound by the response set.
+        #[arg(long)]
+        component_profile: PathBuf,
+        /// Exact material JSON bound by the case and response set.
+        #[arg(long)]
+        material: PathBuf,
+        /// Exact source JSON bound by the case.
+        #[arg(long)]
+        source: PathBuf,
+        /// Reviewed neutron response set (must satisfy `validate_for_folding`).
+        #[arg(long)]
+        response_set: PathBuf,
+        /// Case-scoped OpenMC nuclear-data manifest.
+        #[arg(long)]
+        nuclear_data_manifest: PathBuf,
+        /// Frozen OpenMC execution profile (for example the smoke profile).
+        #[arg(long)]
+        execution_profile: PathBuf,
+        /// Root containing cross_sections.xml and every selected HDF5 file.
+        #[arg(long)]
+        nuclear_data_root: PathBuf,
+        /// New output directory for the generated deck; it must not already exist.
+        #[arg(long)]
+        output: PathBuf,
+    },
 }
 
 #[derive(Debug, Args)]
@@ -1204,6 +1236,50 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                     println!("qualification: backend_capability_derived_unreviewed");
                 }
             },
+            OpenMcCommand::Generate {
+                case,
+                component_profile,
+                material,
+                source,
+                response_set,
+                nuclear_data_manifest,
+                execution_profile,
+                nuclear_data_root,
+                output,
+            } => {
+                let case_json = fs::read(&case)?;
+                let case: TransportCase = serde_json::from_slice(&case_json)?;
+                let component_profile_json = fs::read(&component_profile)?;
+                let material_json = fs::read(&material)?;
+                let source_json = fs::read(&source)?;
+                let response_set_json = fs::read(&response_set)?;
+                let nuclear_data_manifest_json = fs::read(&nuclear_data_manifest)?;
+                let execution_profile_json = fs::read(&execution_profile)?;
+                let deck = OpenMcInputDeck::generate(
+                    &case,
+                    &nuclear_data_root,
+                    OpenMcInputArtifacts {
+                        component_profile_json: &component_profile_json,
+                        material_json: &material_json,
+                        source_json: &source_json,
+                        response_set_json: &response_set_json,
+                        nuclear_data_manifest_json: &nuclear_data_manifest_json,
+                        execution_profile_json: &execution_profile_json,
+                    },
+                )?;
+                deck.write_new(&output)?;
+                println!(
+                    "generated deterministic OpenMC input deck at {}",
+                    output.display()
+                );
+                println!("case: {}", deck.manifest.case_id);
+                println!("xml artifacts: {}", deck.manifest.xml_artifacts.len());
+                println!("tallies: {}", deck.manifest.tallies.len());
+                println!(
+                    "particles per batch: {}",
+                    deck.manifest.execution.particles_per_batch
+                );
+            }
         },
         Some(Command::Njoy(args)) => match args.command {
             NjoyCommand::Prepare {

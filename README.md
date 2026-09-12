@@ -313,7 +313,38 @@ is specified by [ADR
 work queue by [ADR
 0025](docs/adr/0025-diagnostic-triage-of-remaining-njoy-findings.md), and the
 O-17 attribution and response-path pause by [ADR
-0026](docs/adr/0026-o17-processor-energy-balance-attribution.md).
+0026](docs/adr/0026-o17-processor-energy-balance-attribution.md); that pause is
+superseded by [ADR
+0031](docs/adr/0031-o17-diagnostic-queue-dispositioned.md), under which the
+first component response tables are generated from the receipt-bound
+production HEATR output and sealed `independently_reviewed` by deterministic
+in-house regeneration.
+
+### OpenMC input generation
+
+With the sealed response set in place, generate the deterministic OpenMC deck
+for the frozen smoke profile:
+
+```text
+cargo run --bin nctforge -- openmc generate \
+  --case benchmarks/synthetic/nf-bnct-001/transport/case.json \
+  --component-profile benchmarks/synthetic/nf-bnct-001/transport/component-profile.json \
+  --material benchmarks/synthetic/nf-bnct-001/transport/material.json \
+  --source benchmarks/synthetic/nf-bnct-001/transport/source.json \
+  --response-set benchmarks/synthetic/nf-bnct-001/transport/provenance/neutron-response-set.json \
+  --nuclear-data-manifest benchmarks/synthetic/nf-bnct-001/transport/provenance/openmc-endfb81-processed-data-manifest.json \
+  --execution-profile benchmarks/synthetic/nf-bnct-001/transport/openmc-smoke-profile.json \
+  --nuclear-data-root PATH-TO-SELECTED-ENDFB81-HDF5-ROOT \
+  --output NEW-DECK-DIRECTORY
+```
+
+The generator verifies every content binding, requires the response set to
+pass `validate_for_folding` (`independently_reviewed` under the ADR 0031
+in-house deterministic-verification path), confirms the response energy range
+covers the selected data, and refuses an existing output directory. The deck
+executes under OpenMC 0.16.0 at commit
+`617d35a5063c57796b43428bc401e627d2011046` with `OPENMC_CROSS_SECTIONS`
+pointed at the manifest's `cross_sections.xml`.
 
 A controlled ENDF/B-VIII.1 + TENDL-2025 mixed-source candidate was then
 executed under selection schema `0.3.0`. The six shared nuclides reproduce the

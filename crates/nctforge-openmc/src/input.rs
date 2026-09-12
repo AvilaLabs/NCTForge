@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::fs;
 use std::io;
 use std::path::Path;
 
@@ -500,6 +501,53 @@ impl OpenMcInputDeck {
         self.files
             .iter()
             .find(|file| file.relative_path == relative_path)
+    }
+
+    /// Write the generated deck to a new directory without overwriting any
+    /// existing path. A failed write leaves the partial directory for review.
+    pub fn write_new(&self, output: &Path) -> Result<(), OpenMcInputError> {
+        use std::io::Write;
+
+        fs::create_dir(output).map_err(|source| OpenMcInputError::Io {
+            path: output.to_path_buf(),
+            source,
+        })?;
+        for file in &self.files {
+            let relative = Path::new(&file.relative_path);
+            if file.relative_path.is_empty()
+                || file.relative_path.contains('\\')
+                || relative.is_absolute()
+                || !relative
+                    .components()
+                    .all(|component| matches!(component, std::path::Component::Normal(_)))
+            {
+                return Err(OpenMcInputError::UnsafeRelativePath(
+                    file.relative_path.clone(),
+                ));
+            }
+            let path = output.join(relative);
+            if let Some(parent) = path.parent()
+                && parent != output
+            {
+                fs::create_dir(parent).map_err(|source| OpenMcInputError::Io {
+                    path: parent.to_path_buf(),
+                    source,
+                })?;
+            }
+            let mut stream = std::fs::OpenOptions::new()
+                .create_new(true)
+                .write(true)
+                .open(&path)
+                .map_err(|source| OpenMcInputError::Io {
+                    path: path.clone(),
+                    source,
+                })?;
+            stream
+                .write_all(&file.bytes)
+                .and_then(|()| stream.sync_all())
+                .map_err(|source| OpenMcInputError::Io { path, source })?;
+        }
+        Ok(())
     }
 }
 
@@ -1304,6 +1352,14 @@ pub enum OpenMcInputError {
     XmlWrite(#[source] io::Error),
     #[error("failed to serialize NCTForge input manifest: {0}")]
     ManifestSerialization(#[source] serde_json::Error),
+    #[error("generated file path is not a safe relative path: {0}")]
+    UnsafeRelativePath(String),
+    #[error("failed to write generated OpenMC input at {path}: {source}")]
+    Io {
+        path: std::path::PathBuf,
+        #[source]
+        source: io::Error,
+    },
 }
 
 #[cfg(test)]
@@ -1743,6 +1799,38 @@ mod tests {
                 histories: 1_001,
                 batches: 5
             }
+        ));
+    }
+
+    #[test]
+    fn write_new_materializes_exact_deck_and_refuses_existing_output() {
+        let deck = generate();
+        let output = tempfile::tempdir().unwrap();
+        let deck_dir = output.path().join("deck");
+        deck.write_new(&deck_dir).unwrap();
+        for file in &deck.files {
+            assert_eq!(
+                fs::read(deck_dir.join(&file.relative_path)).unwrap(),
+                file.bytes,
+                "{}",
+                file.relative_path
+            );
+        }
+        let mut written: Vec<String> = fs::read_dir(&deck_dir)
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+            .collect();
+        let mut expected: Vec<String> = deck
+            .files
+            .iter()
+            .map(|file| file.relative_path.clone())
+            .collect();
+        written.sort();
+        expected.sort();
+        assert_eq!(written, expected);
+        assert!(matches!(
+            deck.write_new(&deck_dir),
+            Err(OpenMcInputError::Io { .. })
         ));
     }
 }

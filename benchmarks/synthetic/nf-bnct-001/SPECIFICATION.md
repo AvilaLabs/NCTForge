@@ -258,6 +258,12 @@ with SHA-256
 ADR 0007 defines its unit path and acceptance evidence. The method artifact is
 not a response table and does not raise the benchmark qualification ceiling.
 
+The transport case embedding the frozen grid geometry, material, and source is
+[`transport/case.json`](transport/case.json), with SHA-256
+`d8eb0290a20725520e5268cb5f29523e25d0ea2bdc09c98acd1524f6b46bbcac`. Its
+material and source members must equal the frozen artifacts byte-for-byte;
+the OpenMC generator rejects any drift between them.
+
 The first controlled execution of all ten prepared NJOY decks is frozen in
 [`transport/provenance/njoy2016-78-execution-receipt.json`](transport/provenance/njoy2016-78-execution-receipt.json),
 with SHA-256
