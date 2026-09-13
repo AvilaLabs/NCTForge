@@ -596,7 +596,13 @@ Implementation status:
   wheel per platform covers Python ≥ 3.10; the abi3 wheel builds and passes
   the full 39-test parity suite in a clean venv on CPython 3.14. Remaining:
   per-platform builds and the TestPyPI upload itself;
-- pending: review public crate surfaces before enabling crates.io publication;
+- in progress: crates.io publication review — workspace `publish = false`
+  stays the deliberate gate. Reviewed findings: every crate already carries
+  description/license/repository; publication still needs `version` fields
+  on all ~20 internal path dependencies (bare `path` deps cannot publish),
+  a per-crate or shared `readme` field, and a decision on which crates are
+  public API (library crates plausibly; `nctforge`/`nctforge-gui` binaries
+  optionally via `cargo install`);
 - pending: produce signed native desktop release artifacts.
 
 ## R5 — External validation and adoption
