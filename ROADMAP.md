@@ -385,9 +385,17 @@ Implementation status:
   folded components by the atom-density ratio (density × mass fraction),
   residual folds by the density ratio alone. Rotated grids, overlaps,
   out-of-grid indices, and duplicated voxels are all rejected;
-- in progress: candidate-reference execution — three frozen-seed 300M-history
-  runs are executing under the predeclared acceptance contract; the report
-  and reference-status decision follow when the runs complete;
+- complete (negative result): candidate-reference execution — all three
+  frozen-seed 300M-history runs completed under the predeclared acceptance
+  contract and the evaluation report is committed at
+  `transport/openmc-acceptance-report-300M.json` (sha256 e68ba744…a820).
+  Every estimator comparison (291) and chi-square seed-consistency check
+  (378) passed, as did boron/nitrogen/hydrogen voxel precision; the photon
+  heating component missed the predeclared voxel-precision bounds on all
+  three seeds (median RSE ≈ 3.72% vs the 3.0% gate; p95 ≈ 5.08% vs the
+  5.0% gate). The candidate is therefore **not** promoted to reference
+  status — acceptance requires a higher-statistics execution under the
+  same frozen contract (same seeds, min_batches is a floor, not a cap);
 - complete (OP-02, continued): `benchmark derive-materials --mask NAME=path`
   binds map keys to external `RegionMask` JSONs (e.g. `nifti to-mask`
   output) instead of RT Structure Set ROIs, with name/voxel-count checks —
