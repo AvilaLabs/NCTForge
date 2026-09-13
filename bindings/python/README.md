@@ -49,8 +49,11 @@ python3 -m venv .venv
 ```
 
 `maturin develop` builds the extension in place; `maturin build` produces a
-wheel under `target/wheels`. CI builds the wheel, installs it into a clean
-virtual environment, and runs the parity suite there. Prebuilt wheels for the
-supported interpreter/OS matrix and a TestPyPI run remain pending release
-gates — see [ADR 0015](../../docs/adr/0015-python-and-native-distribution.md)
+wheel under `target/wheels`. The extension targets the CPython stable ABI
+(`abi3-py310`), so one wheel per platform covers every supported interpreter
+(`cp310-abi3-*`). CI builds the wheel, installs it into a clean
+virtual environment, and runs the parity suite there; the same build +
+clean-venv parity run has been verified locally on CPython 3.14.
+Publication of the platform matrix through TestPyPI remains a pending
+release gate — see [ADR 0015](../../docs/adr/0015-python-and-native-distribution.md)
 and [ADR 0027](../../docs/adr/0027-first-bounded-python-api.md).

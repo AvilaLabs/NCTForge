@@ -589,9 +589,13 @@ Implementation status:
   versioned Rust contracts — case generation, verification, and gated loading;
   geometry and ROI inspection; schema-validated manifest and transport-contract
   readers with canonical `to_json` serialization; the honest response-set
-  folding gate and backend capability flags — with a 12-test cross-language
+  folding gate and backend capability flags — with a 39-test cross-language
   parity suite run against a wheel installed into a clean environment in CI;
-- pending: build and smoke-test the supported wheel matrix through TestPyPI;
+- in progress: build and smoke-test the supported wheel matrix through
+  TestPyPI — the extension now targets the stable ABI (`abi3-py310`), so one
+  wheel per platform covers Python ≥ 3.10; the abi3 wheel builds and passes
+  the full 39-test parity suite in a clean venv on CPython 3.14. Remaining:
+  per-platform builds and the TestPyPI upload itself;
 - pending: review public crate surfaces before enabling crates.io publication;
 - pending: produce signed native desktop release artifacts.
 

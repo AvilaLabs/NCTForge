@@ -20,7 +20,7 @@ nctforge-evidence = { path = "../../crates/nctforge-evidence" }
 nctforge-transport = { path = "../../crates/nctforge-transport" }
 nctforge-openmc = { path = "../../crates/nctforge-openmc" }
 nctforge-plan = { path = "../../crates/nctforge-plan" }
-pyo3 = { version = "0.29.2", features = ["extension-module"] }
+pyo3 = { version = "0.29.2", features = ["extension-module", "abi3-py310"] }
 serde = "1"
 serde_json = { version = "1", features = ["float_roundtrip"] }
 sha2 = "0.10"

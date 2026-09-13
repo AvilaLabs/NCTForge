@@ -852,6 +852,7 @@ impl PyPositionReport {
 /// `direction_lps` an arbitrary `(dx, dy, dz)`. `case_id` is stamped into the
 /// report. Returns `(positioned_source, report)`.
 #[pyfunction]
+#[allow(clippy::too_many_arguments)]
 #[pyo3(signature = (source, geometry, mask, case_id, approach=None, direction_lps=None, half_widths_cm=(1.0, 1.0), margin_cm=0.01))]
 fn aim_source(
     source: &PyFixedSource,
@@ -1786,6 +1787,10 @@ fn combine_biological_doses(
     })
 }
 
+/// `(quantity, unit, max_abs, mean_abs, rms, max_normalized,
+/// within_sigma_fraction)` row returned by `DoseComparison.quantities`.
+type QuantityComparisonRow = (String, String, f64, f64, f64, f64, Option<f64>);
+
 /// A cross-code dose-comparison record (`nctforge.dose-comparison/0.1.0`).
 #[pyclass(frozen, name = "DoseComparison")]
 struct PyDoseComparison {
@@ -1834,7 +1839,7 @@ impl PyDoseComparison {
     /// `(quantity, unit, max_abs, mean_abs, rms, max_normalized,
     /// within_sigma_fraction)` per component plus `physical_total`.
     #[getter]
-    fn quantities(&self) -> Vec<(String, String, f64, f64, f64, f64, Option<f64>)> {
+    fn quantities(&self) -> Vec<QuantityComparisonRow> {
         self.inner
             .quantities
             .iter()
@@ -2668,6 +2673,7 @@ fn load_endpoint_evaluation(path: PathBuf) -> PyResult<PyEndpointEvaluation> {
     })
 }
 
+#[allow(clippy::too_many_arguments)]
 fn run_endpoint_evaluation(
     model: &PyEndpointModel,
     case_id: &str,
