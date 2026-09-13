@@ -248,6 +248,13 @@ impl DoseArtifact {
         }
     }
 
+    fn geometry(&self) -> &nctforge_core::GridGeometry {
+        match self {
+            Self::Physical(bundle) => &bundle.geometry,
+            Self::Biological(bundle) => &bundle.geometry,
+        }
+    }
+
     fn unit(&self) -> &str {
         match self {
             Self::Physical(bundle) => match bundle.components.first() {
@@ -327,6 +334,104 @@ impl DoseArtifact {
                 _ => "unqualified",
             },
         }
+    }
+}
+
+/// Resolved dose wash for one render pass: selected quantity values on the
+/// case grid, the field maximum used for color normalization, and the
+/// absolute display floor derived from the threshold percentage.
+#[derive(Clone, Copy)]
+struct DoseWash<'a> {
+    values: &'a [f64],
+    max: f64,
+    floor: f64,
+    opacity: f32,
+    unit: &'a str,
+}
+
+/// Optional dose wash over the verified case image. The loaded bundle must
+/// declare the same case id and an equivalent grid — the overlay indexes
+/// voxels directly, so a mismatched grid or foreign case is rejected.
+struct DoseOverlay {
+    path: String,
+    loaded: Option<LoadedDose>,
+    error: Option<String>,
+    quantity: String,
+    enabled: bool,
+    opacity: f32,
+    threshold_percent: f32,
+}
+
+impl Default for DoseOverlay {
+    fn default() -> Self {
+        Self {
+            path: String::new(),
+            loaded: None,
+            error: None,
+            quantity: String::new(),
+            enabled: true,
+            opacity: 0.55,
+            threshold_percent: 10.0,
+        }
+    }
+}
+
+impl DoseOverlay {
+    fn load(&mut self, case: &VerifiedBenchmarkCase) {
+        let outcome = DoseArtifact::load(Path::new(self.path.trim())).and_then(|dose| {
+            if dose.artifact.case_id() != case.report.case_id {
+                return Err(format!(
+                    "dose case_id {:?} does not match this case {:?}",
+                    dose.artifact.case_id(),
+                    case.report.case_id
+                ));
+            }
+            if !nctforge_core::grid_geometry_equivalent(dose.artifact.geometry(), &case.ct.geometry)
+            {
+                return Err("dose grid geometry does not match this case".into());
+            }
+            Ok(dose)
+        });
+        match outcome {
+            Ok(dose) => {
+                self.error = None;
+                self.quantity = match &dose.artifact {
+                    DoseArtifact::Physical(_) => "physical_total".into(),
+                    DoseArtifact::Biological(_) => "biological_total".into(),
+                };
+                self.loaded = Some(dose);
+            }
+            Err(error) => {
+                self.loaded = None;
+                self.error = Some(error);
+            }
+        }
+    }
+
+    fn wash(&self) -> Option<DoseWash<'_>> {
+        if !self.enabled {
+            return None;
+        }
+        let loaded = self.loaded.as_ref()?;
+        let values = loaded
+            .artifact
+            .rows()
+            .into_iter()
+            .find(|(name, ..)| {
+                *name == self.quantity || format!("component:{name}") == self.quantity
+            })
+            .map(|(_, values, _)| values)?;
+        let max = values.iter().copied().fold(0.0_f64, f64::max);
+        if !max.is_finite() || max <= 0.0 {
+            return None;
+        }
+        Some(DoseWash {
+            values,
+            max,
+            floor: f64::from(self.threshold_percent) / 100.0 * max,
+            opacity: self.opacity,
+            unit: loaded.artifact.unit(),
+        })
     }
 }
 
@@ -1346,6 +1451,7 @@ struct ViewerCase {
     grid: PatientAlignedGrid,
     crosshair: Crosshair,
     roi_visible: Vec<bool>,
+    dose: DoseOverlay,
     textures: [Option<egui::TextureHandle>; 3],
     textures_dirty: bool,
 }
@@ -1368,6 +1474,7 @@ impl ViewerCase {
             grid,
             crosshair,
             roi_visible,
+            dose: DoseOverlay::default(),
             textures: array::from_fn(|_| None),
             textures_dirty: true,
         })
@@ -1381,12 +1488,13 @@ impl ViewerCase {
         if !self.textures_dirty {
             return Ok(());
         }
+        let wash = self.dose.wash();
         for (view_index, plane) in AnatomicalPlane::ALL.into_iter().enumerate() {
             let view = self
                 .grid
                 .slice(plane, self.crosshair)
                 .map_err(|error| error.to_string())?;
-            let image = render_slice(&self.verified, view, &self.roi_visible, display)?;
+            let image = render_slice(&self.verified, view, &self.roi_visible, wash, display)?;
             if let Some(texture) = &mut self.textures[view_index] {
                 texture.set(image, egui::TextureOptions::NEAREST);
             } else {
@@ -2409,6 +2517,9 @@ fn show_case_summary(ui: &mut egui::Ui, case: &ViewerCase) {
         } else {
             format!("ROIs: {}", names.join(", "))
         });
+        if let Some(wash) = case.dose.wash() {
+            ui.monospace(format!("dose {:.3e} {}", wash.values[index], wash.unit));
+        }
     }
 }
 
@@ -2465,6 +2576,73 @@ fn show_display_controls(
             ui.colored_label(color, "■");
             changed |= ui.checkbox(visible, &roi.name).changed();
         });
+    }
+
+    ui.separator();
+    ui.heading("Dose overlay");
+    ui.label("Load a dose bundle for this case to wash it over the image.");
+    ui.horizontal(|ui| {
+        ui.label("bundle");
+        ui.add(
+            egui::TextEdit::singleline(&mut case.dose.path)
+                .hint_text("dose-bundle.json")
+                .desired_width(160.0),
+        );
+    });
+    if ui.button("Load dose bundle").clicked() {
+        case.dose.load(&case.verified);
+        changed = true;
+    }
+    if let Some(error) = &case.dose.error {
+        ui.colored_label(egui::Color32::LIGHT_RED, error);
+    }
+    if let Some(loaded) = &case.dose.loaded {
+        let labels: Vec<String> = loaded
+            .artifact
+            .rows()
+            .iter()
+            .map(|(name, ..)| {
+                if name.ends_with("total") {
+                    name.clone()
+                } else {
+                    format!("component:{name}")
+                }
+            })
+            .collect();
+        let meta = format!(
+            "{} · {} · {}",
+            loaded.artifact.case_id(),
+            loaded.artifact.unit(),
+            loaded.artifact.qualification()
+        );
+        ui.monospace(meta);
+        let selected = case.dose.quantity.clone();
+        egui::ComboBox::from_label("quantity")
+            .selected_text(if selected.is_empty() {
+                "choose".to_owned()
+            } else {
+                selected.clone()
+            })
+            .show_ui(ui, |ui| {
+                for label in &labels {
+                    if ui.selectable_label(selected == *label, label).clicked() {
+                        case.dose.quantity = label.clone();
+                        changed = true;
+                    }
+                }
+            });
+        changed |= ui
+            .checkbox(&mut case.dose.enabled, "show dose wash")
+            .changed();
+        changed |= ui
+            .add(egui::Slider::new(&mut case.dose.opacity, 0.0..=1.0).text("dose opacity"))
+            .changed();
+        changed |= ui
+            .add(
+                egui::Slider::new(&mut case.dose.threshold_percent, 0.0..=100.0)
+                    .text("wash ≥ % of max"),
+            )
+            .changed();
     }
     changed
 }
@@ -2574,6 +2752,7 @@ fn render_slice(
     case: &VerifiedBenchmarkCase,
     view: SliceView,
     roi_visible: &[bool],
+    wash: Option<DoseWash<'_>>,
     display: &DisplaySettings,
 ) -> Result<egui::ColorImage, String> {
     let dimensions = view.dimensions();
@@ -2590,6 +2769,12 @@ fn render_slice(
                 display.window_width,
             );
             let mut color = egui::Color32::from_gray(gray);
+            if let Some(wash) = &wash {
+                let dose = wash.values[index];
+                if dose >= wash.floor {
+                    color = blend(color, dose_wash_color(dose / wash.max), wash.opacity);
+                }
+            }
             for ((visible, roi), overlay) in roi_visible
                 .iter()
                 .zip(&case.structures.rois)
@@ -2633,6 +2818,18 @@ fn blend(base: egui::Color32, overlay: egui::Color32, opacity: f32) -> egui::Col
         channel(base.r(), overlay.r()),
         channel(base.g(), overlay.g()),
         channel(base.b(), overlay.b()),
+    )
+}
+
+/// Classic "hot" dose-wash ramp: black → red → orange → yellow → white
+/// over the normalized fraction `t` of the field maximum.
+fn dose_wash_color(t: f64) -> egui::Color32 {
+    let t = t.clamp(0.0, 1.0);
+    let channel = |value: f64| (value.clamp(0.0, 1.0) * 255.0).round() as u8;
+    egui::Color32::from_rgb(
+        channel(3.0 * t),
+        channel(3.0 * t - 1.0),
+        channel(3.0 * t - 2.0),
     )
 }
 
@@ -2815,6 +3012,111 @@ mod tests {
         assert_eq!(rows[4].0, "physical_total");
         assert_eq!(rows[4].1, &[1.75e-12, 1.75e-12]);
         assert_eq!(loaded.sha256.len(), 64);
+    }
+
+    #[test]
+    fn dose_overlay_loads_washes_and_rejects_mismatched_grids() {
+        let scratch = tempfile::tempdir().unwrap();
+        let case_root = scratch.path().join("case");
+        nctforge_dicom::synthetic::generate_nf_bnct_001(&case_root).unwrap();
+        let mut case = ViewerCase::load(&case_root).unwrap();
+
+        let voxels: usize = case
+            .verified
+            .ct
+            .geometry
+            .shape
+            .iter()
+            .map(|n| *n as usize)
+            .product();
+        let values: Vec<f64> = (0..voxels).map(|i| i as f64).collect();
+        let components: Vec<serde_json::Value> = ["boron", "nitrogen", "hydrogen", "photon"]
+            .iter()
+            .map(|name| {
+                serde_json::json!({
+                    "component": name,
+                    "unit": "gray_per_source_particle",
+                    "values": values,
+                    "absolute_standard_uncertainty": serde_json::Value::Null,
+                })
+            })
+            .collect();
+        let bundle = serde_json::json!({
+            "schema_version": "nctforge.physical-dose-bundle/0.2.0",
+            "case_id": case.verified.report.case_id,
+            "frame_of_reference_uid": null,
+            "geometry": serde_json::to_value(&case.verified.ct.geometry).unwrap(),
+            "component_profile": {"id": "p", "sha256": "a".repeat(64)},
+            "response_set": {"id": "r", "sha256": "b".repeat(64)},
+            "components": components,
+            "physical_total": {
+                "unit": "gray_per_source_particle",
+                "values": values,
+                "absolute_standard_uncertainty": serde_json::Value::Null,
+                "uncertainty_method": "unavailable",
+            },
+            "provenance_id": "test-provenance",
+        });
+        let path = scratch.path().join("dose.json");
+        std::fs::write(&path, serde_json::to_vec_pretty(&bundle).unwrap()).unwrap();
+
+        case.dose.path = path.to_string_lossy().into();
+        case.dose.load(&case.verified);
+        assert!(
+            case.dose.error.is_none(),
+            "load rejected: {:?}",
+            case.dose.error
+        );
+        assert_eq!(case.dose.quantity, "physical_total");
+        let wash = case.dose.wash().expect("wash must resolve");
+        assert_eq!(wash.max, (voxels - 1) as f64);
+        assert_eq!(wash.unit, "gray_per_source_particle");
+        assert_eq!(wash.values.len(), voxels);
+
+        case.dose.quantity = "component:boron".into();
+        assert!(case.dose.wash().is_some());
+        case.dose.quantity = "component:missing".into();
+        assert!(case.dose.wash().is_none());
+        case.dose.quantity = "physical_total".into();
+        case.dose.enabled = false;
+        assert!(case.dose.wash().is_none());
+        case.dose.enabled = true;
+
+        // Hot ramp endpoints.
+        assert_eq!(dose_wash_color(1.0), egui::Color32::WHITE);
+        assert_eq!(dose_wash_color(0.0), egui::Color32::BLACK);
+
+        // A foreign case_id must not overlay on this patient.
+        let mut foreign = bundle.clone();
+        foreign["case_id"] = serde_json::json!("other-case");
+        let foreign_path = scratch.path().join("foreign.json");
+        std::fs::write(&foreign_path, serde_json::to_vec_pretty(&foreign).unwrap()).unwrap();
+        case.dose.path = foreign_path.to_string_lossy().into();
+        case.dose.load(&case.verified);
+        assert!(case.dose.loaded.is_none());
+        assert!(
+            case.dose.error.as_deref().unwrap().contains("case_id"),
+            "unexpected error: {:?}",
+            case.dose.error
+        );
+
+        // A same-case bundle on a different grid must not overlay either.
+        let mut off_grid = bundle.clone();
+        off_grid["geometry"]["shape"] = serde_json::json!([2, 1, 1]);
+        for component in off_grid["components"].as_array_mut().unwrap() {
+            component["values"] = serde_json::json!([1.0, 1.0]);
+        }
+        off_grid["physical_total"]["values"] = serde_json::json!([1.0, 1.0]);
+        let off_path = scratch.path().join("off-grid.json");
+        std::fs::write(&off_path, serde_json::to_vec_pretty(&off_grid).unwrap()).unwrap();
+        case.dose.path = off_path.to_string_lossy().into();
+        case.dose.load(&case.verified);
+        assert!(case.dose.loaded.is_none());
+        assert!(
+            case.dose.error.as_deref().unwrap().contains("grid"),
+            "unexpected error: {:?}",
+            case.dose.error
+        );
     }
 
     #[test]

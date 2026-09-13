@@ -183,7 +183,11 @@ workspace loads any validated physical or biological bundle
 file — component statistics, totals, a region-mask DVH plot, and region
 dose-volume metrics (`D_x`, `V_x`, EUD via the same `RegionDoseMetrics` path
 as the CLI and Python, exportable as `nctforge.dose-metrics/0.1.0`) — while
-keeping the two layers visually distinct. A NIfTI section inspects
+keeping the two layers visually distinct. The geometry workspace can
+additionally wash a loaded dose over the patient image: the bundle must
+declare the same `case_id` and an equivalent grid, after which any component
+or total renders as a hot-ramp overlay with opacity and %of-max threshold
+controls and a live dose readout at the linked voxel. A NIfTI section inspects
 `.nii`/`.nii.gz` volumes, writes region masks, resamples onto a bundle's
 grid, and exports dose volumes — the same `nctforge-nifti` paths as
 `nctforge nifti`. The evidence workspace can verify an exported

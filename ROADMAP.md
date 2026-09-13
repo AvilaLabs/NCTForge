@@ -461,7 +461,12 @@ Implementation status:
   (`load_exposure_plan`, `exposure_plan_diagnostics`,
   `accumulate_exposures`, `plan_table_read`, `plan_table_write`), and the
   GUI Plan workspace identically;
-- pending: optional GUI slice-overlay of loaded dose on the patient grid.
+- complete: optional GUI slice-overlay of loaded dose on the patient grid —
+  the geometry workspace loads a physical or biological dose bundle gated on
+  matching `case_id` and equivalent grid geometry, then blends a hot-ramp
+  dose wash (component or total, opacity and %of-max threshold controls)
+  into the linked axial/sagittal/coronal renders, with the dose value
+  surfaced at the linked voxel;
 
 ## R4 — Transport-neutral reference platform
 
