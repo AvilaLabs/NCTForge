@@ -395,7 +395,12 @@ Implementation status:
   three seeds (median RSE ≈ 3.72% vs the 3.0% gate; p95 ≈ 5.08% vs the
   5.0% gate). The candidate is therefore **not** promoted to reference
   status — acceptance requires a higher-statistics execution under the
-  same frozen contract (same seeds, min_batches is a floor, not a cap);
+  same frozen contract (same seeds, min_batches is a floor, not a cap).
+  That extension is in flight: `*-b100` execution profiles declare 100
+  batches (600M histories) per seed upfront and each run was continued
+  from its 50-batch statepoint via OpenMC restart, which restores the RNG
+  stream and tally accumulators — statistically identical to a fresh
+  600M run at half the compute;
 - complete (OP-02, continued): `benchmark derive-materials --mask NAME=path`
   binds map keys to external `RegionMask` JSONs (e.g. `nifti to-mask`
   output) instead of RT Structure Set ROIs, with name/voxel-count checks —
