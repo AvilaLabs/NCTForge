@@ -297,6 +297,26 @@ case: Seppälä's Table 4 values are digitized but their reported
 uncertainties were not transcribed, so all five points compare honestly
 without pass/fail — including the expected 29% J/Φ gap.
 
+### RT Dose export
+
+`nctforge dicom export-rtdose` writes one volume of a physical dose
+bundle as a multi-frame DICOM RT Dose object: unsigned 32-bit pixels
+scaled by DoseGridScaling, with ImagePositionPatient /
+ImageOrientationPatient / GridFrameOffsetVector addressing the voxel
+grid. `--component total|B|N|H|P` selects the physical total (default)
+or a named component; `--ct-series <dir>` attaches the source CT via
+ReferencedSOPSequence and adopts its study/frame-of-reference identity.
+Absolute-gray volumes declare `DoseUnits=GY`; per-source-particle
+quantities honestly declare `RELATIVE` with the true unit in
+DoseComment. Exported objects are marked research-only. The export
+round-trips in pydicom with grid fidelity at the 32-bit quantization
+floor (verified max relative deviation <1e-6 on a 40³ bundle).
+
+```text
+nctforge dicom export-rtdose --bundle dose.json --component total \
+  --ct-series /path/to/ct --output dose.dcm
+```
+
 ### OpenMC input generation
 
 With the sealed response set in place, generate the deterministic OpenMC deck

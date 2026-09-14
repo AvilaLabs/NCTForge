@@ -7,6 +7,7 @@
 mod benchmark;
 mod ct;
 mod error;
+mod rtdose;
 mod rtstruct;
 pub mod synthetic;
 
@@ -15,4 +16,5 @@ pub use benchmark::{
 };
 pub use ct::{CtVolume, import_ct_series};
 pub use error::{DicomError, Result};
+pub use rtdose::{DoseSelection, RtDoseExportOptions, RtDoseExportResult, export_rt_dose};
 pub use rtstruct::{RoiMask, StructureSet, import_rtstruct};

@@ -84,6 +84,8 @@ enum Command {
     /// Inspect measurement records and compare them against computed
     /// artifacts (`nctforge.measurement-record/0.1.0`).
     Measurement(MeasurementArgs),
+    /// Export dose bundles as DICOM RT Dose objects.
+    Dicom(DicomArgs),
     /// Prepare and audit OpenMC-specific research artifacts.
     Openmc(OpenMcArgs),
     /// Prepare deterministic NJOY response-generation artifacts.
@@ -353,6 +355,43 @@ enum MeasurementCommand {
         #[arg(long, default_value = "2.0")]
         sigma_tolerance: f64,
         /// New output path for the comparison record JSON.
+        #[arg(long)]
+        output: PathBuf,
+    },
+}
+
+#[derive(Debug, Args)]
+struct DicomArgs {
+    #[command(subcommand)]
+    command: DicomCommand,
+}
+
+#[derive(Debug, Subcommand)]
+enum DicomCommand {
+    /// Write one dose volume of a physical dose bundle as a DICOM RT
+    /// Dose file (multi-frame, 32-bit pixels with DoseGridScaling).
+    /// Research export — not for clinical treatment use.
+    ExportRtdose {
+        /// `nctforge.physical-dose-bundle` JSON document.
+        #[arg(long)]
+        bundle: PathBuf,
+        /// Which volume to export: `total` (default) or a component
+        /// `B`, `N`, `H`, `P`.
+        #[arg(long, default_value = "total")]
+        component: String,
+        /// Directory of source CT slices; their SOP Instance UIDs are
+        /// emitted as ReferencedSOPSequence and their frame-of-reference
+        /// is used when --frame-of-reference-uid is not given.
+        #[arg(long)]
+        ct_series: Option<PathBuf>,
+        /// Frame of Reference UID override; defaults to the bundle's.
+        #[arg(long)]
+        frame_of_reference_uid: Option<String>,
+        #[arg(long, default_value = "OPENBNCT^RESEARCH")]
+        patient_name: String,
+        #[arg(long)]
+        patient_id: Option<String>,
+        /// Output `.dcm` path.
         #[arg(long)]
         output: PathBuf,
     },
@@ -2370,6 +2409,69 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                     );
                 }
                 println!("report: {}", output.display());
+            }
+        },
+        Some(Command::Dicom(args)) => match args.command {
+            DicomCommand::ExportRtdose {
+                bundle,
+                component,
+                ct_series,
+                frame_of_reference_uid,
+                patient_name,
+                patient_id,
+                output,
+            } => {
+                let bundle: nctforge_core::PhysicalDoseBundle =
+                    serde_json::from_slice(&fs::read(&bundle)?)?;
+                let selection = match component.trim().to_ascii_lowercase().as_str() {
+                    "total" => nctforge_dicom::DoseSelection::PhysicalTotal,
+                    "b" | "boron" => nctforge_dicom::DoseSelection::Component(
+                        nctforge_core::DoseComponent::Boron,
+                    ),
+                    "n" | "nitrogen" => nctforge_dicom::DoseSelection::Component(
+                        nctforge_core::DoseComponent::Nitrogen,
+                    ),
+                    "h" | "hydrogen" => nctforge_dicom::DoseSelection::Component(
+                        nctforge_core::DoseComponent::Hydrogen,
+                    ),
+                    "p" | "photon" => nctforge_dicom::DoseSelection::Component(
+                        nctforge_core::DoseComponent::Photon,
+                    ),
+                    other => {
+                        return Err(io::Error::other(format!(
+                            "--component must be total|B|N|H|P, not {other:?}"
+                        ))
+                        .into());
+                    }
+                };
+                let mut options = nctforge_dicom::RtDoseExportOptions {
+                    patient_name,
+                    patient_id: patient_id.unwrap_or_else(|| bundle.case_id.clone()),
+                    ..Default::default()
+                };
+                if let Some(dir) = &ct_series {
+                    let mut slices = fs::read_dir(dir)?
+                        .map(|entry| entry.map(|entry| entry.path()))
+                        .collect::<std::result::Result<Vec<_>, _>>()?;
+                    slices.sort();
+                    let ct = nctforge_dicom::import_ct_series(&slices)
+                        .map_err(|error| io::Error::other(format!("ct series: {error}")))?;
+                    options.referenced_ct_instance_uids = ct.slice_sop_instance_uids;
+                    options.study_instance_uid = ct.study_instance_uid;
+                    if options.frame_of_reference_uid.is_empty() {
+                        options.frame_of_reference_uid = ct.frame_of_reference_uid;
+                    }
+                }
+                if let Some(uid) = frame_of_reference_uid {
+                    options.frame_of_reference_uid = uid;
+                }
+                let result = nctforge_dicom::export_rt_dose(&bundle, selection, &options, &output)
+                    .map_err(|error| io::Error::other(format!("rtdose export: {error}")))?;
+                println!("rtdose: {}", result.path.display());
+                println!(
+                    "  units {} · dose grid scaling {:.6e}",
+                    result.dose_units, result.dose_grid_scaling
+                );
             }
         },
         Some(Command::Openmc(args)) => match args.command {

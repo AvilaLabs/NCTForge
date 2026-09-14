@@ -67,6 +67,9 @@ bundling those systems.
   artifacts via `nctforge measurement compare`, emitting a
   hash-bound `nctforge.measurement-comparison/0.1.0` record with
   sigma-normalized and relative differences.
+- **RT Dose export** — `nctforge dicom export-rtdose` writes any dose
+  volume as a multi-frame RTDOSE with full grid geometry and CT
+  referencing, verified by independent-toolkit round-trip.
 - **Three surfaces, one implementation** — CLI (`nctforge`), a native egui
   workbench (integrity-gated tri-planar viewer, dose wash, DVH/metrics,
   plan workspace, source positioning), and a bounded Python package —

@@ -686,10 +686,17 @@ prerequisites for starting external review.
   `without_uncertainty` rather than inventing sigmas. Comparing a
   measurement record against raw tally outputs (not just beam-quality
   reports) is the remaining extension.
-- **R6-04 — RT Dose export.** Write physical and biological dose bundles
-  as DICOM RT Dose referencing the source CT/RTSTRUCT. Acceptance:
-  exported RTDOSE loads in an independent DICOM toolkit and reproduces the
-  dose grid within float-scaling tolerance.
+- **R6-04 — RT Dose export.** *(implemented)* `nctforge dicom
+  export-rtdose` writes any dose-bundle volume (physical total or named
+  component) as a multi-frame RT Dose object: 32-bit pixels with
+  DoseGridScaling, full IPP/IOP/GFOV grid addressing, deterministic
+  2.25.* UIDs derived from bundle provenance, optional CT
+  ReferencedSOPSequence, and research-only marking. DoseUnits is honest:
+  GY for absolute dose, RELATIVE for per-source-particle bundles.
+  Verified by independent-toolkit (pydicom) round-trip reproducing a 40³
+  grid within 8e-7 relative — the 32-bit quantization floor. RTSTRUCT
+  contour export and RTPLAN linkage remain future scope; the export is
+  not a commissioned planning artifact.
 - **R6-05 — microdosimetric model family.** MKM/stochastic microdosimetric
   evaluation in the biological model registry with lineal-energy spectrum
   import (TEPC-derived or published). Acceptance: conformance fixtures
