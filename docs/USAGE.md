@@ -904,6 +904,54 @@ registrations without a provenance note. Registration is a research
 interoperability feature; it makes no clinical assertion about alignment
 quality beyond the recorded landmark residual.
 
+### PET-derived boron fields
+
+`nctforge boron` maps a co-registered PET SUV volume to a per-voxel B-10
+concentration field (`nctforge.boron-field/0.1.0`, µg/g) under a versioned
+`nctforge.boron-uptake-model/0.1.0`. Three mappings are supported:
+
+- `suv_ratio` — the tumor:blood-ratio method:
+  `B10(v) = η · R_ref · SUV(v)/SUV_ref`, where `R_ref` is a measured
+  reference concentration (classically a blood sample at irradiation
+  time) and `η` is the assay's B-10 fraction (1.0 for a B-10 assay,
+  ~0.99 for enriched-BPA total-boron assays).
+- `linear_suv` — a calibrated regression `B10(v) = a·SUV(v) + b`.
+- `uniform` — a declared constant loading (the assumed-uptake baseline);
+  consumes no SUV volume.
+
+All mapping parameters carry 1σ uncertainties propagated to per-voxel
+field σ (first order, parameters treated as independent); an optional
+per-voxel `suv_noise_1sigma` and an optional single-rate exponential
+`time_correction` (washout `2^(−Δt/T½)` with half-life σ) are included.
+The model's `validity_domain` is mandatory free text stating the imaging
+protocol and population assumptions. Negative mapped values clamp to
+zero and the clamped count is recorded in the field.
+
+```text
+nctforge boron info --model examples/boron/suv-ratio-model-v1.json
+nctforge boron apply \
+  --model MODEL.json --case CASE.json \
+  --suv PET-SUV.nii.gz [--registration REGISTRATION.json] \
+  --id FIELD-001 --output NEW-FIELD.json \
+  [--nifti-output CONC.nii.gz]
+nctforge boron materialize \
+  --field FIELD.json --case CASE.json --tiers 8 \
+  --output NEW-ASSIGNMENT.json
+```
+
+`apply` requires the case the field binds (grid + `case_id`); when
+`--registration` is given the SUV volume is first moved through that
+transform, then resampled onto the case grid — SUV voxels outside the
+imaged field of view contribute zero concentration. `materialize` bins
+the field into linearly-spaced concentration tiers realized as voxel-set
+`MaterialRegion`s, each carrying the tier-center B10 mass fraction
+(other nuclides renormalized); the resulting
+`nctforge.material-assignment` feeds `openmc generate --assignment`.
+Tier count trades geometric fidelity for lattice cost — every tier is a
+distinct material in the deck. The emitted field asserts
+`pet_derived_boron_research_only_not_clinical`: it is a modeled estimate
+with propagated parameter uncertainty, not an assayed measurement.
+
 `nctforge mask` combines and constructs `RegionMask` volumes for
 limiting-organ construction: subtraction (e.g. organ minus tumor), union,
 and intersection across mask JSONs, plus CT-threshold regions built from a

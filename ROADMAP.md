@@ -720,10 +720,25 @@ prerequisites for starting external review.
   from photon-isoeffective weighting: a weight-model declaring
   `microdosimetric_kinetic` semantics is rejected, and MKM outputs assert
   no clinical RBE/CBE/Gy-Eq claim.
-- **R6-06 — PET-derived boron.** SUV-to-B-10 mapping models (tumor:normal
-  ratio, compartment pharmacokinetics, time-dependent washout) producing
-  boron fields with stated uncertainty. Depends on R6-07 for co-registering
-  the PET volume to the case CT.
+- **R6-06 — PET-derived boron.** *(implemented)*
+  `nctforge.boron-uptake-model/0.1.0` maps a co-registered SUV volume to a
+  per-voxel B-10 concentration field: `suv_ratio` (measured blood-pool
+  reference scaling — the tumor:blood-ratio method, with a B-10
+  isotopic-fraction parameter for total-boron assays), `linear_suv`
+  (calibrated regression), and `uniform` (assumed-uptake baseline). An
+  optional uniform exponential `time_correction` applies
+  `2^(−Δt/T½)` washout between imaging and irradiation with half-life
+  uncertainty. Model parameters carry 1σ uncertainties propagated to
+  per-voxel field σ; the mandatory `validity_domain` states the protocol
+  assumptions, and negative mapped values clamp to zero with the count
+  recorded. Output is `nctforge.boron-field/0.1.0`, content-binding the
+  model, SUV image, and registration. `nctforge boron info|apply|
+  materialize` covers inspection, field generation (optionally chaining
+  `--registration` to co-register the PET volume first), and realization
+  into a tiered `MaterialAssignment` for `--assignment` deck generation.
+  Per-voxel SUV noise is an explicit optional term. The field is a
+  research estimate (`pet_derived_boron_research_only_not_clinical`), not
+  an assayed patient measurement.
 - **R6-07 — rigid registration.** *(implemented)*
   `nctforge.registration/0.1.0` records a moving→fixed rigid transform
   (LPS mm, row-major 3×3 rotation + translation) with optional

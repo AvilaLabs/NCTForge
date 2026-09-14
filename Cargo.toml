@@ -1,6 +1,7 @@
 [workspace]
 members = [
   "crates/nctforge-bio",
+  "crates/nctforge-boron",
   "crates/nctforge-core",
   "crates/nctforge-dicom",
   "crates/nctforge-view",

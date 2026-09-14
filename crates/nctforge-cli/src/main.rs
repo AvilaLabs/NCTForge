@@ -193,6 +193,11 @@ enum Command {
     /// transforms, and transform application to NIfTI volumes
     /// (`nctforge.registration/0.1.0`).
     Register(RegisterArgs),
+    /// PET-derived boron: map a co-registered SUV volume to a per-voxel
+    /// B-10 field with stated uncertainty, or realize a field as a
+    /// material assignment (`nctforge.boron-uptake-model/0.1.0`,
+    /// `nctforge.boron-field/0.1.0`).
+    Boron(BoronArgs),
     /// Evaluate organ-limited irradiation time over a per-source-particle
     /// dose endpoint, reporting the limiting structure and assumptions.
     IrradiationTime {
@@ -344,6 +349,74 @@ enum RegisterCommand {
         #[arg(long, default_value = "trilinear")]
         interpolation: String,
         /// New output path for the resampled NIfTI volume.
+        #[arg(long)]
+        output: PathBuf,
+    },
+}
+
+#[derive(Debug, Args)]
+struct BoronArgs {
+    #[command(subcommand)]
+    command: BoronCommand,
+}
+
+#[derive(Debug, Subcommand)]
+enum BoronCommand {
+    /// Validate a boron uptake model JSON and print its parameters.
+    Info {
+        /// `nctforge.boron-uptake-model/0.1.0` JSON document.
+        #[arg(long)]
+        model: PathBuf,
+    },
+    /// Apply an uptake model to an SUV volume, emitting a per-voxel
+    /// B-10 field (µg/g) with propagated 1σ on the transport grid.
+    Apply {
+        /// `nctforge.boron-uptake-model/0.1.0` JSON document.
+        #[arg(long)]
+        model: PathBuf,
+        /// Transport-case JSON whose grid and case_id the field binds.
+        #[arg(long)]
+        case: PathBuf,
+        /// SUV NIfTI volume (`.nii`/`.nii.gz`). Required unless the model
+        /// mapping is `uniform`. When `--registration` is supplied the
+        /// image is first moved through that transform; it is then
+        /// resampled onto the case grid if the geometry differs.
+        #[arg(long)]
+        suv: Option<PathBuf>,
+        /// Optional `nctforge.registration/0.1.0` applied to the SUV
+        /// volume before resampling (e.g. PET→CT registration).
+        #[arg(long)]
+        registration: Option<PathBuf>,
+        /// Interpolation for SUV resampling: `trilinear` (default) or
+        /// `nearest`.
+        #[arg(long, default_value = "trilinear")]
+        interpolation: String,
+        /// Field id.
+        #[arg(long)]
+        id: String,
+        /// New output path for the `nctforge.boron-field/0.1.0` JSON.
+        #[arg(long)]
+        output: PathBuf,
+        /// Optional NIfTI export of the concentration field.
+        #[arg(long)]
+        nifti_output: Option<PathBuf>,
+    },
+    /// Realize a boron field as a material assignment: voxels are binned
+    /// into `--tiers` linearly-spaced concentration regions (voxel sets),
+    /// each tier's material carrying the tier-center B10 mass fraction.
+    Materialize {
+        /// `nctforge.boron-field/0.1.0` JSON document.
+        #[arg(long)]
+        field: PathBuf,
+        /// Transport-case JSON supplying the base material and binding
+        /// the field's case_id/geometry.
+        #[arg(long)]
+        case: PathBuf,
+        /// Number of concentration tiers.
+        #[arg(long, default_value_t = 8)]
+        tiers: u32,
+        /// New output path for the material-assignment JSON (feed to
+        /// `openmc generate --assignment`).
         #[arg(long)]
         output: PathBuf,
     },
@@ -5912,6 +5985,177 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                     "registration: {} ({:?})",
                     registration.id, registration.method
                 );
+            }
+        },
+        Some(Command::Boron(args)) => match args.command {
+            BoronCommand::Info { model } => {
+                let model: nctforge_boron::BoronUptakeModel =
+                    serde_json::from_slice(&fs::read(&model)?)?;
+                model
+                    .validate()
+                    .map_err(|error| io::Error::other(error.to_string()))?;
+                println!("id: {}", model.id);
+                println!("mapping: {:?}", model.mapping);
+                if let Some(washout) = &model.time_correction {
+                    println!(
+                        "washout: {} min elapsed, T1/2 {} ± {} min",
+                        washout.delta_minutes,
+                        washout.half_life_minutes,
+                        washout.half_life_1sigma_minutes
+                    );
+                }
+                if let Some(noise) = model.suv_noise_1sigma {
+                    println!("suv noise 1σ: {noise}");
+                }
+                println!("validity domain: {}", model.validity_domain);
+                println!("provenance: {}", model.provenance_id);
+            }
+            BoronCommand::Apply {
+                model: model_path,
+                case,
+                suv,
+                registration,
+                interpolation,
+                id,
+                output,
+                nifti_output,
+            } => {
+                let model: nctforge_boron::BoronUptakeModel =
+                    serde_json::from_slice(&fs::read(&model_path)?)?;
+                model
+                    .validate()
+                    .map_err(|error| io::Error::other(error.to_string()))?;
+                let case: TransportCase = serde_json::from_slice(&fs::read(&case)?)?;
+                case.validate()
+                    .map_err(|error| io::Error::other(error.to_string()))?;
+
+                let registration_doc: Option<nctforge_core::Registration> = registration
+                    .as_ref()
+                    .map(|path| -> Result<nctforge_core::Registration, io::Error> {
+                        let doc: nctforge_core::Registration =
+                            serde_json::from_slice(&fs::read(path)?)?;
+                        doc.validate()
+                            .map_err(|error| io::Error::other(error.to_string()))?;
+                        Ok(doc)
+                    })
+                    .transpose()?;
+
+                // Load, transform, and resample the SUV volume onto the
+                // case grid when the model consumes one.
+                let suv_values: Option<Vec<f64>> = if let Some(suv_path) = &suv {
+                    let mut image = read_nifti_file(suv_path)
+                        .map_err(|error| io::Error::other(format!("nifti: {error}")))?;
+                    if let Some(doc) = &registration_doc {
+                        image.geometry = doc.transform.apply_to_geometry(&image.geometry);
+                    }
+                    let values = if image.geometry == case.geometry {
+                        image.values
+                    } else {
+                        let interpolation = match interpolation.as_str() {
+                            "trilinear" => Interpolation::Trilinear,
+                            "nearest" => Interpolation::Nearest,
+                            other => {
+                                return Err(io::Error::other(format!(
+                                    "unknown interpolation {other:?}; use trilinear or nearest"
+                                ))
+                                .into());
+                            }
+                        };
+                        resample_to_grid(&image, &case.geometry, interpolation)
+                    };
+                    Some(values)
+                } else {
+                    if registration_doc.is_some() {
+                        return Err(io::Error::other("--registration requires --suv").into());
+                    }
+                    if model.requires_suv() {
+                        return Err(io::Error::other(
+                            "model mapping requires --suv (only `uniform` omits it)",
+                        )
+                        .into());
+                    }
+                    None
+                };
+
+                let field = nctforge_boron::apply_uptake_model(
+                    &model,
+                    suv_values.as_deref(),
+                    &case.geometry,
+                    &case.case_id,
+                    nctforge_boron::BoronFieldProvenance {
+                        id,
+                        provenance_id: format!("boron-field:{}", model.id),
+                        model: nctforge_core::ContentReference {
+                            id: model.id.clone(),
+                            sha256: nctforge_evidence::sha256_file(&model_path)?,
+                        },
+                        suv_image: image_reference(&suv)?,
+                        registration: image_reference(&registration)?,
+                    },
+                )
+                .map_err(|error| io::Error::other(error.to_string()))?;
+                write_new_json(&output, &field)?;
+                println!("boron field at {}", output.display());
+                println!("voxels: {}", field.values.len());
+                let (min, max) = field
+                    .values
+                    .iter()
+                    .fold((f64::INFINITY, f64::NEG_INFINITY), |(lo, hi), &v| {
+                        (lo.min(v), hi.max(v))
+                    });
+                println!("B-10 range: {min:.4} – {max:.4} µg/g");
+                if field.clamped_negative_voxels > 0 {
+                    println!(
+                        "note: {} voxels clamped from negative to zero",
+                        field.clamped_negative_voxels
+                    );
+                }
+                if let Some(nifti_path) = nifti_output {
+                    let image = NiftiImage {
+                        geometry: field.geometry.clone(),
+                        values: field.values.clone(),
+                        datatype: 64,
+                        transform_source: "sform",
+                        description: format!(
+                            "B-10 field {} (µg/g) from model {}",
+                            field.id, model.id
+                        ),
+                        intent_name: String::new(),
+                        units_declared_mm: true,
+                    };
+                    write_nifti(&image, &nifti_path)?;
+                    println!("nifti: {}", nifti_path.display());
+                }
+            }
+            BoronCommand::Materialize {
+                field,
+                case,
+                tiers,
+                output,
+            } => {
+                let field: nctforge_boron::BoronField = serde_json::from_slice(&fs::read(&field)?)?;
+                field
+                    .validate()
+                    .map_err(|error| io::Error::other(error.to_string()))?;
+                let case: TransportCase = serde_json::from_slice(&fs::read(&case)?)?;
+                case.validate()
+                    .map_err(|error| io::Error::other(error.to_string()))?;
+                if field.geometry != case.geometry {
+                    return Err(
+                        io::Error::other("field geometry does not match the case grid").into(),
+                    );
+                }
+                let assignment = nctforge_boron::materialize_field(
+                    &field,
+                    &case.material,
+                    &case.case_id,
+                    tiers,
+                    format!("boron-materialize:{}", field.id),
+                )
+                .map_err(|error| io::Error::other(error.to_string()))?;
+                write_new_json(&output, &assignment)?;
+                println!("material assignment at {}", output.display());
+                println!("tiers populated: {}", assignment.regions.len());
             }
         },
         Some(Command::Position(args)) => match args.command {

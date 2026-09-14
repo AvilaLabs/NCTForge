@@ -2575,11 +2575,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "nctforge-boron"
+version = "0.1.0"
+dependencies = [
+ "nctforge-core",
+ "nctforge-transport",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.20",
+]
+
+[[package]]
 name = "nctforge-cli"
 version = "0.1.0"
 dependencies = [
  "clap",
  "nctforge-bio",
+ "nctforge-boron",
  "nctforge-core",
  "nctforge-dicom",
  "nctforge-evidence",

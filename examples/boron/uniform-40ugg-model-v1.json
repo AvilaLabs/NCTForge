@@ -1,0 +1,13 @@
+{
+  "schema_version": "nctforge.boron-uptake-model/0.1.0",
+  "id": "nctforge.examples.boron.uniform-40ugg.v1",
+  "mapping": {
+    "kind": "uniform",
+    "concentration_ug_g": 40.0,
+    "concentration_1sigma": 8.0
+  },
+  "time_correction": null,
+  "suv_noise_1sigma": null,
+  "validity_domain": "Conventional assumed-uptake baseline: a declared uniform B-10 loading (40 µg/g, 20% assumed 1σ) matching the NF-BNCT-001 benchmark material's B10 mass fraction of 4e-5.",
+  "provenance_id": "examples/boron/uniform-40ugg-model-v1.json"
+}
