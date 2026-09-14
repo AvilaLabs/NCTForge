@@ -626,6 +626,61 @@ Exit evidence:
 - at least two institutions execute the conformance suite;
 - methods manuscript and archival software/data release.
 
+## R6 — Domain completeness
+
+Candidate milestones for the "go-to BNCT workbench" scope, adopted at the
+project owner's direction. Each remains evidence-gated like the earlier
+milestones; R6 capabilities strengthen what R5 validates but are not
+prerequisites for starting external review.
+
+- **R6-01 — facility beam descriptions.** A versioned beam document:
+  source term (energy spectrum, angular and spatial distributions),
+  aperture/collimator geometry, normalization basis, and provenance
+  (published reference or measured characterization). Acceptance: schema,
+  a published-beam registry encoding at least one literature epithermal
+  beam with citation, and a transport case binding the beam that executes.
+- **R6-02 — beam quality characterization.** IAEA TECDOC-1223-style
+  metrics computed through the transport backend on declared standard
+  geometry: in-air epithermal flux, fast-neutron and gamma contamination,
+  thermal fraction, current-to-flux; in-phantom advantage depth, advantage
+  ratio, and peak therapeutic ratio. Acceptance: analytic or published
+  reference values reproduced within predeclared tolerances on an encoded
+  beam.
+- **R6-03 — measurement import.** A measurement record schema covering
+  foil activation, ion chamber, TLD, and TEPC lineal-energy spectra with
+  units, absolute uncertainty, and position provenance, plus a
+  measurement-vs-tally comparison record. Acceptance: a digitized
+  published beam-QA dataset imported and compared; real facility data
+  remains an R5 collaboration item.
+- **R6-04 — RT Dose export.** Write physical and biological dose bundles
+  as DICOM RT Dose referencing the source CT/RTSTRUCT. Acceptance:
+  exported RTDOSE loads in an independent DICOM toolkit and reproduces the
+  dose grid within float-scaling tolerance.
+- **R6-05 — microdosimetric model family.** MKM/stochastic microdosimetric
+  evaluation in the biological model registry with lineal-energy spectrum
+  import (TEPC-derived or published). Acceptance: conformance fixtures
+  from published parameter sets, explicit validity domains, kept distinct
+  from the photon-isoeffective family.
+- **R6-06 — PET-derived boron.** SUV-to-B-10 mapping models (tumor:normal
+  ratio, compartment pharmacokinetics, time-dependent washout) producing
+  boron fields with stated uncertainty. Depends on R6-07 for co-registering
+  the PET volume to the case CT.
+- **R6-07 — rigid registration.** CT/MRI/PET rigid co-registration with
+  transform provenance bound into evidence. Acceptance: landmark-based
+  synthetic cases recovered within declared tolerance.
+- **R6-08 — systematic uncertainty propagation.** Beyond Monte Carlo
+  statistics: declared boron-concentration, model-parameter, and
+  positioning uncertainties propagated into component-dose and endpoint
+  uncertainty in the evidence bundle.
+- **R6-09 — variance reduction.** Weight-window or equivalent variance
+  reduction for the OpenMC path. Acceptance: the frozen benchmark passes
+  its photon precision gate at materially reduced histories with
+  validated unbiasedness against the analog result.
+
+Out of scope for R6 remains the deferred list below — in particular plan
+optimization stays behind the IP boundary and nothing in R6 is a clinical
+claim.
+
 ## Deferred beyond the research platform
 
 - patient-specific clinical decisions;
