@@ -813,7 +813,7 @@ mod tests {
 
     #[test]
     fn materialize_bins_tiers_and_scales_b10() {
-        let mut suv: Vec<f64> = (0..32).map(|i| i as f64 / 8.0).collect(); // 0..3.875
+        let suv: Vec<f64> = (0..32).map(|i| i as f64 / 8.0).collect(); // 0..3.875
         let field = apply(&ratio_model(), Some(&suv));
         let base = nctforge_transport::MaterialDefinition {
             schema_version: "nctforge.material-definition/0.1.0".into(),

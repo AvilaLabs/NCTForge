@@ -54,6 +54,10 @@ pub struct OpenMcStatepoint {
     /// `openmc_version` root attribute, rendered `major.minor.patch`.
     pub openmc_version: String,
     pub energy_functions: BTreeMap<u32, OpenMcEnergyFunction>,
+    /// Bin edges (eV) of each `energy`-type filter, keyed by filter id.
+    /// Used to verify declared weight-window energy groups against the
+    /// tally they were derived from.
+    pub energy_filter_edges: BTreeMap<u32, Vec<f64>>,
     pub tallies: Vec<OpenMcStatepointTally>,
 }
 
@@ -123,6 +127,7 @@ impl OpenMcStatepoint {
             .map_err(|_| OpenMcCollectError::MissingDataset("tallies/filters".to_string()))?;
 
         let mut energy_functions = BTreeMap::new();
+        let mut energy_filter_edges = BTreeMap::new();
         for member in filters_group.groups().map_err(|error| {
             OpenMcCollectError::Read("tallies/filters".into(), error.to_string())
         })? {
@@ -130,6 +135,14 @@ impl OpenMcStatepoint {
                 .group(&member)
                 .map_err(|error| OpenMcCollectError::Read(member.clone(), error.to_string()))?;
             let kind = read_string_member(&group, "type")?;
+            if kind == "energy" {
+                let filter_id = member
+                    .strip_prefix("filter ")
+                    .and_then(|digits| digits.parse::<u32>().ok())
+                    .ok_or_else(|| OpenMcCollectError::InvalidMember(member.clone()))?;
+                energy_filter_edges.insert(filter_id, read_f64_member(&group, "bins")?);
+                continue;
+            }
             if kind != "energyfunction" {
                 continue;
             }
@@ -231,6 +244,7 @@ impl OpenMcStatepoint {
             run_mode,
             openmc_version,
             energy_functions,
+            energy_filter_edges,
             tallies,
         })
     }

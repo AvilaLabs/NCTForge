@@ -8,7 +8,7 @@ use nctforge_core::{ContentReference, DoseComponent, GridGeometry};
 use nctforge_transport::{
     AngularDistribution, ComponentDefinitionProfile, EnergyDistribution, FixedSourceDefinition,
     MATERIAL_ASSIGNMENT_SCHEMA, MaterialAssignment, MaterialDefinition, NeutronResponseSet,
-    ParticleType, SourceSpatialDistribution, TransportCase,
+    ParticleType, ResolvedWeightWindows, SourceSpatialDistribution, TransportCase,
 };
 use quick_xml::Writer;
 use quick_xml::events::{BytesDecl, BytesEnd, BytesStart, BytesText, Event};
@@ -63,6 +63,10 @@ const PHOTON_LEAKAGE_TALLY_ID: u32 = 12;
 const ROI_MESH_ID_BASE: u32 = 2;
 const ROI_MESH_FILTER_ID_BASE: u32 = 10;
 const ROI_TALLY_ID_BASE: u32 = 21;
+/// Mesh ids for weight-window meshes declared inside `settings.xml`.
+/// Kept far above the scoring/ROI mesh ids so a declared window mesh can
+/// never collide with a tally-side mesh.
+const WW_MESH_ID_BASE: u32 = 1_000_000;
 const ROI_TALLIES_PER_REGION: u32 = 9;
 
 /// Versioned controls that materially affect one OpenMC input deck.
@@ -397,6 +401,10 @@ pub struct OpenMcInputArtifacts<'a> {
     /// structure-derived cases; the deck then emits one CSG cell per region
     /// and one OpenMC material per distinct region material.
     pub material_assignment_json: Option<&'a [u8]>,
+    /// Resolved `nctforge.weight-windows/0.1.0` artifact. When present the
+    /// deck declares each window mesh in `settings.xml` and emits the
+    /// OpenMC `<weight_windows>` entries that enable splitting/roulette.
+    pub variance_reduction_json: Option<&'a [u8]>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -448,6 +456,8 @@ pub struct OpenMcInputBindings {
     pub acceptance: Option<ContentReference>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub material_assignment: Option<ContentReference>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub variance_reduction: Option<ContentReference>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -628,6 +638,25 @@ impl OpenMcInputDeck {
                     )));
                 }
                 Some(contract)
+            }
+            None => None,
+        };
+
+        let variance_reduction = match artifacts.variance_reduction_json {
+            Some(bytes) => {
+                let resolved: ResolvedWeightWindows = parse_json("variance_reduction", bytes)?;
+                resolved.validate().map_err(|error| {
+                    OpenMcInputError::InvalidVarianceReduction(error.to_string())
+                })?;
+                if let Some(vr_case) = &resolved.case_id
+                    && vr_case != &case.case_id
+                {
+                    return Err(OpenMcInputError::InvalidVarianceReduction(format!(
+                        "weight-windows case_id {vr_case} does not match case {}",
+                        case.case_id
+                    )));
+                }
+                Some(resolved)
             }
             None => None,
         };
@@ -885,6 +914,7 @@ impl OpenMcInputDeck {
             &execution_profile,
             particles_per_batch,
             execution_profile.batches,
+            variance_reduction.as_ref(),
         )?;
         let tallies_xml = tallies_xml(
             &response_set,
@@ -922,6 +952,13 @@ impl OpenMcInputDeck {
                 bytes.to_vec(),
             ));
         }
+        if let Some(bytes) = artifacts.variance_reduction_json {
+            files.push(generated_file(
+                crate::variance_reduction::RESOLVED_WW_FILE,
+                JSON_MEDIA_TYPE,
+                bytes.to_vec(),
+            ));
+        }
         let xml_artifacts = files
             .iter()
             .map(|file| OpenMcInputManifestArtifact {
@@ -935,7 +972,10 @@ impl OpenMcInputDeck {
             .clone()
             .expect("folding validation requires independent review");
         let manifest = OpenMcInputManifest {
-            schema_version: if acceptance.is_some() || material_assignment.is_some() {
+            schema_version: if acceptance.is_some()
+                || material_assignment.is_some()
+                || variance_reduction.is_some()
+            {
                 INPUT_MANIFEST_SCHEMA_V2
             } else {
                 INPUT_MANIFEST_SCHEMA
@@ -962,6 +1002,9 @@ impl OpenMcInputDeck {
                         MATERIAL_ASSIGNMENT_SCHEMA,
                         artifacts.material_assignment_json.unwrap(),
                     )
+                }),
+                variance_reduction: variance_reduction.as_ref().map(|resolved| {
+                    content_reference(&resolved.id, artifacts.variance_reduction_json.unwrap())
                 }),
             },
             execution: OpenMcRunControls {
@@ -1467,6 +1510,7 @@ fn settings_xml(
     profile: &OpenMcExecutionProfile,
     particles_per_batch: u64,
     batches: u32,
+    variance_reduction: Option<&ResolvedWeightWindows>,
 ) -> Result<Vec<u8>, OpenMcInputError> {
     xml_document("settings", |writer| {
         text_element(writer, "run_mode", "fixed source")?;
@@ -1654,6 +1698,89 @@ fn settings_xml(
             &format_float(profile.temperature_tolerance_k),
         )?;
         text_element(writer, "event_based", bool_text(profile.event_based))?;
+
+        // Weight windows: OpenMC reads <mesh> elements from settings.xml
+        // before <weight_windows>, so both the window meshes and the
+        // window definitions live here rather than in tallies.xml. A
+        // mesh referenced by several windows is emitted once.
+        if let Some(vr) = variance_reduction {
+            let mut mesh_ids: Vec<u32> = Vec::with_capacity(vr.windows.len());
+            for (index, window) in vr.windows.iter().enumerate() {
+                let mesh_id = vr
+                    .windows
+                    .iter()
+                    .take(index)
+                    .position(|prior| prior.mesh == window.mesh)
+                    .map(|prior| WW_MESH_ID_BASE + prior as u32)
+                    .unwrap_or(WW_MESH_ID_BASE + index as u32);
+                mesh_ids.push(mesh_id);
+                if mesh_ids[..index].contains(&mesh_id) {
+                    continue;
+                }
+                let mut mesh_element = BytesStart::new("mesh");
+                mesh_element.push_attribute(("id", mesh_id.to_string().as_str()));
+                mesh_element.push_attribute(("type", "regular"));
+                writer.write_event(Event::Start(mesh_element))?;
+                text_element(
+                    writer,
+                    "dimension",
+                    &format_integers(&window.mesh.dimensions),
+                )?;
+                text_element(
+                    writer,
+                    "lower_left",
+                    &format_numbers(&window.mesh.lower_left_cm),
+                )?;
+                text_element(
+                    writer,
+                    "upper_right",
+                    &format_numbers(&window.mesh.upper_right_cm),
+                )?;
+                writer.write_event(Event::End(BytesEnd::new("mesh")))?;
+            }
+            for (index, window) in vr.windows.iter().enumerate() {
+                writer.write_event(Event::Start(BytesStart::new("weight_windows")))?;
+                text_element(writer, "id", &index.to_string())?;
+                text_element(writer, "mesh", &mesh_ids[index].to_string())?;
+                let particle = match window.particle {
+                    ParticleType::Neutron => "neutron",
+                    ParticleType::Photon => "photon",
+                };
+                text_element(writer, "particle_type", particle)?;
+                if let Some(bounds) = &window.energy_bounds_ev {
+                    text_element(writer, "energy_bounds", &format_numbers(bounds))?;
+                }
+                text_element(
+                    writer,
+                    "lower_ww_bounds",
+                    &format_numbers(&window.lower_bounds),
+                )?;
+                text_element(
+                    writer,
+                    "upper_ww_bounds",
+                    &format_numbers(&window.upper_bounds),
+                )?;
+                text_element(
+                    writer,
+                    "survival_ratio",
+                    &format_float(window.parameters.survival_ratio),
+                )?;
+                text_element(
+                    writer,
+                    "max_split",
+                    &window.parameters.max_split.to_string(),
+                )?;
+                text_element(
+                    writer,
+                    "weight_cutoff",
+                    &format_float(window.parameters.weight_cutoff),
+                )?;
+                if let Some(ratio) = window.parameters.max_lower_bound_ratio {
+                    text_element(writer, "max_lower_bound_ratio", &format_float(ratio))?;
+                }
+                writer.write_event(Event::End(BytesEnd::new("weight_windows")))?;
+            }
+        }
         Ok(())
     })
 }
@@ -2372,6 +2499,8 @@ pub enum OpenMcInputError {
     InvalidSource(String),
     #[error("neutron response set is invalid or unreviewed: {0}")]
     InvalidResponseSet(String),
+    #[error("resolved weight windows are invalid: {0}")]
+    InvalidVarianceReduction(String),
     #[error(transparent)]
     InvalidExecutionProfile(#[from] OpenMcProfileError),
     #[error(transparent)]
@@ -2671,6 +2800,7 @@ pub(crate) mod tests {
                 execution_profile_json: PROFILE_JSON,
                 acceptance_json: None,
                 material_assignment_json: None,
+                variance_reduction_json: None,
             },
         )
         .unwrap()
@@ -2738,6 +2868,7 @@ pub(crate) mod tests {
                 execution_profile_json: &profile,
                 acceptance_json: Some(&contract),
                 material_assignment_json: None,
+                variance_reduction_json: None,
             },
         )
         .unwrap()
@@ -2803,6 +2934,7 @@ pub(crate) mod tests {
                 execution_profile_json: PROFILE_JSON,
                 acceptance_json: Some(&contract),
                 material_assignment_json: None,
+                variance_reduction_json: None,
             },
         )
         .unwrap_err();
@@ -2828,6 +2960,7 @@ pub(crate) mod tests {
                 execution_profile_json: &profile,
                 acceptance_json: None,
                 material_assignment_json: None,
+                variance_reduction_json: None,
             },
         )
         .unwrap_err();
@@ -2903,6 +3036,7 @@ pub(crate) mod tests {
                 execution_profile_json: PROFILE_JSON,
                 acceptance_json: None,
                 material_assignment_json: Some(assignment_json),
+                variance_reduction_json: None,
             },
         )
     }
@@ -3160,6 +3294,7 @@ pub(crate) mod tests {
                 execution_profile_json: PROFILE_JSON,
                 acceptance_json: None,
                 material_assignment_json: None,
+                variance_reduction_json: None,
             },
         )
         .unwrap_err();
@@ -3188,6 +3323,7 @@ pub(crate) mod tests {
                 execution_profile_json: PROFILE_JSON,
                 acceptance_json: None,
                 material_assignment_json: None,
+                variance_reduction_json: None,
             },
         )
         .unwrap_err();
@@ -3218,6 +3354,7 @@ pub(crate) mod tests {
                 execution_profile_json: PROFILE_JSON,
                 acceptance_json: None,
                 material_assignment_json: None,
+                variance_reduction_json: None,
             },
         )
         .unwrap_err();
@@ -3244,6 +3381,7 @@ pub(crate) mod tests {
                 execution_profile_json: PROFILE_JSON,
                 acceptance_json: None,
                 material_assignment_json: None,
+                variance_reduction_json: None,
             },
         )
         .unwrap_err();
@@ -3270,6 +3408,7 @@ pub(crate) mod tests {
                 execution_profile_json: PROFILE_JSON,
                 acceptance_json: None,
                 material_assignment_json: None,
+                variance_reduction_json: None,
             },
         )
         .unwrap_err();
@@ -3333,6 +3472,7 @@ pub(crate) mod tests {
                 execution_profile_json: PROFILE_JSON,
                 acceptance_json: None,
                 material_assignment_json: None,
+                variance_reduction_json: None,
             },
         )
         .unwrap()
@@ -3423,6 +3563,7 @@ pub(crate) mod tests {
                 execution_profile_json: PROFILE_JSON,
                 acceptance_json: None,
                 material_assignment_json: None,
+                variance_reduction_json: None,
             },
         )
         .unwrap_err();
@@ -3430,6 +3571,105 @@ pub(crate) mod tests {
             error,
             OpenMcInputError::SourceEnergyOutsideDataRange { source_ev, .. }
                 if source_ev == 25.0e6
+        ));
+    }
+
+    fn resolved_ww_json() -> Vec<u8> {
+        // One photon window over the scoring mesh: 2 energy groups, 8
+        // cells — small enough to read in the emitted XML.
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "schema_version": "nctforge.weight-windows/0.1.0",
+            "id": "nctforge.test.ww.v1",
+            "case_id": "nf-bnct-001",
+            "spec": {"id": "nctforge.test.vr.v1", "sha256": "00".repeat(32)},
+            "windows": [{
+                "particle": "photon",
+                "mesh": {
+                    "dimensions": [2, 2, 2],
+                    "lower_left_cm": [-10.0, -10.0, -10.0],
+                    "upper_right_cm": [10.0, 10.0, 10.0]
+                },
+                "energy_bounds_ev": [0.0, 1.0e6, 2.0e7],
+                "lower_bounds": [0.1, 0.2, -1.0, 0.4, 0.5, 0.6, 0.7, 0.8,
+                                 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9],
+                "upper_bounds": [0.3, 0.6, -1.0, 1.2, 1.5, 1.8, 2.1, 2.4,
+                                 2.7, 2.7, 2.7, 2.7, 2.7, 2.7, 2.7, 2.7],
+                "parameters": {
+                    "survival_ratio": 3.0,
+                    "max_split": 10,
+                    "weight_cutoff": 1e-38
+                }
+            }],
+            "derivation": {
+                "method": "explicit",
+                "note": "unit test fixture"
+            },
+            "qualification": "variance_reduction_research_only_not_clinical"
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn emits_weight_windows_mesh_and_entries_in_settings() {
+        let inputs = input_bytes();
+        let vr = resolved_ww_json();
+        let deck = OpenMcInputDeck::generate(
+            &case(),
+            inputs.data_root.path(),
+            OpenMcInputArtifacts {
+                component_profile_json: COMPONENT_PROFILE_JSON,
+                material_json: MATERIAL_JSON,
+                source_json: SOURCE_JSON,
+                response_set_json: &inputs.response_set_json,
+                nuclear_data_manifest_json: &inputs.nuclear_data_json,
+                execution_profile_json: PROFILE_JSON,
+                acceptance_json: None,
+                material_assignment_json: None,
+                variance_reduction_json: Some(&vr),
+            },
+        )
+        .unwrap();
+        let settings = settings_text(&deck);
+        // Window mesh is declared in settings.xml (parsed before the
+        // weight_windows entries that reference it).
+        assert!(settings.contains("<mesh id=\"1000000\" type=\"regular\">"));
+        assert!(settings.contains("<weight_windows>"));
+        assert!(settings.contains("<particle_type>photon</particle_type>"));
+        assert!(settings.contains("<mesh>1000000</mesh>"));
+        assert!(settings.contains("<energy_bounds>0 1000000 20000000</energy_bounds>"));
+        assert!(settings.contains("<survival_ratio>3</survival_ratio>"));
+        assert!(settings.contains("<max_split>10</max_split>"));
+        assert!(settings.contains("<weight_cutoff>"));
+        // Manifest binds the artifact and ships it in the deck.
+        assert!(deck.file("nctforge-weight-windows.json").is_some());
+        assert!(deck.manifest.bindings.variance_reduction.is_some());
+    }
+
+    #[test]
+    fn weight_windows_reject_case_mismatch_and_bad_pairs() {
+        let inputs = input_bytes();
+        let mut vr: serde_json::Value = serde_json::from_slice(&resolved_ww_json()).unwrap();
+        vr["case_id"] = serde_json::json!("other-case");
+        let vr_json = serde_json::to_vec(&vr).unwrap();
+        let error = OpenMcInputDeck::generate(
+            &case(),
+            inputs.data_root.path(),
+            OpenMcInputArtifacts {
+                component_profile_json: COMPONENT_PROFILE_JSON,
+                material_json: MATERIAL_JSON,
+                source_json: SOURCE_JSON,
+                response_set_json: &inputs.response_set_json,
+                nuclear_data_manifest_json: &inputs.nuclear_data_json,
+                execution_profile_json: PROFILE_JSON,
+                acceptance_json: None,
+                material_assignment_json: None,
+                variance_reduction_json: Some(&vr_json),
+            },
+        )
+        .unwrap_err();
+        assert!(matches!(
+            error,
+            OpenMcInputError::InvalidVarianceReduction(_)
         ));
     }
 }

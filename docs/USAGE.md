@@ -987,6 +987,58 @@ nctforge uq apply \
 nctforge uq info --report UQ-REPORT.json
 ```
 
+### Variance reduction
+
+`nctforge vr` manages weight-window variance reduction for the OpenMC
+path through two versioned documents. A `nctforge.variance-reduction/0.1.0`
+spec declares, per particle, a regular mesh (cm, world frame), optional
+energy groups, splitting/roulette knobs (`survival_ratio`, `max_split`,
+`weight_cutoff`), and how the bounds are supplied: `uniform` (one lower
+bound everywhere), `explicit` (concrete row-major `(energy, mesh)`
+arrays), or `forward_flux` (derived from a completed run's mesh flux
+tally by the MAGIC-equivalent rule `lower = flux/(2 × group_max)` with
+noisy cells disabled).
+
+`vr resolve` turns the spec into a `nctforge.weight-windows/0.1.0`
+artifact carrying the concrete bounds and a content-bound provenance
+chain — the spec hash and, for flux-derived windows, the generating
+statepoint hash:
+
+```text
+nctforge vr resolve \
+  --spec SPEC.json --run ANALOG-RUN-DIR \
+  --id WW-001 --output NEW-WW.json
+nctforge vr info --document WW.json
+```
+
+The resolved artifact is consumed at deck generation or run time —
+`openmc generate|run --vr WW.json` declares each window mesh inside
+`settings.xml` (OpenMC parses it before the `<weight_windows>` entries
+that reference it) and binds the artifact in the input manifest. The
+benchmark spec
+`variance-reduction/nf-bnct-001-ww-v1.json` derives neutron and photon
+windows from the case's diagnostic fluence tallies on the scoring mesh.
+
+`vr validate` evaluates a completed variance-reduced run through the
+ordinary acceptance machinery and then checks it for *unbiasedness*
+against an analog acceptance report: every shared region/tally mean must
+agree within `z_limit` combined sigma of *each* reference seed's result,
+and the run must have used fewer histories. The emitted
+`nctforge.vr-validation/0.1.0` report records the achieved reduction
+factor rather than assuming it:
+
+```text
+nctforge vr validate \
+  --vr-run VR-RUN-DIR --exit-code 0 \
+  --reference-report openmc-acceptance-report-600M.json \
+  --reference-histories 600000000 \
+  --z-limit 3.0 --output NEW-VR-VALIDATION.json
+```
+
+Weight windows change statistical efficiency only — estimator semantics
+are untouched — and these artifacts are research-verification machinery,
+not clinical commissioning evidence.
+
 `nctforge mask` combines and constructs `RegionMask` volumes for
 limiting-organ construction: subtraction (e.g. organ minus tumor), union,
 and intersection across mask JSONs, plus CT-threshold regions built from a

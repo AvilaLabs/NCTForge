@@ -73,6 +73,12 @@ bundling those systems.
 - **RT Dose export** — `nctforge dicom export-rtdose` writes any dose
   volume as a multi-frame RTDOSE with full grid geometry and CT
   referencing, verified by independent-toolkit round-trip.
+- **Variance reduction** — `nctforge vr resolve` derives OpenMC weight
+  windows (uniform, explicit, or MAGIC-equivalent forward-flux bounds
+  from an analog statepoint) into a content-bound
+  `nctforge.weight-windows/0.1.0` artifact; `openmc generate --vr`
+  binds it into the deck and `nctforge vr validate` certifies the
+  reduced-history run against an analog acceptance report.
 - **Three surfaces, one implementation** — CLI (`nctforge`), a native egui
   workbench (integrity-gated tri-planar viewer, dose wash, DVH/metrics,
   plan workspace, source positioning), and a bounded Python package —

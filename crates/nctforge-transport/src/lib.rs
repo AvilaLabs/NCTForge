@@ -13,6 +13,7 @@ mod measurement;
 mod model;
 mod positioning;
 mod response;
+mod variance_reduction;
 
 pub use beam::{
     BEAM_DESCRIPTION_SCHEMA, BeamDescription, BeamError, BeamProvenance, Citation,
@@ -47,6 +48,11 @@ pub use response::{
     PhysicalTotalEstimator, ResponseGenerationMethod, ResponseInterpolation, ResponseMethodError,
     ResponseSetError, ResponseSetQualification, ResponseUnit, SourceNormalization,
     SpatialDoseModel, ToolIdentity,
+};
+pub use variance_reduction::{
+    ResolvedWeightWindow, ResolvedWeightWindows, VARIANCE_REDUCTION_SCHEMA, VarianceReductionError,
+    VarianceReductionSpec, WEIGHT_WINDOWS_SCHEMA, WeightWindowBounds, WeightWindowDerivation,
+    WeightWindowMesh, WeightWindowParameters, WeightWindowSpec,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

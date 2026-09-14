@@ -768,10 +768,20 @@ prerequisites for starting external review.
   `nctforge uq apply|info` emits and inspects reports; the dose bundle's
   own σ stays pure Monte Carlo — the systematic layer is additive, never
   relabeled.
-- **R6-09 — variance reduction.** Weight-window or equivalent variance
-  reduction for the OpenMC path. Acceptance: the frozen benchmark passes
-  its photon precision gate at materially reduced histories with
-  validated unbiasedness against the analog result.
+- **R6-09 — variance reduction.** *(implemented)* Weight-window
+  variance reduction for the OpenMC path. A
+  `nctforge.variance-reduction/0.1.0` spec declares per-particle regular
+  meshes with uniform, explicit, or forward-flux-derived bounds;
+  `vr resolve` turns it into a `nctforge.weight-windows/0.1.0` artifact
+  (forward-flux resolution implements OpenMC's MAGIC-equivalent
+  volume-normalized, group-maximum-normalized derivation from a
+  completed analog statepoint, disabling cells above a relative-error
+  threshold). `openmc generate --vr` emits the mesh and
+  `<weight_windows>` blocks into `settings.xml`; `vr validate`
+  re-runs the ordinary acceptance evaluation on the reduced-history
+  result and compares shared region/tally means against a reference
+  acceptance report under combined uncertainty, recording the achieved
+  history-reduction factor in a `nctforge.vr-validation/0.1.0` report.
 
 Out of scope for R6 remains the deferred list below — in particular plan
 optimization stays behind the IP boundary and nothing in R6 is a clinical

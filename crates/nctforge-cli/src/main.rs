@@ -202,6 +202,10 @@ enum Command {
     /// positioning, component-relative) into per-voxel and region-mean
     /// dose uncertainty (`nctforge.systematic-uncertainty/0.1.0`).
     Uq(UqArgs),
+    /// Variance reduction: resolve a `nctforge.variance-reduction/0.1.0`
+    /// spec into a `nctforge.weight-windows/0.1.0` artifact and validate a
+    /// variance-reduced run against an analog reference.
+    Vr(VrArgs),
     /// Evaluate organ-limited irradiation time over a per-source-particle
     /// dose endpoint, reporting the limiting structure and assumptions.
     IrradiationTime {
@@ -473,6 +477,66 @@ enum UqCommand {
         /// `nctforge.systematic-uncertainty/0.1.0` JSON document.
         #[arg(long)]
         report: PathBuf,
+    },
+}
+
+#[derive(Debug, Args)]
+struct VrArgs {
+    #[command(subcommand)]
+    command: VrCommand,
+}
+
+#[derive(Debug, Subcommand)]
+enum VrCommand {
+    /// Resolve a variance-reduction spec into a concrete weight-windows
+    /// artifact. `--run` is required when any window derives bounds from
+    /// a completed run's forward-flux tally.
+    Resolve {
+        /// `nctforge.variance-reduction/0.1.0` spec JSON.
+        #[arg(long)]
+        spec: PathBuf,
+        /// Completed OpenMC run directory (manifest + statepoint) to
+        /// derive `forward_flux` bounds from.
+        #[arg(long)]
+        run: Option<PathBuf>,
+        /// Resolved artifact id, e.g. `nctforge.nf-bnct-001.ww.v1`.
+        #[arg(long)]
+        id: String,
+        /// New output path for the `nctforge.weight-windows` JSON.
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Validate and print a spec or resolved weight-windows artifact.
+    Info {
+        /// `nctforge.variance-reduction` or `nctforge.weight-windows` JSON.
+        #[arg(long)]
+        document: PathBuf,
+    },
+    /// Validate a completed variance-reduced run against an analog
+    /// acceptance report: every shared region/tally mean must agree
+    /// within `z_limit` combined sigma, and the run must have used fewer
+    /// histories than the reference.
+    Validate {
+        /// Completed variance-reduced run directory.
+        #[arg(long)]
+        vr_run: PathBuf,
+        /// Exit code the run finished with.
+        #[arg(long, default_value_t = 0)]
+        exit_code: i32,
+        /// Reference `nctforge.openmc-acceptance-report` JSON from the
+        /// analog campaign.
+        #[arg(long)]
+        reference_report: PathBuf,
+        /// Histories in one reference run (each seed's particle count —
+        /// the report itself does not record it).
+        #[arg(long)]
+        reference_histories: u64,
+        /// Sigma-normalized agreement limit per comparison.
+        #[arg(long, default_value_t = 3.0)]
+        z_limit: f64,
+        /// New output path for the `nctforge.vr-validation` report JSON.
+        #[arg(long)]
+        output: PathBuf,
     },
 }
 
@@ -1105,6 +1169,10 @@ enum OpenMcCommand {
         /// cases only).
         #[arg(long)]
         assignment: Option<PathBuf>,
+        /// Resolved `nctforge.weight-windows` artifact enabling weight-window
+        /// splitting/roulette in this deck.
+        #[arg(long)]
+        vr: Option<PathBuf>,
         /// New output directory for the generated deck; it must not already exist.
         #[arg(long)]
         output: PathBuf,
@@ -1141,6 +1209,10 @@ enum OpenMcCommand {
         /// cases only).
         #[arg(long)]
         assignment: Option<PathBuf>,
+        /// Resolved `nctforge.weight-windows` artifact enabling weight-window
+        /// splitting/roulette in this run.
+        #[arg(long)]
+        vr: Option<PathBuf>,
         /// Root containing cross_sections.xml and every selected HDF5 file.
         #[arg(long)]
         nuclear_data_root: PathBuf,
@@ -2911,6 +2983,7 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                 nuclear_data_root,
                 acceptance,
                 assignment,
+                vr,
                 output,
             } => {
                 let case_json = fs::read(&case)?;
@@ -2923,6 +2996,7 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                 let execution_profile_json = fs::read(&execution_profile)?;
                 let acceptance_json = acceptance.as_ref().map(fs::read).transpose()?;
                 let assignment_json = assignment.as_ref().map(fs::read).transpose()?;
+                let vr_json = vr.as_ref().map(fs::read).transpose()?;
                 let deck = OpenMcInputDeck::generate(
                     &case,
                     &nuclear_data_root,
@@ -2935,6 +3009,7 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                         execution_profile_json: &execution_profile_json,
                         acceptance_json: acceptance_json.as_deref(),
                         material_assignment_json: assignment_json.as_deref(),
+                        variance_reduction_json: vr_json.as_deref(),
                     },
                 )?;
                 deck.write_new(&output)?;
@@ -2960,6 +3035,7 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                 execution_profile,
                 acceptance,
                 assignment,
+                vr,
                 nuclear_data_root,
                 openmc,
                 environment,
@@ -2978,6 +3054,7 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                     execution_profile,
                     acceptance,
                     material_assignment: assignment,
+                    variance_reduction: vr,
                     nuclear_data_root,
                 };
                 let mut backend = OpenMcBackend::new(&openmc).configured(config);
@@ -6484,6 +6561,138 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                     .copied()
                     .fold(0.0_f64, f64::max);
                 println!("max per-voxel systematic σ: {sys_max:.4e}");
+            }
+        },
+        Some(Command::Vr(args)) => match args.command {
+            VrCommand::Resolve {
+                spec,
+                run,
+                id,
+                output,
+            } => {
+                let spec_bytes = fs::read(&spec)?;
+                let spec_doc: nctforge_transport::VarianceReductionSpec =
+                    serde_json::from_slice(&spec_bytes)?;
+                spec_doc
+                    .validate()
+                    .map_err(|error| io::Error::other(error.to_string()))?;
+                let spec_sha256 = nctforge_evidence::sha256_file(&spec)?;
+                let statepoint = run
+                    .as_ref()
+                    .map(|dir| {
+                        let path = nctforge_openmc::latest_statepoint(dir)
+                            .map_err(|e| io::Error::other(format!("{}: {e}", dir.display())))?;
+                        let sp = nctforge_openmc::OpenMcStatepoint::open(&path)
+                            .map_err(|e| io::Error::other(format!("{}: {e}", path.display())))?;
+                        let sha = nctforge_evidence::sha256_file(&path)?;
+                        Ok::<_, io::Error>((sp, sha, path))
+                    })
+                    .transpose()?;
+                let resolved = nctforge_openmc::resolve_weight_windows(
+                    &spec_doc,
+                    &spec_sha256,
+                    &id,
+                    statepoint
+                        .as_ref()
+                        .map(|(sp, sha, path)| (sp, sha.as_str(), path.as_path())),
+                )
+                .map_err(|error| io::Error::other(error.to_string()))?;
+                write_new_json(&output, &resolved)?;
+                println!("resolved weight windows at {}", output.display());
+                println!("method: {}", resolved.derivation.method);
+                for (index, window) in resolved.windows.iter().enumerate() {
+                    let active = window.lower_bounds.iter().filter(|v| **v >= 0.0).count();
+                    println!(
+                        "window {index}: {:?} {}x{}x{} mesh, {}/{} cells active",
+                        window.particle,
+                        window.mesh.dimensions[0],
+                        window.mesh.dimensions[1],
+                        window.mesh.dimensions[2],
+                        active,
+                        window.lower_bounds.len()
+                    );
+                }
+            }
+            VrCommand::Info { document } => {
+                let bytes = fs::read(&document)?;
+                let schema: serde_json::Value = serde_json::from_slice(&bytes)?;
+                match schema["schema_version"].as_str() {
+                    Some(nctforge_transport::VARIANCE_REDUCTION_SCHEMA) => {
+                        let spec: nctforge_transport::VarianceReductionSpec =
+                            serde_json::from_slice(&bytes)?;
+                        spec.validate()
+                            .map_err(|error| io::Error::other(error.to_string()))?;
+                        println!("variance-reduction spec {}", spec.id);
+                        println!("windows: {}", spec.windows.len());
+                        println!("qualification: {}", spec.qualification);
+                    }
+                    Some(nctforge_transport::WEIGHT_WINDOWS_SCHEMA) => {
+                        let resolved: nctforge_transport::ResolvedWeightWindows =
+                            serde_json::from_slice(&bytes)?;
+                        resolved
+                            .validate()
+                            .map_err(|error| io::Error::other(error.to_string()))?;
+                        println!("resolved weight windows {}", resolved.id);
+                        println!("spec: {}", resolved.spec.id);
+                        println!("method: {}", resolved.derivation.method);
+                        for (index, window) in resolved.windows.iter().enumerate() {
+                            let active = window.lower_bounds.iter().filter(|v| **v >= 0.0).count();
+                            println!(
+                                "window {index}: {:?}, {}/{} cells active",
+                                window.particle,
+                                active,
+                                window.lower_bounds.len()
+                            );
+                        }
+                    }
+                    other => {
+                        return Err(io::Error::other(format!(
+                            "unrecognized schema {other:?}; expected a variance-reduction \
+                             or weight-windows document"
+                        ))
+                        .into());
+                    }
+                }
+            }
+            VrCommand::Validate {
+                vr_run,
+                exit_code,
+                reference_report,
+                reference_histories,
+                z_limit,
+                output,
+            } => {
+                let reference_bytes = fs::read(&reference_report)?;
+                let report = nctforge_openmc::validate_variance_reduction(
+                    &vr_run,
+                    exit_code,
+                    &reference_bytes,
+                    reference_histories,
+                    z_limit,
+                )
+                .map_err(|error| io::Error::other(error.to_string()))?;
+                write_new_json(&output, &report)?;
+                println!("vr-validation report at {}", output.display());
+                println!(
+                    "histories: {} vs reference {} (x{:.1} reduction)",
+                    report.vr_run.histories,
+                    report.reference.histories,
+                    report.history_reduction_factor
+                );
+                println!(
+                    "unbiased: {} ({} comparisons, z <= {})",
+                    report.unbiased,
+                    report.comparisons.len(),
+                    z_limit
+                );
+                println!("vr acceptance gates passed: {}", report.vr_gates_passed);
+                let worst = report
+                    .comparisons
+                    .iter()
+                    .map(|c| c.z_score)
+                    .fold(0.0_f64, f64::max);
+                println!("max z-score: {worst:.2}");
+                println!("gates passed: {}", report.gates_passed);
             }
         },
         Some(Command::Position(args)) => match args.command {

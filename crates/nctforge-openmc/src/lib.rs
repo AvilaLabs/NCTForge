@@ -17,6 +17,7 @@ mod domain;
 mod evaluated;
 mod input;
 mod statepoint;
+mod variance_reduction;
 
 pub use acceptance::{
     ACCEPTANCE_CONTRACT_FILE, ACCEPTANCE_REPORT_SCHEMA, OpenMcAcceptanceError,
@@ -66,6 +67,11 @@ pub use statepoint::{
     OpenMcStatepoint, OpenMcStatepointTally, collect_completed, collect_statepoint,
     latest_statepoint,
 };
+pub use variance_reduction::{
+    RESOLVED_WW_FILE, VR_VALIDATION_SCHEMA, VarianceReductionError, VrComparison,
+    VrReferenceBinding, VrRunBinding, VrValidationReport, resolve_weight_windows,
+    validate_variance_reduction,
+};
 
 /// Resolved input artifacts and environment for backend-driven runs.
 ///
@@ -83,6 +89,9 @@ pub struct OpenMcBackendConfig {
     pub acceptance: Option<PathBuf>,
     /// DICOM-derived voxel-box material assignment for structure-derived cases.
     pub material_assignment: Option<PathBuf>,
+    /// Resolved `nctforge.weight-windows` artifact enabling weight-window
+    /// splitting/roulette for this run.
+    pub variance_reduction: Option<PathBuf>,
     pub nuclear_data_root: PathBuf,
 }
 
@@ -184,6 +193,7 @@ impl TransportBackend for OpenMcBackend {
         };
         let acceptance_json = config.acceptance.as_ref().map(&read).transpose()?;
         let assignment_json = config.material_assignment.as_ref().map(&read).transpose()?;
+        let vr_json = config.variance_reduction.as_ref().map(&read).transpose()?;
         let deck = OpenMcInputDeck::generate(
             case,
             &config.nuclear_data_root,
@@ -196,6 +206,7 @@ impl TransportBackend for OpenMcBackend {
                 execution_profile_json: &read(&config.execution_profile)?,
                 acceptance_json: acceptance_json.as_deref(),
                 material_assignment_json: assignment_json.as_deref(),
+                variance_reduction_json: vr_json.as_deref(),
             },
         )?;
         deck.write_new(working_directory)?;
@@ -366,6 +377,7 @@ mod tests {
             execution_profile: write("profile.json", PROFILE_JSON),
             acceptance: None,
             material_assignment: None,
+            variance_reduction: None,
             nuclear_data_root: inputs.data_root.path().to_path_buf(),
         };
         (

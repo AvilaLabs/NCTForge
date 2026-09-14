@@ -1,0 +1,48 @@
+{
+  "schema_version": "nctforge.variance-reduction/0.1.0",
+  "id": "nctforge.nf-bnct-001.vr.ww.v1",
+  "description": "Weight-window variance reduction for the nf-bnct-001 frozen benchmark: neutron and photon windows on the 40x40x40 scoring mesh, lower bounds derived from each particle's diagnostic fluence tally of a dedicated analog run (MAGIC-equivalent normalization).",
+  "case_id": "nf-bnct-001",
+  "windows": [
+    {
+      "particle": "neutron",
+      "mesh": {
+        "dimensions": [40, 40, 40],
+        "lower_left_cm": [-9.75, -9.75, -9.75],
+        "upper_right_cm": [10.25, 10.25, 10.25]
+      },
+      "energy_bounds_ev": [0.0, 0.5, 1000.0, 10000.0, 20000000.0],
+      "parameters": {
+        "survival_ratio": 3.0,
+        "max_split": 10,
+        "weight_cutoff": 1e-38
+      },
+      "bounds": {
+        "kind": "forward_flux",
+        "tally": "nctforge.diagnostic.neutron_fluence",
+        "rel_err_threshold": 0.5
+      }
+    },
+    {
+      "particle": "photon",
+      "mesh": {
+        "dimensions": [40, 40, 40],
+        "lower_left_cm": [-9.75, -9.75, -9.75],
+        "upper_right_cm": [10.25, 10.25, 10.25]
+      },
+      "energy_bounds_ev": [0.0, 477000.0, 479000.0, 2223000.0, 2225000.0, 20000000.0],
+      "parameters": {
+        "survival_ratio": 3.0,
+        "max_split": 10,
+        "weight_cutoff": 1e-38
+      },
+      "bounds": {
+        "kind": "forward_flux",
+        "tally": "nctforge.diagnostic.photon_fluence",
+        "rel_err_threshold": 0.5
+      }
+    }
+  ],
+  "provenance_note": "MAGIC-style forward-flux derivation: per energy group the volume-normalized tally mean scaled by 1/(2 * group_max) becomes the lower bound; cells whose tally relative error exceeds 0.5 are disabled. Energy groups match the case's diagnostic fluence grids so no re-binning occurs.",
+  "qualification": "variance_reduction_research_only_not_clinical"
+}
