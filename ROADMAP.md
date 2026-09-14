@@ -430,7 +430,7 @@ Implementation status:
   transport workspace (ROI or mask-file target, approach axis, quarter-turn
   rotate, report/source export) now match the CLI — all three surfaces run
   the same `nctforge_transport` functions;
-- in progress (OP-01): NIfTI imaging I/O — `nctforge-nifti` reads and writes
+- complete (OP-01): NIfTI imaging I/O — `nctforge-nifti` reads and writes
   NIfTI-1 `.nii`/`.nii.gz` 3-D scalar volumes (`u8`–`f64`), prefers sform
   over qform, converts RAS+ to patient LPS with transform provenance,
   accepts explicit-mm or unspecified units, and rejects unsupported
