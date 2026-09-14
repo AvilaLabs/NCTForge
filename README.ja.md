@@ -1,13 +1,15 @@
-# NCTForge
+# OpenBNCT
 
-[![CI](https://github.com/AvilaLabs/NCTForge/actions/workflows/ci.yml/badge.svg)](https://github.com/AvilaLabs/NCTForge/actions/workflows/ci.yml)
+[![CI](https://github.com/AvilaLabs/OpenBNCT/actions/workflows/ci.yml/badge.svg)](https://github.com/AvilaLabs/OpenBNCT/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Status: early research](https://img.shields.io/badge/status-early_research-orange.svg)](ROADMAP.md)
 [![Clinical use: not validated](https://img.shields.io/badge/clinical_use-not_validated-red.svg)](DISCLAIMER.md)
 
 [English](README.md) | **日本語**
 
-NCTForge は、ホウ素中性子捕捉療法（BNCT）の研究および独立検証を目的とした、
+*（旧称 NCTForge。内部のクレート名・`nctforge` CLI/Python パッケージ・`nctforge.*` スキーマ識別子は従来の名前空間を維持します。）*
+
+OpenBNCT は、ホウ素中性子捕捉療法（BNCT）の研究および独立検証を目的とした、
 輸送コードに依存しない DICOM ネイティブのオープンソース・ワークベンチです。
 
 本プロジェクトは Rust でゼロから開発されています。OpenMC は輸送コードに依存しない
@@ -15,7 +17,7 @@ NCTForge は、ホウ素中性子捕捉療法（BNCT）の研究および独立�
 公開された成分線量の相互交換コントラクトを通じて取り込めます。
 
 > [!WARNING]
-> NCTForge は初期研究段階のソフトウェアです。現時点では線量計算システムでも、
+> OpenBNCT は初期研究段階のソフトウェアです。現時点では線量計算システムでも、
 > 医療機器でもありません。臨床判断、治療計画、患者治療には使用できません。
 
 ## 目標
@@ -61,7 +63,7 @@ DICOM／ケース入力
 品質保証、比較、可視化、証拠バンドル
 ```
 
-NCTForge の中心的な役割は、特定施設の臨床 TPS を置き換えることではなく、研究コード、
+OpenBNCT の中心的な役割は、特定施設の臨床 TPS を置き換えることではなく、研究コード、
 輸送コード、施設間で BNCT の計算結果を再現・監査・比較できる公開基盤を提供することです。
 
 ## 関連資料
@@ -77,4 +79,4 @@ NCTForge の中心的な役割は、特定施設の臨床 TPS を置き換える
 
 ## ライセンス
 
-NCTForge は [Apache License 2.0](LICENSE) で公開されています。
+OpenBNCT は [Apache License 2.0](LICENSE) で公開されています。

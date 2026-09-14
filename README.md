@@ -1,24 +1,27 @@
-# NCTForge
+# OpenBNCT
 
-[![CI](https://github.com/AvilaLabs/NCTForge/actions/workflows/ci.yml/badge.svg)](https://github.com/AvilaLabs/NCTForge/actions/workflows/ci.yml)
+[![CI](https://github.com/AvilaLabs/OpenBNCT/actions/workflows/ci.yml/badge.svg)](https://github.com/AvilaLabs/OpenBNCT/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Status: early research](https://img.shields.io/badge/status-early_research-orange.svg)](ROADMAP.md)
 [![Clinical use: not validated](https://img.shields.io/badge/clinical_use-not_validated-red.svg)](DISCLAIMER.md)
 
 **English** | [日本語](README.ja.md)
 
-NCTForge is an open, transport-neutral research workbench for boron neutron
+OpenBNCT is an open, transport-neutral research workbench for boron neutron
 capture therapy (BNCT) dosimetry and independent verification. It is built in
 Rust around one idea: a dose result should carry its provenance, uncertainty,
 and qualification with it — and a claim should only be as strong as the
 evidence bound to it.
+
+*(Formerly NCTForge — internal crate names, the `nctforge` CLI/Python package,
+and `nctforge.*` schema identifiers retain the original namespace.)*
 
 OpenMC is the first transport backend behind a transport-neutral boundary.
 MCNP, PHITS, and other external results import through a published
 component-dose interchange contract — nothing about the platform requires
 bundling those systems.
 
-> **NCTForge is research software.** It is not a medical device, not a dose
+> **OpenBNCT is research software.** It is not a medical device, not a dose
 > calculator for clinical use, and not commissioned for any treatment
 > facility. See [DISCLAIMER.md](DISCLAIMER.md).
 

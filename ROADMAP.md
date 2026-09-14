@@ -1,8 +1,14 @@
-# NCTForge Development Roadmap
+# OpenBNCT Development Roadmap
+
+*(Formerly NCTForge — internal crate names, the `nctforge` CLI/Python package,
+and `nctforge.*` schema identifiers retain the original namespace.)*
 
 **Adopted:** 2026-08-31
 
-**Status:** R1 complete; R2 response generation and smoke execution implemented; reference acceptance remains open. R3/R4 capability parity requirements expanded on 2026-09-12.
+**Status:** R1 complete; R2 reference-statistics execution passed all
+predeclared gates at 600M histories per seed; reference-output promotion
+awaits the cross-code reproduction gate. R3 capability parity complete; R4
+complete except real-engine acceptance gates.
 
 **Style:** Evidence-gated, not feature-count or calendar driven
 

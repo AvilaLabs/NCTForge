@@ -21,8 +21,8 @@ classifiers = [
 ]
 
 [project.urls]
-Repository = "https://github.com/AvilaLabs/NCTForge"
-Disclaimer = "https://github.com/AvilaLabs/NCTForge/blob/main/DISCLAIMER.md"
+Repository = "https://github.com/AvilaLabs/OpenBNCT"
+Disclaimer = "https://github.com/AvilaLabs/OpenBNCT/blob/main/DISCLAIMER.md"
 
 [tool.maturin]
 module-name = "nctforge._nctforge"
