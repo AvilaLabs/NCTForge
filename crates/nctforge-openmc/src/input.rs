@@ -8,7 +8,7 @@ use nctforge_core::{ContentReference, DoseComponent, GridGeometry};
 use nctforge_transport::{
     AngularDistribution, ComponentDefinitionProfile, EnergyDistribution, FixedSourceDefinition,
     MATERIAL_ASSIGNMENT_SCHEMA, MaterialAssignment, MaterialDefinition, NeutronResponseSet,
-    ParticleType, TransportCase,
+    ParticleType, SourceSpatialDistribution, TransportCase,
 };
 use quick_xml::Writer;
 use quick_xml::events::{BytesDecl, BytesEnd, BytesStart, BytesText, Event};
@@ -772,17 +772,30 @@ impl OpenMcInputDeck {
             });
         }
 
-        let source_energy_ev = match source.energy {
-            EnergyDistribution::Monoenergetic { energy_ev } => energy_ev,
-        };
         if source.particle != ParticleType::Neutron {
             return Err(OpenMcInputError::UnsupportedSourceParticle(source.particle));
         }
-        if source_energy_ev < data_energy_range[0] || source_energy_ev >= data_energy_range[1] {
-            return Err(OpenMcInputError::SourceEnergyOutsideDataRange {
-                source_ev: source_energy_ev,
-                data_ev: data_energy_range,
-            });
+        // Every emitted source energy must sit inside the selected data
+        // range; for a histogram that is the outer bin edges.
+        let source_edges_ev: Vec<f64> = match &source.energy {
+            EnergyDistribution::Monoenergetic { energy_ev } => vec![*energy_ev],
+            EnergyDistribution::TabulatedHistogram {
+                energy_boundaries_ev,
+                ..
+            } => energy_boundaries_ev
+                .first()
+                .into_iter()
+                .chain(energy_boundaries_ev.last())
+                .copied()
+                .collect(),
+        };
+        for source_ev in source_edges_ev {
+            if source_ev < data_energy_range[0] || source_ev >= data_energy_range[1] {
+                return Err(OpenMcInputError::SourceEnergyOutsideDataRange {
+                    source_ev,
+                    data_ev: data_energy_range,
+                });
+            }
         }
 
         let scoring_mesh = scoring_mesh(case)?;
@@ -1138,14 +1151,35 @@ fn validate_source_containment(
     source: &FixedSourceDefinition,
     mesh: &OpenMcScoringMesh,
 ) -> Result<(), OpenMcInputError> {
-    let (plane_axis, offset_cm, u_range_cm, v_range_cm) = source.space.plane_parts();
-    let (u_axis, v_axis) = plane_axis.in_plane_axes();
-    let contained = u_range_cm[0] > mesh.lower_left_cm[u_axis]
-        && u_range_cm[1] < mesh.upper_right_cm[u_axis]
-        && v_range_cm[0] > mesh.lower_left_cm[v_axis]
-        && v_range_cm[1] < mesh.upper_right_cm[v_axis]
-        && offset_cm > mesh.lower_left_cm[plane_axis.index()]
-        && offset_cm < mesh.upper_right_cm[plane_axis.index()];
+    let contained = match &source.space {
+        SourceSpatialDistribution::UniformDisk {
+            axis,
+            offset_cm,
+            center_uv_cm,
+            radius_cm,
+        } => {
+            let (u_axis, v_axis) = axis.in_plane_axes();
+            let axis_index = axis.index();
+            center_uv_cm[0] - *radius_cm > mesh.lower_left_cm[u_axis]
+                && center_uv_cm[0] + *radius_cm < mesh.upper_right_cm[u_axis]
+                && center_uv_cm[1] - *radius_cm > mesh.lower_left_cm[v_axis]
+                && center_uv_cm[1] + *radius_cm < mesh.upper_right_cm[v_axis]
+                && *offset_cm > mesh.lower_left_cm[axis_index]
+                && *offset_cm < mesh.upper_right_cm[axis_index]
+        }
+        space => {
+            let Some((plane_axis, offset_cm, u_range_cm, v_range_cm)) = space.plane_parts() else {
+                return Err(OpenMcInputError::UnsupportedSourceSpace);
+            };
+            let (u_axis, v_axis) = plane_axis.in_plane_axes();
+            u_range_cm[0] > mesh.lower_left_cm[u_axis]
+                && u_range_cm[1] < mesh.upper_right_cm[u_axis]
+                && v_range_cm[0] > mesh.lower_left_cm[v_axis]
+                && v_range_cm[1] < mesh.upper_right_cm[v_axis]
+                && offset_cm > mesh.lower_left_cm[plane_axis.index()]
+                && offset_cm < mesh.upper_right_cm[plane_axis.index()]
+        }
+    };
     if !contained {
         return Err(OpenMcInputError::SourceOutsideGeometry);
     }
@@ -1445,45 +1479,130 @@ fn settings_xml(
         source_element.push_attribute(("particle", "neutron"));
         writer.write_event(Event::Start(source_element))?;
 
-        // Any planar spatial distribution emits as an axis-aligned box
-        // collapsed along the plane axis (zero thickness -> plane source).
-        let (plane_axis, offset_cm, u_range_cm, v_range_cm) = source.space.plane_parts();
-        let (u_axis, v_axis) = plane_axis.in_plane_axes();
-        let mut lower = [0.0; 3];
-        let mut upper = [0.0; 3];
-        lower[plane_axis.index()] = offset_cm;
-        upper[plane_axis.index()] = offset_cm;
-        lower[u_axis] = u_range_cm[0];
-        upper[u_axis] = u_range_cm[1];
-        lower[v_axis] = v_range_cm[0];
-        upper[v_axis] = v_range_cm[1];
-        let mut space = BytesStart::new("space");
-        space.push_attribute(("type", "box"));
-        writer.write_event(Event::Start(space))?;
-        text_element(
-            writer,
-            "parameters",
-            &format_numbers(&[lower[0], lower[1], lower[2], upper[0], upper[1], upper[2]]),
-        )?;
-        writer.write_event(Event::End(BytesEnd::new("space")))?;
+        match &source.space {
+            SourceSpatialDistribution::UniformCartesianPlane { .. }
+            | SourceSpatialDistribution::UniformAxisPlane { .. } => {
+                // Any rectangular planar spatial distribution emits as an
+                // axis-aligned box collapsed along the plane axis (zero
+                // thickness -> plane source).
+                let Some((plane_axis, offset_cm, u_range_cm, v_range_cm)) =
+                    source.space.plane_parts()
+                else {
+                    unreachable!("rectangular source variants always have plane parts")
+                };
+                let (u_axis, v_axis) = plane_axis.in_plane_axes();
+                let mut lower = [0.0; 3];
+                let mut upper = [0.0; 3];
+                lower[plane_axis.index()] = offset_cm;
+                upper[plane_axis.index()] = offset_cm;
+                lower[u_axis] = u_range_cm[0];
+                upper[u_axis] = u_range_cm[1];
+                lower[v_axis] = v_range_cm[0];
+                upper[v_axis] = v_range_cm[1];
+                let mut space = BytesStart::new("space");
+                space.push_attribute(("type", "box"));
+                writer.write_event(Event::Start(space))?;
+                text_element(
+                    writer,
+                    "parameters",
+                    &format_numbers(&[lower[0], lower[1], lower[2], upper[0], upper[1], upper[2]]),
+                )?;
+                writer.write_event(Event::End(BytesEnd::new("space")))?;
+            }
+            SourceSpatialDistribution::UniformDisk {
+                axis,
+                offset_cm,
+                center_uv_cm,
+                radius_cm,
+            } => {
+                // A disk emits as a cylindrical distribution on the port
+                // plane: r ~ powerlaw(n=1) samples area uniformly,
+                // phi ~ uniform, z degenerate at the plane.
+                let (u_axis, v_axis) = axis.in_plane_axes();
+                let mut origin = [0.0; 3];
+                origin[axis.index()] = *offset_cm;
+                origin[u_axis] = center_uv_cm[0];
+                origin[v_axis] = center_uv_cm[1];
+                let mut z_dir = [0.0; 3];
+                z_dir[axis.index()] = 1.0;
+                let mut r_dir = [0.0; 3];
+                r_dir[u_axis] = 1.0;
+                let mut space = BytesStart::new("space");
+                space.push_attribute(("type", "cylindrical"));
+                writer.write_event(Event::Start(space))?;
+                text_element(writer, "origin", &format_numbers(&origin))?;
+                text_element(writer, "z_dir", &format_numbers(&z_dir))?;
+                text_element(writer, "r_dir", &format_numbers(&r_dir))?;
+                univariate_element(writer, "r", "powerlaw", &[0.0, *radius_cm, 1.0])?;
+                univariate_element(writer, "phi", "uniform", &[0.0, std::f64::consts::TAU])?;
+                univariate_element(writer, "z", "discrete", &[0.0, 1.0])?;
+                writer.write_event(Event::End(BytesEnd::new("space")))?;
+            }
+        }
 
-        let AngularDistribution::Monodirectional { unit_vector } = source.angle;
-        let direction = format_numbers(&unit_vector);
-        let mut angle = BytesStart::new("angle");
-        angle.push_attribute(("type", "monodirectional"));
-        angle.push_attribute(("reference_uvw", direction.as_str()));
-        writer.write_event(Event::Empty(angle))?;
+        match &source.angle {
+            AngularDistribution::Monodirectional { unit_vector } => {
+                let mut angle = BytesStart::new("angle");
+                angle.push_attribute(("type", "monodirectional"));
+                writer.write_event(Event::Start(angle))?;
+                text_element(writer, "reference_uvw", &format_numbers(unit_vector))?;
+                writer.write_event(Event::End(BytesEnd::new("angle")))?;
+            }
+            AngularDistribution::IsotropicCone {
+                axis_unit_vector,
+                half_angle_rad,
+            } => {
+                // Uniform-in-solid-angle cone: mu ~ U(cos θ0, 1) about
+                // the cone axis, phi ~ U(0, 2π).
+                let mut angle = BytesStart::new("angle");
+                angle.push_attribute(("type", "mu-phi"));
+                writer.write_event(Event::Start(angle))?;
+                text_element(writer, "reference_uvw", &format_numbers(axis_unit_vector))?;
+                univariate_element(writer, "mu", "uniform", &[half_angle_rad.cos(), 1.0])?;
+                univariate_element(writer, "phi", "uniform", &[0.0, std::f64::consts::TAU])?;
+                writer.write_event(Event::End(BytesEnd::new("angle")))?;
+            }
+        }
 
-        let EnergyDistribution::Monoenergetic { energy_ev } = source.energy;
-        let mut energy = BytesStart::new("energy");
-        energy.push_attribute(("type", "discrete"));
-        writer.write_event(Event::Start(energy))?;
-        text_element(
-            writer,
-            "parameters",
-            &format!("{} 1.0", format_float(energy_ev)),
-        )?;
-        writer.write_event(Event::End(BytesEnd::new("energy")))?;
+        match &source.energy {
+            EnergyDistribution::Monoenergetic { energy_ev } => {
+                let mut energy = BytesStart::new("energy");
+                energy.push_attribute(("type", "discrete"));
+                writer.write_event(Event::Start(energy))?;
+                text_element(
+                    writer,
+                    "parameters",
+                    &format!("{} 1.0", format_float(*energy_ev)),
+                )?;
+                writer.write_event(Event::End(BytesEnd::new("energy")))?;
+            }
+            EnergyDistribution::TabulatedHistogram {
+                energy_boundaries_ev,
+                bin_weights,
+            } => {
+                // OpenMC tabular parameters are the x array followed by
+                // the p array. For histogram interpolation p is a density,
+                // so convert bin weights to weights-per-eV; the trailing p
+                // entry is ignored, so pad it with zero.
+                let mut parameters = String::new();
+                for value in energy_boundaries_ev {
+                    parameters.push_str(&format_float(*value));
+                    parameters.push(' ');
+                }
+                for (index, weight) in bin_weights.iter().enumerate() {
+                    let width = energy_boundaries_ev[index + 1] - energy_boundaries_ev[index];
+                    parameters.push_str(&format_float(*weight / width));
+                    parameters.push(' ');
+                }
+                parameters.push('0');
+                let mut energy = BytesStart::new("energy");
+                energy.push_attribute(("type", "tabular"));
+                writer.write_event(Event::Start(energy))?;
+                text_element(writer, "interpolation", "histogram")?;
+                text_element(writer, "parameters", &parameters)?;
+                writer.write_event(Event::End(BytesEnd::new("energy")))?;
+            }
+        }
         writer.write_event(Event::End(BytesEnd::new("source")))?;
 
         writer.write_event(Event::Start(BytesStart::new("output")))?;
@@ -1917,6 +2036,23 @@ where
     Ok(bytes)
 }
 
+/// Emit `<name type="kind"><parameters>...</parameters></name>` — the
+/// univariate distribution shape used inside `space`/`angle` source
+/// elements.
+fn univariate_element(
+    writer: &mut Writer<Vec<u8>>,
+    name: &str,
+    kind: &str,
+    parameters: &[f64],
+) -> io::Result<()> {
+    let mut element = BytesStart::new(name);
+    element.push_attribute(("type", kind));
+    writer.write_event(Event::Start(element))?;
+    text_element(writer, "parameters", &format_numbers(parameters))?;
+    writer.write_event(Event::End(BytesEnd::new(name)))?;
+    Ok(())
+}
+
 fn text_element(writer: &mut Writer<Vec<u8>>, name: &str, text: &str) -> io::Result<()> {
     writer.write_event(Event::Start(BytesStart::new(name)))?;
     writer.write_event(Event::Text(BytesText::new(text)))?;
@@ -2265,6 +2401,8 @@ pub enum OpenMcInputError {
     UnsupportedGeometryDirection([f64; 9]),
     #[error("source plane must lie strictly inside all six transport boundaries")]
     SourceOutsideGeometry,
+    #[error("source spatial distribution is not representable in the OpenMC emit path")]
+    UnsupportedSourceSpace,
     #[error("{histories} histories are not divisible by {batches} active batches")]
     HistoriesNotDivisibleByBatches { histories: u64, batches: u32 },
     #[error("particles per batch must fit a positive signed 64-bit OpenMC count; observed {0}")]
@@ -2978,7 +3116,7 @@ pub(crate) mod tests {
                 ),
                 (
                     "settings.xml",
-                    "4df825f159916242fb048312fcec4f9c16ffdf2454843e8ea7939e6b7b49a3aa"
+                    "dc0149c33efb12668f68d70f039da6580969f6de93d75005698fb9d53dfe8d02"
                 ),
                 (
                     "tallies.xml",
@@ -2986,7 +3124,7 @@ pub(crate) mod tests {
                 ),
                 (
                     "nctforge-input-manifest.json",
-                    "49dcbe2501d88cdeb9c4585ccf2b0124c7783d71e0e9e248641f1b4c6b1027f9"
+                    "ccb3b3fe904efc819459801042e09a1de462fa1337dec497dac6a2e25e4c40c3"
                 ),
             ]
         );
@@ -3173,6 +3311,125 @@ pub(crate) mod tests {
         assert!(matches!(
             deck.write_new(&deck_dir),
             Err(OpenMcInputError::Io { .. })
+        ));
+    }
+
+    /// The reference case with a caller-supplied source definition; the
+    /// source artifact JSON is regenerated to keep content binding honest.
+    fn generate_with_source(source: &nctforge_transport::FixedSourceDefinition) -> OpenMcInputDeck {
+        let inputs = input_bytes();
+        let source_json = serde_json::to_vec_pretty(source).unwrap();
+        let mut case = case();
+        case.source = source.clone();
+        OpenMcInputDeck::generate(
+            &case,
+            inputs.data_root.path(),
+            OpenMcInputArtifacts {
+                component_profile_json: COMPONENT_PROFILE_JSON,
+                material_json: MATERIAL_JSON,
+                source_json: &source_json,
+                response_set_json: &inputs.response_set_json,
+                nuclear_data_manifest_json: &inputs.nuclear_data_json,
+                execution_profile_json: PROFILE_JSON,
+                acceptance_json: None,
+                material_assignment_json: None,
+            },
+        )
+        .unwrap()
+    }
+
+    fn settings_text(deck: &OpenMcInputDeck) -> String {
+        String::from_utf8(deck.file("settings.xml").unwrap().bytes.clone()).unwrap()
+    }
+
+    #[test]
+    fn emits_monodirectional_angle_as_reference_uvw_element() {
+        // reference_uvw is a child element in the OpenMC schema; an
+        // attribute of the same name is silently ignored (defaults +z).
+        let settings = settings_text(&generate());
+        assert!(settings.contains("<angle type=\"monodirectional\">"));
+        assert!(settings.contains("<reference_uvw>0 0 1</reference_uvw>"));
+        assert!(!settings.contains("reference_uvw="));
+    }
+
+    #[test]
+    fn emits_disk_cone_and_tabulated_source() {
+        let mut source: nctforge_transport::FixedSourceDefinition =
+            serde_json::from_slice(SOURCE_JSON).unwrap();
+        source.space = nctforge_transport::SourceSpatialDistribution::UniformDisk {
+            axis: nctforge_transport::PlaneAxis::Z,
+            offset_cm: -9.999999,
+            center_uv_cm: [0.0, 0.0],
+            radius_cm: 7.0,
+        };
+        source.angle = AngularDistribution::IsotropicCone {
+            axis_unit_vector: [0.0, 0.0, 1.0],
+            half_angle_rad: 0.1,
+        };
+        source.energy = EnergyDistribution::TabulatedHistogram {
+            energy_boundaries_ev: vec![0.5, 1.0e4, 1.0e6],
+            bin_weights: vec![3.0, 1.0],
+        };
+        let settings = settings_text(&generate_with_source(&source));
+
+        // Disk: cylindrical spatial distribution, r ~ powerlaw(n=1) for
+        // uniform area, z degenerate on the port plane.
+        assert!(settings.contains("<space type=\"cylindrical\">"));
+        assert!(settings.contains("<origin>0 0 -9.999999</origin>"));
+        assert!(settings.contains("<z_dir>0 0 1</z_dir>"));
+        assert!(settings.contains("<r type=\"powerlaw\">"));
+        assert!(settings.contains("<parameters>0 7 1</parameters>"));
+        assert!(settings.contains("<phi type=\"uniform\">"));
+        assert!(settings.contains("<parameters>0 6.283185307179586</parameters>"));
+        assert!(settings.contains("<z type=\"discrete\">"));
+        assert!(settings.contains("<parameters>0 1</parameters>"));
+
+        // Cone: mu-phi about +z with mu uniform on [cos 0.1, 1].
+        assert!(settings.contains("<angle type=\"mu-phi\">"));
+        assert!(settings.contains("<reference_uvw>0 0 1</reference_uvw>"));
+        assert!(settings.contains("<mu type=\"uniform\">"));
+        assert!(settings.contains("<parameters>0.9950041652780258 1</parameters>"));
+
+        // Spectrum: histogram tabular; p values are densities so bin
+        // probabilities equal the declared weights despite unequal widths.
+        assert!(settings.contains("<energy type=\"tabular\">"));
+        assert!(settings.contains("<interpolation>histogram</interpolation>"));
+        assert!(settings.contains(
+            "<parameters>0.5 10000 1000000 0.0003000150007500375 0.00000101010101010101 0</parameters>"
+        ));
+    }
+
+    #[test]
+    fn rejects_tabulated_source_energy_outside_data_range() {
+        let mut source: nctforge_transport::FixedSourceDefinition =
+            serde_json::from_slice(SOURCE_JSON).unwrap();
+        source.energy = EnergyDistribution::TabulatedHistogram {
+            energy_boundaries_ev: vec![0.5, 1.0e4, 25.0e6],
+            bin_weights: vec![1.0, 1.0],
+        };
+        let inputs = input_bytes();
+        let source_json = serde_json::to_vec_pretty(&source).unwrap();
+        let mut case = case();
+        case.source = source;
+        let error = OpenMcInputDeck::generate(
+            &case,
+            inputs.data_root.path(),
+            OpenMcInputArtifacts {
+                component_profile_json: COMPONENT_PROFILE_JSON,
+                material_json: MATERIAL_JSON,
+                source_json: &source_json,
+                response_set_json: &inputs.response_set_json,
+                nuclear_data_manifest_json: &inputs.nuclear_data_json,
+                execution_profile_json: PROFILE_JSON,
+                acceptance_json: None,
+                material_assignment_json: None,
+            },
+        )
+        .unwrap_err();
+        assert!(matches!(
+            error,
+            OpenMcInputError::SourceEnergyOutsideDataRange { source_ev, .. }
+                if source_ev == 25.0e6
         ));
     }
 }

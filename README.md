@@ -52,6 +52,10 @@ bundling those systems.
   import contract; MCNP meshtal and PHITS output adapters; MCNP input-deck
   export; external-dose import and combined-treatment evaluation; a
   `nctforge compare` cross-code comparison record.
+- **Facility beam descriptions** — versioned `nctforge.beam-description/0.1.0`
+  documents (spectrum, divergence, aperture, normalization, cited provenance)
+  that bind onto a transport case (`nctforge beam info|list|bind`); the
+  `beams/` registry ships the FiR 1 K63 literature beam.
 - **Three surfaces, one implementation** — CLI (`nctforge`), a native egui
   workbench (integrity-gated tri-planar viewer, dose wash, DVH/metrics,
   plan workspace, source positioning), and a bounded Python package —

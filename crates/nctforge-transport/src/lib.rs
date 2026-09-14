@@ -7,10 +7,15 @@ use std::{error::Error, path::Path};
 use nctforge_core::PhysicalDoseBundle;
 use serde::{Deserialize, Serialize};
 
+mod beam;
 mod model;
 mod positioning;
 mod response;
 
+pub use beam::{
+    BEAM_DESCRIPTION_SCHEMA, BeamDescription, BeamError, BeamProvenance, Citation,
+    NormalizationBasis, PortGeometry, PortShape,
+};
 pub use model::{
     AngularDistribution, EnergyDistribution, FixedSourceDefinition, IntervalConvention,
     MATERIAL_ASSIGNMENT_SCHEMA, MaterialAssignment, MaterialDefinition, MaterialRegion,

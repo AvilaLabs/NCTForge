@@ -89,6 +89,8 @@ pub enum PositioningError {
     },
     #[error("rotation must be a multiple of 90 degrees about a world axis")]
     UnsupportedRotation,
+    #[error("rotation of a non-rectangular source space is not supported")]
+    NonRectangularSourceSpace,
     #[error("unsupported position-report schema {0:?}")]
     InvalidReportSchema(String),
 }
@@ -269,7 +271,9 @@ pub fn rotate_source(
         return Err(PositioningError::UnsupportedRotation);
     }
     let quarter_turns = (degrees.rem_euclid(360.0) / 90.0) as usize;
-    let (plane_axis, offset_cm, u_range, v_range) = source.space.plane_parts();
+    let Some((plane_axis, offset_cm, u_range, v_range)) = source.space.plane_parts() else {
+        return Err(PositioningError::NonRectangularSourceSpace);
+    };
     let (u_axis, v_axis) = plane_axis.in_plane_axes();
 
     // Represent the plane as world interval bounds, rotate the two slab
@@ -322,6 +326,9 @@ pub fn rotate_source(
         AngularDistribution::Monodirectional { unit_vector } => {
             rotate_quarter(*unit_vector, [0.0; 3], axis.index(), quarter_turns)
         }
+        AngularDistribution::IsotropicCone {
+            axis_unit_vector, ..
+        } => rotate_quarter(*axis_unit_vector, [0.0; 3], axis.index(), quarter_turns),
     };
 
     let mut rotated = source.clone();
@@ -332,8 +339,16 @@ pub fn rotate_source(
         offset_cm: rotated_lower[flat_axes[0]],
         interval_convention: IntervalConvention::HalfOpen,
     };
-    rotated.angle = AngularDistribution::Monodirectional {
-        unit_vector: direction,
+    rotated.angle = match &source.angle {
+        AngularDistribution::Monodirectional { .. } => AngularDistribution::Monodirectional {
+            unit_vector: direction,
+        },
+        AngularDistribution::IsotropicCone { half_angle_rad, .. } => {
+            AngularDistribution::IsotropicCone {
+                axis_unit_vector: direction,
+                half_angle_rad: *half_angle_rad,
+            }
+        }
     };
     Ok(rotated)
 }
@@ -444,7 +459,7 @@ mod tests {
         // Plane sits 1 mm inside the -20 face: z = -19 mm.
         assert_eq!(report.source_plane_point_lps_mm, [5.0, 5.0, -19.0]);
         assert!((report.source_to_centroid_mm - 24.0).abs() < 1.0e-9);
-        let (axis, offset, u, v) = source.space.plane_parts();
+        let (axis, offset, u, v) = source.space.plane_parts().unwrap();
         assert_eq!(axis, PlaneAxis::Z);
         assert_eq!(offset, -1.9);
         assert_eq!(u, [-0.5, 1.5]);
@@ -468,7 +483,7 @@ mod tests {
         assert_eq!(report.entry_side, EntrySide::High);
         assert_eq!(report.entry_point_lps_mm, [20.0, 5.0, 5.0]);
         // Plane 2 mm inside +20 face: x = 18 mm; u/v span y,z.
-        let (axis, offset, u, v) = source.space.plane_parts();
+        let (axis, offset, u, v) = source.space.plane_parts().unwrap();
         assert_eq!(axis, PlaneAxis::X);
         assert_eq!(offset, 1.8);
         assert_eq!(u, [0.0, 1.0]);
@@ -477,6 +492,7 @@ mod tests {
             AngularDistribution::Monodirectional { unit_vector } => {
                 assert_eq!(unit_vector, [-1.0, 0.0, 0.0]);
             }
+            AngularDistribution::IsotropicCone { .. } => panic!("expected monodirectional"),
         }
     }
 
@@ -499,7 +515,7 @@ mod tests {
         let y_entry = 5.0 - t * 0.5;
         assert!((report.entry_point_lps_mm[1] - y_entry).abs() < 1.0e-9);
         assert_eq!(report.entry_axis, PlaneAxis::Z);
-        let (_, _, u, v) = source.space.plane_parts();
+        let (_, _, u, v) = source.space.plane_parts().unwrap();
         // Aperture centered on the beam's x,y where it meets the plane.
         assert!((u[0] + u[1]) / 2.0 - 0.5 < 1.0e-9);
         assert!(((v[0] + v[1]) / 2.0 - y_entry / 10.0).abs() < 1.0e-9);
@@ -543,7 +559,7 @@ mod tests {
         // Right-hand rule about +y: +z -> +x, +x -> -z. The z-plane at
         // offset -1.9 cm (point (0,0,-1.9)) maps to x = -1.9 cm, flat
         // along x; the +z beam direction maps to +x.
-        let (axis, offset, u, v) = rotated.space.plane_parts();
+        let (axis, offset, u, v) = rotated.space.plane_parts().unwrap();
         assert_eq!(axis, PlaneAxis::X);
         assert_eq!(offset, -1.9);
         // u spans world z after rotation: old x range [-1,1] -> z range
@@ -555,6 +571,7 @@ mod tests {
             AngularDistribution::Monodirectional { unit_vector } => {
                 assert_eq!(unit_vector, [1.0, 0.0, 0.0]);
             }
+            AngularDistribution::IsotropicCone { .. } => panic!("expected monodirectional"),
         }
     }
 

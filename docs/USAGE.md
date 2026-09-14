@@ -212,6 +212,42 @@ first component response tables are generated from the receipt-bound
 production HEATR output and sealed `independently_reviewed` by deterministic
 in-house regeneration.
 
+### Facility beam descriptions
+
+A `nctforge.beam-description/0.1.0` document records a facility beam as
+delivered at its port reference plane: the source term (energy spectrum,
+angular distribution, spatial distribution matching the aperture), the
+port geometry, a declared normalization basis, and provenance citing the
+published reference or measured characterization every number came from.
+The repository's `beams/` registry currently ships one encoded literature
+beam — `fir1-k63.json`, the FiR 1 K63 epithermal column from
+Seppälä (2002, HU-P-D103), explicitly labeled a literature reconstruction
+(group-integrated fluences are measured; within-group shape and the
+collimator-derived divergence cone are stated assumptions).
+
+```text
+nctforge beam list                          # scan ./beams
+nctforge beam info --beam beams/fir1-k63.json
+nctforge beam bind \
+  --beam beams/fir1-k63.json \
+  --case benchmarks/synthetic/nf-bnct-001/transport/case.json \
+  --output bound-case.json
+```
+
+`bind` repositions the beam's source onto the case: the port plane lands
+just inside the bounding-box face the beam enters (sign of propagation
+picks the side), centered on that face, keeping the declared aperture. An
+aperture that does not fit the face is rejected rather than clipped. The
+bound case feeds `openmc generate` directly — extract its `source` member
+as the `--source` artifact so content binding stays honest.
+
+The underlying transport model supports `uniform_disk` spatial,
+`isotropic_cone` angular, and `tabulated_histogram` energy distributions;
+the OpenMC emitter maps them to `cylindrical`/`mu-phi`/`tabular` XML and
+the MCNP deck emitter to `POS/AXS/RAD`, `DIR` cosine histograms, and
+`ERG` histograms. Cone half-angles are bounded below π/2 (no upstream
+emission) and must be coaxial with the port normal.
+
 ### OpenMC input generation
 
 With the sealed response set in place, generate the deterministic OpenMC deck

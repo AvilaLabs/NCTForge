@@ -22,9 +22,13 @@
 //!
 //! - units are centimetres; the case geometry's millimetre fields are
 //!   converted on emission;
-//! - `SDEF` samples `X`/`Y`/`Z` as absolute coordinate distributions
-//!   (`SI`/`SP` `1 1` = uniform on each interval), `VEC`/`DIR=1` gives the
-//!   monodirectional beam, `ERG` is MeV;
+//! - `SDEF` samples rectangular planes as `X`/`Y`/`Z` absolute-coordinate
+//!   distributions (`SI`/`SP` `1 1` = uniform on each interval) and disks
+//!   as `POS`/`AXS`/`RAD` with `EXT=0` (`SP -21 1` = uniform area);
+//!   `VEC`/`DIR=1` gives a monodirectional beam while a cone emits as a
+//!   `DIR` cosine histogram (`SI -1 cos(θ) 1`, `SP 0 1` — uniform in
+//!   solid angle); `ERG` is MeV, tabulated spectra emit as `SI H`
+//!   boundaries with `SP D` bin weights;
 //! - `FILL` array order is `i` fastest, then `j`, then `k`, matching the
 //!   bundle convention `i + nx*j + nx*ny*k`;
 //! - mass fractions emit as *negative* `M`-card entries per MCNP convention;
@@ -36,8 +40,8 @@
 use std::fmt::Write as _;
 
 use nctforge_transport::{
-    AngularDistribution, EnergyDistribution, FixedSourceDefinition, MaterialAssignment,
-    MaterialDefinition, ParticleType, TransportCase, TransportModelError,
+    AngularDistribution, EnergyDistribution, MaterialAssignment, MaterialDefinition, ParticleType,
+    TransportCase, TransportModelError,
 };
 use thiserror::Error;
 
@@ -120,16 +124,41 @@ pub fn export_mcnp_deck(
     // A source point outside the grid box is born in the void cell and
     // scores nothing — reject rather than emit a deck that reads as zero.
     let edges = grid_edges_cm(case);
-    let (axis, offset_cm, u_range, v_range) = case.source.space.plane_parts();
-    let (u_axis, v_axis) = axis.in_plane_axes();
     let inside = |a: usize, lo: f64, hi: f64| {
         let range = edges[a][0]..=edges[a][1];
         range.contains(&lo) && range.contains(&hi)
     };
-    if !(inside(axis.index(), offset_cm, offset_cm)
-        && inside(u_axis, u_range[0], u_range[1])
-        && inside(v_axis, v_range[0], v_range[1]))
-    {
+    let contained = match &case.source.space {
+        nctforge_transport::SourceSpatialDistribution::UniformDisk {
+            axis,
+            offset_cm,
+            center_uv_cm,
+            radius_cm,
+        } => {
+            let (u_axis, v_axis) = axis.in_plane_axes();
+            inside(axis.index(), *offset_cm, *offset_cm)
+                && inside(
+                    u_axis,
+                    center_uv_cm[0] - radius_cm,
+                    center_uv_cm[0] + radius_cm,
+                )
+                && inside(
+                    v_axis,
+                    center_uv_cm[1] - radius_cm,
+                    center_uv_cm[1] + radius_cm,
+                )
+        }
+        space => {
+            let Some((axis, offset_cm, u_range, v_range)) = space.plane_parts() else {
+                return Err(McnpDeckError::SourceOutsideGrid);
+            };
+            let (u_axis, v_axis) = axis.in_plane_axes();
+            inside(axis.index(), offset_cm, offset_cm)
+                && inside(u_axis, u_range[0], u_range[1])
+                && inside(v_axis, v_range[0], v_range[1])
+        }
+    };
+    if !contained {
         return Err(McnpDeckError::SourceOutsideGrid);
     }
     let neutron = case.source.particle == ParticleType::Neutron;
@@ -431,37 +460,146 @@ fn data_cards(
         out.push('\n');
     }
 
-    // Source card: uniform rectangle perpendicular to a world axis.
+    // Source card. Rectangular planes emit as per-coordinate uniform
+    // distributions; a disk emits as POS/AXS/RAD with EXT=0. The cone
+    // emits as a DIR cosine histogram about VEC — MCNP samples mu
+    // uniformly on the tabulated bin, which is uniform in solid angle.
     let source = &case.source;
-    let (axis, offset_cm, u_range, v_range) = source.space.plane_parts();
-    let (u_axis, v_axis) = axis.in_plane_axes();
     let coord = |i: usize| ["x", "y", "z"][i];
-    write_card(
-        &mut out,
-        &format!(
-            "sdef  {}=d1  {}=d2  {}={}  vec={}  dir=1  erg={}  par={}",
-            coord(u_axis),
-            coord(v_axis),
-            coord(axis.index()),
-            fmt(offset_cm),
-            source_vector(source),
-            fmt(source_energy_mev(source)?),
-            match source.particle {
-                ParticleType::Neutron => "n",
-                ParticleType::Photon => "p",
-            }
-        ),
+    let (mut sdef, mut dist_index) = (String::from("sdef"), 0_u32);
+    let mut si_sp = String::new();
+    let dist = |si_sp: &mut String, index: u32, si: String, sp: &str| {
+        write_card(si_sp, &format!("si{index}  {si}"));
+        write_card(si_sp, &format!("sp{index}  {sp}"));
+    };
+    match &source.space {
+        nctforge_transport::SourceSpatialDistribution::UniformDisk {
+            axis,
+            offset_cm,
+            center_uv_cm,
+            radius_cm,
+        } => {
+            let (u_axis, v_axis) = axis.in_plane_axes();
+            let mut pos = [0.0; 3];
+            pos[axis.index()] = *offset_cm;
+            pos[u_axis] = center_uv_cm[0];
+            pos[v_axis] = center_uv_cm[1];
+            let mut axs = [0.0; 3];
+            axs[axis.index()] = 1.0;
+            dist_index += 1;
+            let _ = write!(
+                sdef,
+                "  pos={} {} {}  axs={} {} {}  ext=0  rad=d{}",
+                fmt(pos[0]),
+                fmt(pos[1]),
+                fmt(pos[2]),
+                fmt(axs[0]),
+                fmt(axs[1]),
+                fmt(axs[2]),
+                dist_index
+            );
+            dist(
+                &mut si_sp,
+                dist_index,
+                format!("0  {}", fmt(*radius_cm)),
+                "-21  1",
+            );
+        }
+        space => {
+            let Some((axis, offset_cm, u_range, v_range)) = space.plane_parts() else {
+                return Err(McnpDeckError::SourceOutsideGrid);
+            };
+            let (u_axis, v_axis) = axis.in_plane_axes();
+            dist_index += 1;
+            let u_dist = dist_index;
+            dist_index += 1;
+            let v_dist = dist_index;
+            let _ = write!(
+                sdef,
+                "  {}=d{}  {}=d{}  {}={}",
+                coord(u_axis),
+                u_dist,
+                coord(v_axis),
+                v_dist,
+                coord(axis.index()),
+                fmt(offset_cm)
+            );
+            dist(
+                &mut si_sp,
+                u_dist,
+                format!("{}  {}", fmt(u_range[0]), fmt(u_range[1])),
+                "1  1",
+            );
+            dist(
+                &mut si_sp,
+                v_dist,
+                format!("{}  {}", fmt(v_range[0]), fmt(v_range[1])),
+                "1  1",
+            );
+        }
+    }
+    match &source.angle {
+        AngularDistribution::Monodirectional { unit_vector } => {
+            let _ = write!(
+                sdef,
+                "  vec={} {} {}  dir=1",
+                fmt(unit_vector[0]),
+                fmt(unit_vector[1]),
+                fmt(unit_vector[2])
+            );
+        }
+        AngularDistribution::IsotropicCone {
+            axis_unit_vector,
+            half_angle_rad,
+        } => {
+            dist_index += 1;
+            let _ = write!(
+                sdef,
+                "  vec={} {} {}  dir=d{}",
+                fmt(axis_unit_vector[0]),
+                fmt(axis_unit_vector[1]),
+                fmt(axis_unit_vector[2]),
+                dist_index
+            );
+            dist(
+                &mut si_sp,
+                dist_index,
+                format!("-1  {}  1", fmt(half_angle_rad.cos())),
+                "0  1",
+            );
+        }
+    }
+    match &source.energy {
+        EnergyDistribution::Monoenergetic { energy_ev } => {
+            let _ = write!(sdef, "  erg={}", fmt(energy_ev / 1.0e6));
+        }
+        EnergyDistribution::TabulatedHistogram {
+            energy_boundaries_ev,
+            bin_weights,
+        } => {
+            dist_index += 1;
+            let _ = write!(sdef, "  erg=d{}", dist_index);
+            let si = std::iter::once(String::from("h"))
+                .chain(energy_boundaries_ev.iter().map(|e| fmt(*e / 1.0e6)))
+                .collect::<Vec<_>>()
+                .join("  ");
+            let sp = std::iter::once(String::from("d  0"))
+                .chain(bin_weights.iter().map(|w| fmt(*w)))
+                .collect::<Vec<_>>()
+                .join("  ");
+            dist(&mut si_sp, dist_index, si, &sp);
+        }
+    }
+    let _ = write!(
+        sdef,
+        "  par={}",
+        match source.particle {
+            ParticleType::Neutron => "n",
+            ParticleType::Photon => "p",
+        }
     );
-    write_card(
-        &mut out,
-        &format!("si1  {}  {}", fmt(u_range[0]), fmt(u_range[1])),
-    );
-    write_card(&mut out, "sp1  1  1");
-    write_card(
-        &mut out,
-        &format!("si2  {}  {}", fmt(v_range[0]), fmt(v_range[1])),
-    );
-    write_card(&mut out, "sp2  1  1");
+    write_card(&mut out, &sdef);
+    out.push_str(&si_sp);
 
     // Mesh flux tallies on the case grid; component folding happens outside.
     let edges = grid_edges_cm(case);
@@ -494,25 +632,6 @@ fn data_cards(
         let _ = writeln!(out, "rand seed={seed}");
     }
     Ok(out)
-}
-
-fn source_vector(source: &FixedSourceDefinition) -> String {
-    match &source.angle {
-        AngularDistribution::Monodirectional { unit_vector } => {
-            format!(
-                "{} {} {}",
-                fmt(unit_vector[0]),
-                fmt(unit_vector[1]),
-                fmt(unit_vector[2])
-            )
-        }
-    }
-}
-
-fn source_energy_mev(source: &FixedSourceDefinition) -> Result<f64, McnpDeckError> {
-    match &source.energy {
-        EnergyDistribution::Monoenergetic { energy_ev } => Ok(energy_ev / 1.0e6),
-    }
 }
 
 /// `ElA[_mN]` (e.g. `H1`, `B10`, `Am242_m1`) → MCNP ZAID integer.
@@ -813,5 +932,43 @@ mod tests {
             export_mcnp_deck(&case, None, &options()),
             Err(McnpDeckError::SourceOutsideGrid)
         ));
+    }
+
+    #[test]
+    fn disk_cone_and_spectrum_source_emit_distributions() {
+        let mut value = serde_json::to_value(case()).unwrap();
+        value["source"]["space"] = json!({
+            "kind": "uniform_disk",
+            "axis": "z",
+            "offset_cm": -0.4,
+            "center_uv_cm": [0.0, 0.0],
+            "radius_cm": 0.4
+        });
+        value["source"]["angle"] = json!({
+            "kind": "isotropic_cone",
+            "axis_unit_vector": [0.0, 0.0, 1.0],
+            "half_angle_rad": 0.1
+        });
+        value["source"]["energy"] = json!({
+            "kind": "tabulated_histogram",
+            "energy_boundaries_ev": [0.5, 1.0e4, 1.0e6],
+            "bin_weights": [3.0, 1.0]
+        });
+        let case: TransportCase = serde_json::from_value(value).unwrap();
+        let deck = export_mcnp_deck(&case, None, &options()).unwrap();
+        // Disk: POS at the port center, AXS the port normal, RAD sampled
+        // with power law n=1 (uniform area), EXT=0 keeps it planar.
+        assert!(deck.contains("pos=0 0 -0.4 axs=0 0 1 ext=0 rad=d1"));
+        assert!(deck.contains("si1 0 0.4"));
+        assert!(deck.contains("sp1 -21 1"));
+        // Cone: DIR cosine histogram on [cos 0.1, 1] about VEC.
+        assert!(deck.contains("vec=0 0 1 dir=d2"));
+        assert!(deck.contains("si2 -1 0.9950041652780258 1"));
+        assert!(deck.contains("sp2 0 1"));
+        // Spectrum: ERG histogram with H boundaries (MeV) and D weights.
+        assert!(deck.contains("erg=d3 par=n"));
+        assert!(deck.contains("si3 h 0.0000005 0.01 1"));
+        assert!(deck.contains("sp3 d 0 3 1"));
+        assert!(deck.lines().all(|line| line.len() <= CARD_WIDTH));
     }
 }

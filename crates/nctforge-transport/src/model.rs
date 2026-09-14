@@ -109,31 +109,78 @@ impl FixedSourceDefinition {
             ));
         }
 
-        let (_, offset_cm, u_range_cm, v_range_cm) = self.space.plane_parts();
-        if !valid_interval(u_range_cm) || !valid_interval(v_range_cm) || !offset_cm.is_finite() {
-            return Err(TransportModelError::InvalidSourceSpace);
+        match &self.space {
+            SourceSpatialDistribution::UniformCartesianPlane { .. }
+            | SourceSpatialDistribution::UniformAxisPlane { .. } => {
+                let Some((_, offset_cm, u_range_cm, v_range_cm)) = self.space.plane_parts() else {
+                    return Err(TransportModelError::InvalidSourceSpace);
+                };
+                if !valid_interval(u_range_cm)
+                    || !valid_interval(v_range_cm)
+                    || !offset_cm.is_finite()
+                {
+                    return Err(TransportModelError::InvalidSourceSpace);
+                }
+            }
+            SourceSpatialDistribution::UniformDisk {
+                offset_cm,
+                center_uv_cm,
+                radius_cm,
+                ..
+            } => {
+                if !offset_cm.is_finite()
+                    || center_uv_cm.iter().any(|v| !v.is_finite())
+                    || !radius_cm.is_finite()
+                    || *radius_cm <= 0.0
+                {
+                    return Err(TransportModelError::InvalidSourceSpace);
+                }
+            }
         }
         match &self.angle {
             AngularDistribution::Monodirectional { unit_vector } => {
-                if unit_vector.iter().any(|value| !value.is_finite()) {
+                if !is_unit_vector(unit_vector) {
                     return Err(TransportModelError::InvalidSourceDirection);
                 }
-                let norm_squared = unit_vector[0].mul_add(
-                    unit_vector[0],
-                    unit_vector[1].mul_add(unit_vector[1], unit_vector[2] * unit_vector[2]),
-                );
-                if (norm_squared - 1.0).abs() > UNIT_VECTOR_TOLERANCE {
+            }
+            AngularDistribution::IsotropicCone {
+                axis_unit_vector,
+                half_angle_rad,
+            } => {
+                if !is_unit_vector(axis_unit_vector)
+                    || !half_angle_rad.is_finite()
+                    || *half_angle_rad <= 0.0
+                    || *half_angle_rad > std::f64::consts::PI
+                {
                     return Err(TransportModelError::InvalidSourceDirection);
                 }
             }
         }
-        match self.energy {
+        match &self.energy {
             EnergyDistribution::Monoenergetic { energy_ev }
-                if !energy_ev.is_finite() || energy_ev <= 0.0 =>
+                if !energy_ev.is_finite() || *energy_ev <= 0.0 =>
             {
                 return Err(TransportModelError::InvalidSourceEnergy);
             }
             EnergyDistribution::Monoenergetic { .. } => {}
+            EnergyDistribution::TabulatedHistogram {
+                energy_boundaries_ev,
+                bin_weights,
+            } => {
+                if energy_boundaries_ev.len() < 2
+                    || energy_boundaries_ev.len() != bin_weights.len() + 1
+                    || energy_boundaries_ev
+                        .iter()
+                        .any(|e| !e.is_finite() || *e <= 0.0)
+                    || energy_boundaries_ev
+                        .windows(2)
+                        .any(|pair| pair[0] >= pair[1])
+                    || bin_weights.iter().any(|w| !w.is_finite() || *w < 0.0)
+                    || bin_weights.iter().all(|w| *w == 0.0)
+                {
+                    return Err(TransportModelError::InvalidSourceEnergy);
+                }
+            }
         }
 
         Ok(())
@@ -169,6 +216,17 @@ pub enum SourceSpatialDistribution {
         offset_cm: f64,
         interval_convention: IntervalConvention,
     },
+    /// Uniform sampling over a bounded disk perpendicular to a world axis —
+    /// the natural form of a circular beam aperture. `center_uv_cm` is the
+    /// disk center in the plane's in-plane world coordinates (canonical
+    /// `(u, v)` order for `axis`); `offset_cm` is the world coordinate of
+    /// the disk plane along `axis`.
+    UniformDisk {
+        axis: PlaneAxis,
+        offset_cm: f64,
+        center_uv_cm: [f64; 2],
+        radius_cm: f64,
+    },
 }
 
 /// World axis a `UniformAxisPlane` is perpendicular to.
@@ -203,24 +261,47 @@ impl PlaneAxis {
 }
 
 impl SourceSpatialDistribution {
-    /// Normalize any planar variant to `(axis, offset_cm, u_range_cm,
-    /// v_range_cm)` in world coordinates.
+    /// Normalize a rectangular planar variant to `(axis, offset_cm,
+    /// u_range_cm, v_range_cm)` in world coordinates. `None` for
+    /// non-rectangular variants (`UniformDisk`) — callers must not fall
+    /// back to a bounding box, which would silently widen the aperture.
     #[must_use]
-    pub fn plane_parts(&self) -> (PlaneAxis, f64, [f64; 2], [f64; 2]) {
+    pub fn plane_parts(&self) -> Option<(PlaneAxis, f64, [f64; 2], [f64; 2])> {
         match *self {
             SourceSpatialDistribution::UniformCartesianPlane {
                 x_range_cm,
                 y_range_cm,
                 z_cm,
                 ..
-            } => (PlaneAxis::Z, z_cm, x_range_cm, y_range_cm),
+            } => Some((PlaneAxis::Z, z_cm, x_range_cm, y_range_cm)),
             SourceSpatialDistribution::UniformAxisPlane {
                 axis,
                 u_range_cm,
                 v_range_cm,
                 offset_cm,
                 ..
-            } => (axis, offset_cm, u_range_cm, v_range_cm),
+            } => Some((axis, offset_cm, u_range_cm, v_range_cm)),
+            SourceSpatialDistribution::UniformDisk { .. } => None,
+        }
+    }
+
+    /// The world axis the distribution's plane/disk is perpendicular to.
+    #[must_use]
+    pub fn axis(&self) -> PlaneAxis {
+        match self {
+            SourceSpatialDistribution::UniformCartesianPlane { .. } => PlaneAxis::Z,
+            SourceSpatialDistribution::UniformAxisPlane { axis, .. }
+            | SourceSpatialDistribution::UniformDisk { axis, .. } => *axis,
+        }
+    }
+
+    /// World coordinate of the plane/disk along its perpendicular axis.
+    #[must_use]
+    pub fn offset_cm(&self) -> f64 {
+        match self {
+            SourceSpatialDistribution::UniformCartesianPlane { z_cm, .. } => *z_cm,
+            SourceSpatialDistribution::UniformAxisPlane { offset_cm, .. }
+            | SourceSpatialDistribution::UniformDisk { offset_cm, .. } => *offset_cm,
         }
     }
 }
@@ -234,13 +315,34 @@ pub enum IntervalConvention {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum AngularDistribution {
-    Monodirectional { unit_vector: [f64; 3] },
+    Monodirectional {
+        unit_vector: [f64; 3],
+    },
+    /// Uniform in solid angle inside a cone of half-angle
+    /// `half_angle_rad` about `axis_unit_vector` — the divergence model
+    /// of a collimated beam. `half_angle_rad = π` is full-sphere
+    /// isotropic.
+    IsotropicCone {
+        axis_unit_vector: [f64; 3],
+        half_angle_rad: f64,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum EnergyDistribution {
-    Monoenergetic { energy_ev: f64 },
+    Monoenergetic {
+        energy_ev: f64,
+    },
+    /// Piecewise-uniform energy histogram: `energy_boundaries_ev` holds
+    /// `n+1` strictly increasing positive edges and `bin_weights` the `n`
+    /// bin probability masses (normalized by the sampler, not required to
+    /// sum to one). The admitted encoding for a tabulated facility-beam
+    /// spectrum.
+    TabulatedHistogram {
+        energy_boundaries_ev: Vec<f64>,
+        bin_weights: Vec<f64>,
+    },
 }
 
 /// Complete backend-neutral input to one transport preparation.
@@ -482,6 +584,17 @@ fn validate_identifier(label: &'static str, value: &str) -> Result<(), Transport
 
 fn valid_interval(interval: [f64; 2]) -> bool {
     interval.iter().all(|value| value.is_finite()) && interval[0] < interval[1]
+}
+
+fn is_unit_vector(vector: &[f64; 3]) -> bool {
+    if vector.iter().any(|value| !value.is_finite()) {
+        return false;
+    }
+    let norm_squared = vector[0].mul_add(
+        vector[0],
+        vector[1].mul_add(vector[1], vector[2] * vector[2]),
+    );
+    (norm_squared - 1.0).abs() <= UNIT_VECTOR_TOLERANCE
 }
 
 fn is_nuclide_name(name: &str) -> bool {

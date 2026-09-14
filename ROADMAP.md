@@ -639,6 +639,19 @@ prerequisites for starting external review.
   (published reference or measured characterization). Acceptance: schema,
   a published-beam registry encoding at least one literature epithermal
   beam with citation, and a transport case binding the beam that executes.
+  **Status: implemented.** `nctforge.beam-description/0.1.0` is live
+  (`beam.rs`); the transport model gained `uniform_disk` space,
+  `isotropic_cone` angle, and `tabulated_histogram` energy variants; the
+  OpenMC emitter maps them to `cylindrical`/`mu-phi`/`tabular`
+  distributions and the MCNP deck emitter to `POS/AXS/RAD`, `DIR` cosine
+  histograms, and `ERG` histograms; `nctforge beam info|list|bind` is on
+  the CLI; `beams/fir1-k63.json` encodes the FiR 1 K63 beam from
+  Seppälä (2002, HU-P-D103) group-integrated fluences and is labeled a
+  literature reconstruction. A bound FiR 1 case generated a deck and
+  executed a 5-batch OpenMC smoke run end-to-end. Also fixed a latent
+  emit bug: `reference_uvw` was written as an XML attribute that OpenMC
+  ignores (silent +z default — coincidentally correct for the benchmark's
+  beam); it is now emitted as the schema's child element.
 - **R6-02 — beam quality characterization.** IAEA TECDOC-1223-style
   metrics computed through the transport backend on declared standard
   geometry: in-air epithermal flux, fast-neutron and gamma contamination,

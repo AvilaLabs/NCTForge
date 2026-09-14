@@ -1,0 +1,585 @@
+// SPDX-License-Identifier: Apache-2.0
+
+//! Versioned facility-beam descriptions (`nctforge.beam-description`).
+//!
+//! A beam description is the transport-neutral record of a neutron or
+//! photon source term as delivered at a declared reference plane — the
+//! beam port or aperture of a facility. It carries the source
+//! distribution itself, the port geometry it is valid at, the declared
+//! physical normalization, and the provenance of every number (a
+//! published reference or a measured characterization).
+//!
+//! The description deliberately does not model upstream hardware
+//! (moderators, collimators, targets): those belong to the facility's
+//! own engineering model. The document describes the beam *as
+//! delivered*, which is what a verification workbench needs.
+
+use std::collections::BTreeSet;
+
+use nctforge_core::{GridGeometry, ValidationError};
+use serde::{Deserialize, Serialize};
+use thiserror::Error;
+
+use crate::model::{
+    AngularDistribution, FixedSourceDefinition, IntervalConvention, PlaneAxis,
+    SourceSpatialDistribution, TransportModelError,
+};
+
+pub const BEAM_DESCRIPTION_SCHEMA: &str = "nctforge.beam-description/0.1.0";
+
+/// A versioned, provenance-bound description of a facility beam at a
+/// reference plane.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct BeamDescription {
+    pub schema_version: String,
+    /// Stable document identifier, e.g. `nctforge.beam.fir1-k63.v1`.
+    pub id: String,
+    pub name: String,
+    /// Facility and host institution the beam belongs to.
+    pub facility: String,
+    /// Port/aperture geometry the source term is valid at.
+    pub port: PortGeometry,
+    /// Source term evaluated at the port reference plane. The source's
+    /// spatial distribution must reproduce the port shape exactly.
+    pub source: FixedSourceDefinition,
+    /// Physical normalization declared by the source reference. This is
+    /// carried for QA metrics and irradiation-time scaling; it never
+    /// changes per-particle Monte Carlo weights.
+    pub normalization: NormalizationBasis,
+    pub provenance: BeamProvenance,
+}
+
+/// The beam port or aperture: a world-axis-perpendicular reference
+/// plane carrying either a circular or rectangular opening.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PortGeometry {
+    pub axis: PlaneAxis,
+    /// World coordinate of the port plane along `axis`, cm.
+    pub offset_cm: f64,
+    pub shape: PortShape,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+pub enum PortShape {
+    Circle {
+        /// Port center in the plane's in-plane world coordinates.
+        center_uv_cm: [f64; 2],
+        radius_cm: f64,
+    },
+    Rectangle {
+        u_range_cm: [f64; 2],
+        v_range_cm: [f64; 2],
+    },
+}
+
+/// How the beam's physical strength is declared.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+pub enum NormalizationBasis {
+    /// Pure Monte Carlo unit normalization — results are per source
+    /// particle.
+    PerSourceParticle,
+    /// Declared total fluence rate through the port plane
+    /// (particles cm⁻² s⁻¹), integrated over the port area.
+    FluenceRateAtPort { fluence_rate_cm2_s: f64 },
+}
+
+/// Where every number in the beam description came from.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+pub enum BeamProvenance {
+    /// Encoded from a published reference (table, dissertation, or
+    /// supplementary data). `derivation_note` must state exactly which
+    /// quantities are measured, which are computed, and which are
+    /// assumed — including any within-group spectral shape that the
+    /// publication does not tabulate.
+    PublishedLiterature {
+        citations: Vec<Citation>,
+        derivation_note: String,
+    },
+    /// Encoded from a measured characterization dataset.
+    MeasuredCharacterization {
+        citations: Vec<Citation>,
+        derivation_note: String,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Citation {
+    pub authors: String,
+    pub title: String,
+    pub venue: String,
+    pub year: u32,
+    pub doi: Option<String>,
+    pub url: Option<String>,
+}
+
+impl BeamDescription {
+    pub fn validate(&self) -> Result<(), BeamError> {
+        if self.schema_version != BEAM_DESCRIPTION_SCHEMA {
+            return Err(BeamError::UnsupportedSchema(self.schema_version.clone()));
+        }
+        non_empty("beam.id", &self.id)?;
+        non_empty("beam.name", &self.name)?;
+        non_empty("beam.facility", &self.facility)?;
+        self.source.validate()?;
+        self.validate_port_consistency()?;
+        self.validate_normalization()?;
+        self.validate_provenance()?;
+        Ok(())
+    }
+
+    /// The port shape and the source's spatial distribution must
+    /// describe the same opening: identical axis, offset, and extents.
+    fn validate_port_consistency(&self) -> Result<(), BeamError> {
+        if self.port.axis != self.source.space.axis() {
+            return Err(BeamError::PortSourceMismatch("axis differs"));
+        }
+        if self.port.offset_cm != self.source.space.offset_cm() {
+            return Err(BeamError::PortSourceMismatch("offset differs"));
+        }
+        match (&self.port.shape, &self.source.space) {
+            (
+                PortShape::Circle {
+                    center_uv_cm,
+                    radius_cm,
+                },
+                SourceSpatialDistribution::UniformDisk {
+                    center_uv_cm: src_center,
+                    radius_cm: src_radius,
+                    ..
+                },
+            ) => {
+                if center_uv_cm != src_center {
+                    return Err(BeamError::PortSourceMismatch("center differs"));
+                }
+                if radius_cm != src_radius {
+                    return Err(BeamError::PortSourceMismatch("radius differs"));
+                }
+            }
+            (
+                PortShape::Rectangle {
+                    u_range_cm,
+                    v_range_cm,
+                },
+                space,
+            ) => {
+                let Some((_, _, u, v)) = space.plane_parts() else {
+                    return Err(BeamError::PortSourceMismatch(
+                        "rectangular port requires a rectangular source plane",
+                    ));
+                };
+                if *u_range_cm != u || *v_range_cm != v {
+                    return Err(BeamError::PortSourceMismatch("aperture extents differ"));
+                }
+            }
+            (PortShape::Circle { .. }, _) => {
+                return Err(BeamError::PortSourceMismatch(
+                    "circular port requires a uniform_disk source",
+                ));
+            }
+        }
+        // The beam must propagate through the port: the axis of symmetry
+        // of the angular distribution must be parallel to the port normal.
+        let mut normal = [0.0; 3];
+        normal[self.port.axis.index()] = 1.0;
+        let axis_vector = match &self.source.angle {
+            AngularDistribution::Monodirectional { unit_vector } => unit_vector,
+            AngularDistribution::IsotropicCone {
+                axis_unit_vector, ..
+            } => axis_unit_vector,
+        };
+        let dot: f64 = axis_vector
+            .iter()
+            .zip(normal.iter())
+            .map(|(a, b)| a * b)
+            .sum();
+        if dot.abs() < 1.0 - 1.0e-9 {
+            return Err(BeamError::NonAxialBeamDirection);
+        }
+        if let AngularDistribution::IsotropicCone { half_angle_rad, .. } = &self.source.angle {
+            // A cone wider than a half-space emits sites traveling back
+            // through the port plane.
+            if *half_angle_rad > std::f64::consts::FRAC_PI_2 {
+                return Err(BeamError::NonAxialBeamDirection);
+            }
+        }
+        Ok(())
+    }
+
+    fn validate_normalization(&self) -> Result<(), BeamError> {
+        if let NormalizationBasis::FluenceRateAtPort { fluence_rate_cm2_s } = self.normalization
+            && (!fluence_rate_cm2_s.is_finite() || fluence_rate_cm2_s <= 0.0)
+        {
+            return Err(BeamError::InvalidNormalization);
+        }
+        Ok(())
+    }
+
+    fn validate_provenance(&self) -> Result<(), BeamError> {
+        let (citations, note) = match &self.provenance {
+            BeamProvenance::PublishedLiterature {
+                citations,
+                derivation_note,
+            }
+            | BeamProvenance::MeasuredCharacterization {
+                citations,
+                derivation_note,
+            } => (citations, derivation_note),
+        };
+        if citations.is_empty() {
+            return Err(BeamError::InvalidCitation);
+        }
+        let mut seen = BTreeSet::new();
+        for citation in citations {
+            if citation.authors.trim().is_empty()
+                || citation.title.trim().is_empty()
+                || citation.venue.trim().is_empty()
+                || !(1800..=2200).contains(&citation.year)
+                || !seen.insert((
+                    citation.title.trim().to_string(),
+                    citation.venue.trim().to_string(),
+                    citation.year,
+                ))
+            {
+                return Err(BeamError::InvalidCitation);
+            }
+        }
+        if note.trim().is_empty() {
+            return Err(BeamError::InvalidCitation);
+        }
+        Ok(())
+    }
+}
+
+fn non_empty(label: &'static str, value: &str) -> Result<(), BeamError> {
+    if value.trim().is_empty() {
+        Err(BeamError::EmptyIdentifier(label))
+    } else {
+        Ok(())
+    }
+}
+
+/// Distance inside the bounding-box face at which a bound source plane is
+/// placed (cm) — the same convention the frozen benchmark cases use.
+const BIND_PLANE_MARGIN_CM: f64 = 1.0e-6;
+
+impl BeamDescription {
+    /// Reposition this beam's source term onto a transport case: the port
+    /// plane is placed just inside the bounding-box face the beam enters
+    /// (sign of the port-axis propagation picks the side), with the port
+    /// centered on that face. The port aperture keeps its declared size;
+    /// if it does not fit inside the face the bind is rejected rather
+    /// than silently clipped. The returned source keeps the beam
+    /// document's `source.id`, preserving provenance into the case.
+    pub fn bound_source(
+        &self,
+        geometry: &GridGeometry,
+    ) -> Result<FixedSourceDefinition, BeamError> {
+        self.validate()?;
+        let (minimum, maximum) = geometry.bounding_box_lps_mm()?;
+        let axis_index = self.port.axis.index();
+        let (u_axis, v_axis) = self.port.axis.in_plane_axes();
+
+        let axis_vector = match &self.source.angle {
+            AngularDistribution::Monodirectional { unit_vector } => unit_vector,
+            AngularDistribution::IsotropicCone {
+                axis_unit_vector, ..
+            } => axis_unit_vector,
+        };
+        // Coaxial with the port normal (validated): sign picks the face.
+        let offset_cm = if axis_vector[axis_index] > 0.0 {
+            minimum[axis_index] / 10.0 + BIND_PLANE_MARGIN_CM
+        } else {
+            maximum[axis_index] / 10.0 - BIND_PLANE_MARGIN_CM
+        };
+        let u_center = (minimum[u_axis] + maximum[u_axis]) / 20.0;
+        let v_center = (minimum[v_axis] + maximum[v_axis]) / 20.0;
+        let u_half_face = (maximum[u_axis] - minimum[u_axis]) / 20.0;
+        let v_half_face = (maximum[v_axis] - minimum[v_axis]) / 20.0;
+
+        let mut source = self.source.clone();
+        source.space = match &self.port.shape {
+            PortShape::Circle { radius_cm, .. } => {
+                if *radius_cm > u_half_face + 1.0e-9 || *radius_cm > v_half_face + 1.0e-9 {
+                    return Err(BeamError::PortOutsideFace);
+                }
+                SourceSpatialDistribution::UniformDisk {
+                    axis: self.port.axis,
+                    offset_cm,
+                    center_uv_cm: [u_center, v_center],
+                    radius_cm: *radius_cm,
+                }
+            }
+            PortShape::Rectangle {
+                u_range_cm,
+                v_range_cm,
+            } => {
+                let u_half = (u_range_cm[1] - u_range_cm[0]) / 2.0;
+                let v_half = (v_range_cm[1] - v_range_cm[0]) / 2.0;
+                if u_half > u_half_face + 1.0e-9 || v_half > v_half_face + 1.0e-9 {
+                    return Err(BeamError::PortOutsideFace);
+                }
+                SourceSpatialDistribution::UniformAxisPlane {
+                    axis: self.port.axis,
+                    u_range_cm: [u_center - u_half, u_center + u_half],
+                    v_range_cm: [v_center - v_half, v_center + v_half],
+                    offset_cm,
+                    interval_convention: IntervalConvention::HalfOpen,
+                }
+            }
+        };
+        Ok(source)
+    }
+}
+
+#[derive(Debug, Error)]
+pub enum BeamError {
+    #[error(transparent)]
+    Model(#[from] TransportModelError),
+    #[error(transparent)]
+    Validation(#[from] ValidationError),
+    #[error("required identifier {0} is empty")]
+    EmptyIdentifier(&'static str),
+    #[error("unsupported beam-description schema {0:?}; expected {BEAM_DESCRIPTION_SCHEMA:?}")]
+    UnsupportedSchema(String),
+    #[error("port geometry and source spatial distribution disagree: {0}")]
+    PortSourceMismatch(&'static str),
+    #[error(
+        "beam angular distribution must be coaxial with the port normal and must not emit \
+         upstream of the reference plane"
+    )]
+    NonAxialBeamDirection,
+    #[error("normalization fluence rate must be finite and greater than zero cm^-2 s^-1")]
+    InvalidNormalization,
+    #[error("port aperture does not fit inside the case bounding-box entry face")]
+    PortOutsideFace,
+    #[error(
+        "provenance requires at least one citation with non-empty authors/title/venue, a plausible \
+         year, and a non-empty derivation note"
+    )]
+    InvalidCitation,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::model::{
+        EnergyDistribution, IntervalConvention, MaterialDefinition, NeutronThermalTreatment,
+        NuclideMassFraction, ParticleType, TransportCase,
+    };
+    use nctforge_core::GridGeometry;
+
+    fn cone_source() -> FixedSourceDefinition {
+        FixedSourceDefinition {
+            schema_version: "nctforge.fixed-source-definition/0.1.0".into(),
+            id: "beam.test.v1".into(),
+            particle: ParticleType::Neutron,
+            source_sites_per_history: 1,
+            statistical_weight_per_site: 1.0,
+            space: SourceSpatialDistribution::UniformDisk {
+                axis: PlaneAxis::Z,
+                offset_cm: 0.0,
+                center_uv_cm: [0.0, 0.0],
+                radius_cm: 7.0,
+            },
+            angle: AngularDistribution::IsotropicCone {
+                axis_unit_vector: [0.0, 0.0, 1.0],
+                half_angle_rad: 1.0002,
+            },
+            energy: EnergyDistribution::TabulatedHistogram {
+                energy_boundaries_ev: vec![1.0e-5, 0.5, 1.0e4, 1.69e7],
+                bin_weights: vec![0.0611, 0.9093, 0.0296],
+            },
+        }
+    }
+
+    fn citation() -> Citation {
+        Citation {
+            authors: "Seppälä, T.".into(),
+            title: "FiR 1 epithermal neutron beam model".into(),
+            venue: "University of Helsinki".into(),
+            year: 2002,
+            doi: None,
+            url: Some("http://hdl.handle.net/10138/23247".into()),
+        }
+    }
+
+    fn beam() -> BeamDescription {
+        BeamDescription {
+            schema_version: BEAM_DESCRIPTION_SCHEMA.into(),
+            id: "nctforge.beam.test.v1".into(),
+            name: "test beam".into(),
+            facility: "test facility".into(),
+            port: PortGeometry {
+                axis: PlaneAxis::Z,
+                offset_cm: 0.0,
+                shape: PortShape::Circle {
+                    center_uv_cm: [0.0, 0.0],
+                    radius_cm: 7.0,
+                },
+            },
+            source: cone_source(),
+            normalization: NormalizationBasis::FluenceRateAtPort {
+                fluence_rate_cm2_s: 1.1769e9,
+            },
+            provenance: BeamProvenance::PublishedLiterature {
+                citations: vec![citation()],
+                derivation_note: "test note".into(),
+            },
+        }
+    }
+
+    #[test]
+    fn valid_beam_passes() {
+        beam().validate().unwrap();
+    }
+
+    #[test]
+    fn port_radius_mismatch_rejected() {
+        let mut b = beam();
+        b.port.shape = PortShape::Circle {
+            center_uv_cm: [0.0, 0.0],
+            radius_cm: 8.0,
+        };
+        assert!(matches!(
+            b.validate().unwrap_err(),
+            BeamError::PortSourceMismatch("radius differs")
+        ));
+    }
+
+    #[test]
+    fn non_axial_direction_rejected() {
+        let mut b = beam();
+        b.source.angle = AngularDistribution::IsotropicCone {
+            axis_unit_vector: [1.0, 0.0, 0.0],
+            half_angle_rad: 0.5,
+        };
+        assert!(matches!(
+            b.validate().unwrap_err(),
+            BeamError::NonAxialBeamDirection
+        ));
+    }
+
+    #[test]
+    fn upstream_cone_rejected() {
+        let mut b = beam();
+        b.source.angle = AngularDistribution::IsotropicCone {
+            axis_unit_vector: [0.0, 0.0, 1.0],
+            half_angle_rad: 2.0,
+        };
+        assert!(matches!(
+            b.validate().unwrap_err(),
+            BeamError::NonAxialBeamDirection
+        ));
+    }
+
+    #[test]
+    fn bad_histogram_rejected() {
+        let mut b = beam();
+        b.source.energy = EnergyDistribution::TabulatedHistogram {
+            energy_boundaries_ev: vec![1.0, 0.5, 0.25],
+            bin_weights: vec![0.5, 0.5],
+        };
+        assert!(matches!(
+            b.validate().unwrap_err(),
+            BeamError::Model(TransportModelError::InvalidSourceEnergy)
+        ));
+    }
+
+    #[test]
+    fn missing_citation_rejected() {
+        let mut b = beam();
+        b.provenance = BeamProvenance::PublishedLiterature {
+            citations: vec![],
+            derivation_note: "note".into(),
+        };
+        assert!(matches!(
+            b.validate().unwrap_err(),
+            BeamError::InvalidCitation
+        ));
+    }
+
+    #[test]
+    fn bound_source_lands_on_entry_face() {
+        let geometry = GridGeometry {
+            shape: [40, 40, 40],
+            spacing_mm: [5.0; 3],
+            origin_mm: [-97.5, -97.5, -97.5],
+            direction: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
+        };
+        let source = beam().bound_source(&geometry).unwrap();
+        // +z propagation -> low-z face at -10.0 cm, plane just inside.
+        let SourceSpatialDistribution::UniformDisk {
+            axis,
+            offset_cm,
+            center_uv_cm,
+            radius_cm,
+        } = source.space
+        else {
+            panic!("expected uniform_disk");
+        };
+        assert_eq!(axis, PlaneAxis::Z);
+        assert!((offset_cm - (-9.999999)).abs() < 1.0e-12);
+        assert_eq!(center_uv_cm, [0.0, 0.0]);
+        assert_eq!(radius_cm, 7.0);
+        // Provenance link: bound source keeps the beam document's id.
+        assert_eq!(source.id, "beam.test.v1");
+
+        // Port too large for the face is rejected, not clipped.
+        let mut big = beam();
+        big.port.shape = PortShape::Circle {
+            center_uv_cm: [0.0, 0.0],
+            radius_cm: 15.0,
+        };
+        big.source.space = SourceSpatialDistribution::UniformDisk {
+            axis: PlaneAxis::Z,
+            offset_cm: 0.0,
+            center_uv_cm: [0.0, 0.0],
+            radius_cm: 15.0,
+        };
+        assert!(matches!(
+            big.bound_source(&geometry).unwrap_err(),
+            BeamError::PortOutsideFace
+        ));
+    }
+
+    #[test]
+    fn bound_source_validates_in_case() {
+        let mut case = TransportCase {
+            schema_version: "nctforge.transport-case/0.1.0".into(),
+            case_id: "beam.test.v1".into(),
+            geometry: GridGeometry {
+                shape: [2, 2, 2],
+                spacing_mm: [10.0; 3],
+                origin_mm: [-5.0, -5.0, -5.0],
+                direction: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
+            },
+            material: MaterialDefinition {
+                schema_version: "nctforge.material-definition/0.1.0".into(),
+                id: "test.material.v1".into(),
+                density_g_cm3: 1.0,
+                temperature_k: 293.6,
+                nuclides: vec![NuclideMassFraction {
+                    name: "H1".into(),
+                    mass_fraction: 1.0,
+                }],
+                neutron_thermal_treatment: NeutronThermalTreatment::FreeGas,
+            },
+            source: beam().source,
+            requested_histories: 1000,
+        };
+        case.source.space = SourceSpatialDistribution::UniformAxisPlane {
+            axis: PlaneAxis::Z,
+            u_range_cm: [-7.0, 7.0],
+            v_range_cm: [-7.0, 7.0],
+            offset_cm: -0.05,
+            interval_convention: IntervalConvention::HalfOpen,
+        };
+        case.validate().unwrap();
+    }
+}

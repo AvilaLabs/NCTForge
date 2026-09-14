@@ -78,6 +78,9 @@ enum Command {
     Backends,
     /// Generate or verify frozen public benchmark cases.
     Benchmark(BenchmarkArgs),
+    /// Inspect and bind versioned facility beam descriptions
+    /// (`nctforge.beam-description/0.1.0`).
+    Beam(BeamArgs),
     /// Prepare and audit OpenMC-specific research artifacts.
     Openmc(OpenMcArgs),
     /// Prepare deterministic NJOY response-generation artifacts.
@@ -243,6 +246,43 @@ enum EndpointCommand {
         #[arg(long)]
         combination: String,
         /// New output path for the UTCP evaluation JSON.
+        #[arg(long)]
+        output: PathBuf,
+    },
+}
+
+#[derive(Debug, Args)]
+struct BeamArgs {
+    #[command(subcommand)]
+    command: BeamCommand,
+}
+
+#[derive(Debug, Subcommand)]
+enum BeamCommand {
+    /// Validate a beam-description JSON and print its declared beam.
+    Info {
+        /// `nctforge.beam-description/0.1.0` JSON document.
+        #[arg(long)]
+        beam: PathBuf,
+    },
+    /// List every valid beam description found in a registry directory.
+    List {
+        /// Directory of beam-description JSON files (repo `beams/` when
+        /// invoked from the repository root).
+        #[arg(long, default_value = "beams")]
+        registry: PathBuf,
+    },
+    /// Bind a beam description to a transport case: writes a new case
+    /// JSON whose source is placed just inside the entry face, centered
+    /// on that face, with the declared port aperture.
+    Bind {
+        /// `nctforge.beam-description/0.1.0` JSON document.
+        #[arg(long)]
+        beam: PathBuf,
+        /// `nctforge.transport-case/0.1.0` JSON the beam enters.
+        #[arg(long)]
+        case: PathBuf,
+        /// New output path for the bound transport-case JSON.
         #[arg(long)]
         output: PathBuf,
     },
@@ -2009,6 +2049,60 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                 }
                 println!("assignment: {}", output_assignment.display());
                 println!("derived case: {}", output_case.display());
+            }
+        },
+        Some(Command::Beam(args)) => match args.command {
+            BeamCommand::Info { beam } => {
+                let beam: nctforge_transport::BeamDescription =
+                    serde_json::from_slice(&fs::read(&beam)?)?;
+                beam.validate()
+                    .map_err(|error| io::Error::other(format!("beam: {error}")))?;
+                print_beam_summary(&beam);
+            }
+            BeamCommand::List { registry } => {
+                let mut entries: Vec<PathBuf> = fs::read_dir(&registry)?
+                    .filter_map(|entry| entry.ok().map(|entry| entry.path()))
+                    .filter(|path| {
+                        path.extension().is_some_and(|ext| ext == "json")
+                            && path.file_name().is_some_and(|name| name != "manifest.json")
+                    })
+                    .collect();
+                entries.sort();
+                if entries.is_empty() {
+                    println!("no beam descriptions in {}", registry.display());
+                }
+                for path in entries {
+                    match serde_json::from_slice::<nctforge_transport::BeamDescription>(&fs::read(
+                        &path,
+                    )?) {
+                        Ok(beam) => match beam.validate() {
+                            Ok(()) => {
+                                println!("{} — {}", beam.id, path.display());
+                                println!("  {} · {}", beam.name, beam.facility);
+                            }
+                            Err(error) => {
+                                println!("{} — INVALID: {error}", path.display())
+                            }
+                        },
+                        Err(error) => {
+                            println!("{} — unreadable: {error}", path.display())
+                        }
+                    }
+                }
+            }
+            BeamCommand::Bind { beam, case, output } => {
+                let beam: nctforge_transport::BeamDescription =
+                    serde_json::from_slice(&fs::read(&beam)?)?;
+                let mut bound: TransportCase = serde_json::from_slice(&fs::read(&case)?)?;
+                bound.source = beam
+                    .bound_source(&bound.geometry)
+                    .map_err(|error| io::Error::other(format!("beam bind: {error}")))?;
+                bound
+                    .validate()
+                    .map_err(|error| io::Error::other(format!("bound case is invalid: {error}")))?;
+                write_new_json(&output, &bound)?;
+                println!("bound {} onto {}", beam.id, bound.case_id);
+                println!("case: {}", output.display());
             }
         },
         Some(Command::Openmc(args)) => match args.command {
@@ -5177,6 +5271,52 @@ fn write_new_text(path: &Path, bytes: &[u8]) -> io::Result<()> {
         .open(path)?;
     file.write_all(bytes)?;
     file.sync_all()
+}
+
+fn print_beam_summary(beam: &nctforge_transport::BeamDescription) {
+    println!("beam: {}", beam.id);
+    println!("name: {}", beam.name);
+    println!("facility: {}", beam.facility);
+    println!(
+        "port: {:?} axis at {} cm",
+        beam.port.axis, beam.port.offset_cm
+    );
+    match &beam.port.shape {
+        nctforge_transport::PortShape::Circle {
+            center_uv_cm,
+            radius_cm,
+        } => println!("  shape: circle r={radius_cm} cm at {center_uv_cm:?}"),
+        nctforge_transport::PortShape::Rectangle {
+            u_range_cm,
+            v_range_cm,
+        } => println!("  shape: rectangle {u_range_cm:?} x {v_range_cm:?} cm"),
+    }
+    match &beam.normalization {
+        nctforge_transport::NormalizationBasis::PerSourceParticle => {
+            println!("normalization: per source particle")
+        }
+        nctforge_transport::NormalizationBasis::FluenceRateAtPort { fluence_rate_cm2_s } => {
+            println!("normalization: {fluence_rate_cm2_s} cm^-2 s^-1 at port")
+        }
+    }
+    let (kind, citations) = match &beam.provenance {
+        nctforge_transport::BeamProvenance::PublishedLiterature { citations, .. } => {
+            ("published literature", citations)
+        }
+        nctforge_transport::BeamProvenance::MeasuredCharacterization { citations, .. } => {
+            ("measured characterization", citations)
+        }
+    };
+    println!("provenance: {kind}");
+    for citation in citations {
+        println!(
+            "  {} ({}), {} — {}",
+            citation.authors, citation.year, citation.venue, citation.title
+        );
+        if let Some(doi) = &citation.doi {
+            println!("    doi:{doi}");
+        }
+    }
 }
 
 fn write_new_json<T: serde::Serialize>(path: &Path, value: &T) -> io::Result<()> {
