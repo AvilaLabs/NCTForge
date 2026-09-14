@@ -43,7 +43,8 @@ bundling those systems.
   (passed).
 - **Component dosimetry** — four-component physical dose (boron, nitrogen,
   hydrogen, photon) with absolute voxel uncertainty; DVH, `D_x`/`V_x`/EUD
-  region metrics, mask operations, CT-threshold regions, NIfTI I/O.
+  region metrics, mask operations, CT-threshold regions, NIfTI I/O, rigid
+  image registration with provenance.
 - **Biological interpretation** — versioned model families (weighted,
   photon-isoeffective, fractionation), sensitivity sweeps, endpoint models
   (logistic/probit TCP/NTCP, voxel-Poisson, UTCP), BED/EQD2 conversion —

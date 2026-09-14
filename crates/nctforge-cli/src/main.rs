@@ -18,7 +18,9 @@ use nctforge_bio::{
 use nctforge_core::{ExposurePlan, PhysicalDoseBundle, ResampleMethod};
 use nctforge_dicom::synthetic::generate_nf_bnct_001;
 use nctforge_dicom::{load_nf_bnct_001, verify_nf_bnct_001};
-use nctforge_nifti::read_nifti_file;
+use nctforge_nifti::{
+    Interpolation, NiftiImage, read_nifti_file, read_target_geometry, resample_to_grid, write_nifti,
+};
 use nctforge_njoy::{
     DEFAULT_CAPTURE_ENERGY_BALANCE_RELATIVE_TOLERANCE,
     DEFAULT_LAW7_BREAKUP_NORMALIZATION_TOLERANCE, DEFAULT_LAW7_BREAKUP_RELATIVE_ENERGY_TOLERANCE,
@@ -187,6 +189,10 @@ enum Command {
     /// Score a TCP/NTCP endpoint model over a dose volume, or combine a
     /// TCP and NTCP evaluation into a UTCP report.
     Endpoint(EndpointArgs),
+    /// Rigid image co-registration: landmark fitting, declared
+    /// transforms, and transform application to NIfTI volumes
+    /// (`nctforge.registration/0.1.0`).
+    Register(RegisterArgs),
     /// Evaluate organ-limited irradiation time over a per-source-particle
     /// dose endpoint, reporting the limiting structure and assumptions.
     IrradiationTime {
@@ -252,6 +258,92 @@ enum EndpointCommand {
         #[arg(long)]
         combination: String,
         /// New output path for the UTCP evaluation JSON.
+        #[arg(long)]
+        output: PathBuf,
+    },
+}
+
+#[derive(Debug, Args)]
+struct RegisterArgs {
+    #[command(subcommand)]
+    command: RegisterCommand,
+}
+
+#[derive(Debug, Subcommand)]
+enum RegisterCommand {
+    /// Fit a rigid transform over paired landmarks (closed-form least
+    /// squares) and emit a registration document.
+    Landmarks {
+        /// JSON array of landmark pairs
+        /// (`{name?, moving_lps_mm, fixed_lps_mm}` in millimetres).
+        #[arg(long)]
+        pairs: PathBuf,
+        /// Registration id.
+        #[arg(long)]
+        id: String,
+        /// Moving image file whose content hash is bound into the
+        /// record (any file; typically `.nii`).
+        #[arg(long)]
+        moving: Option<PathBuf>,
+        /// Fixed (target) image file whose content hash is bound.
+        #[arg(long)]
+        fixed: Option<PathBuf>,
+        /// Free-text provenance note (fiducial system, method).
+        #[arg(long)]
+        note: Option<String>,
+        /// New output path for the registration JSON.
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Record an operator-declared rigid transform (e.g. transcribed
+    /// from an external system's registration matrix).
+    Declare {
+        /// Registration id.
+        #[arg(long)]
+        id: String,
+        /// Row-major rotation as nine comma-separated values.
+        #[arg(long, value_delimiter = ',')]
+        rotation: Vec<f64>,
+        /// Translation in millimetres as three comma-separated values.
+        #[arg(long, value_delimiter = ',')]
+        translation_mm: Vec<f64>,
+        /// Moving image file whose content hash is bound into the
+        /// record.
+        #[arg(long)]
+        moving: Option<PathBuf>,
+        /// Fixed (target) image file whose content hash is bound.
+        #[arg(long)]
+        fixed: Option<PathBuf>,
+        /// Free-text provenance note (external tool, version).
+        #[arg(long)]
+        note: Option<String>,
+        /// New output path for the registration JSON.
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Print a registration document's transform and evidence.
+    Info {
+        /// `nctforge.registration/0.1.0` JSON document.
+        #[arg(long)]
+        registration: PathBuf,
+    },
+    /// Resample a moving NIfTI volume onto a target grid through the
+    /// registered transform.
+    Apply {
+        /// Moving NIfTI volume (`.nii` or `.nii.gz`).
+        #[arg(long)]
+        moving: PathBuf,
+        /// `nctforge.registration/0.1.0` JSON document.
+        #[arg(long)]
+        registration: PathBuf,
+        /// Target grid source: a transport-case or dose-bundle JSON.
+        #[arg(long)]
+        target_grid: PathBuf,
+        /// Interpolation: `trilinear` (default) or `nearest` (masks,
+        /// label images).
+        #[arg(long, default_value = "trilinear")]
+        interpolation: String,
+        /// New output path for the resampled NIfTI volume.
         #[arg(long)]
         output: PathBuf,
     },
@@ -5690,6 +5782,138 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                 println!("qualification: {}", evaluation.qualification);
             }
         },
+        Some(Command::Register(args)) => match args.command {
+            RegisterCommand::Landmarks {
+                pairs,
+                id,
+                moving,
+                fixed,
+                note,
+                output,
+            } => {
+                let pairs: Vec<nctforge_core::LandmarkPair> =
+                    serde_json::from_slice(&fs::read(&pairs)?)?;
+                let moving = image_reference(&moving)?;
+                let fixed = image_reference(&fixed)?;
+                let registration =
+                    nctforge_core::landmark_registration(id, moving, fixed, pairs, note)?;
+                write_new_json(&output, &registration)?;
+                println!("registration at {}", output.display());
+                println!("method: landmark_least_squares");
+                println!(
+                    "landmarks: {}",
+                    registration.landmarks.as_ref().map_or(0, Vec::len)
+                );
+                println!(
+                    "rms residual: {:.6} mm",
+                    registration.rms_residual_mm.unwrap_or(f64::NAN)
+                );
+            }
+            RegisterCommand::Declare {
+                id,
+                rotation,
+                translation_mm,
+                moving,
+                fixed,
+                note,
+                output,
+            } => {
+                if rotation.len() != 9 || translation_mm.len() != 3 {
+                    return Err(io::Error::other(
+                        "--rotation takes nine comma-separated values and --translation-mm three",
+                    )
+                    .into());
+                }
+                let transform = nctforge_core::RigidTransform {
+                    rotation: rotation.try_into().unwrap(),
+                    translation_mm: translation_mm.try_into().unwrap(),
+                };
+                let registration = nctforge_core::declared_registration(
+                    id,
+                    image_reference(&moving)?,
+                    image_reference(&fixed)?,
+                    transform,
+                    note,
+                )?;
+                write_new_json(&output, &registration)?;
+                println!("registration at {}", output.display());
+                println!("method: declared");
+            }
+            RegisterCommand::Info { registration } => {
+                let registration: nctforge_core::Registration =
+                    serde_json::from_slice(&fs::read(&registration)?)?;
+                registration.validate()?;
+                println!("id: {}", registration.id);
+                println!("method: {:?}", registration.method);
+                println!(
+                    "rotation (row-major): {:?}",
+                    registration.transform.rotation
+                );
+                println!(
+                    "translation mm: {:?}",
+                    registration.transform.translation_mm
+                );
+                if let Some(rms) = registration.rms_residual_mm {
+                    println!("rms residual: {rms:.6} mm");
+                }
+                for (label, reference) in [
+                    ("moving", &registration.moving),
+                    ("fixed", &registration.fixed),
+                ] {
+                    if let Some(reference) = reference {
+                        println!("{label}: {} sha256:{}", reference.id, reference.sha256);
+                    }
+                }
+                if let Some(note) = &registration.note {
+                    println!("note: {note}");
+                }
+            }
+            RegisterCommand::Apply {
+                moving,
+                registration,
+                target_grid,
+                interpolation,
+                output,
+            } => {
+                let registration: nctforge_core::Registration =
+                    serde_json::from_slice(&fs::read(&registration)?)?;
+                registration.validate()?;
+                let interpolation = match interpolation.as_str() {
+                    "trilinear" => Interpolation::Trilinear,
+                    "nearest" => Interpolation::Nearest,
+                    other => {
+                        return Err(io::Error::other(format!(
+                            "unknown interpolation {other:?}; use trilinear or nearest"
+                        ))
+                        .into());
+                    }
+                };
+                let mut image = read_nifti_file(&moving)?;
+                // Registration moves the volume's patient-space frame;
+                // the voxel data itself is unchanged.
+                image.geometry = registration.transform.apply_to_geometry(&image.geometry);
+                let target = read_target_geometry(&target_grid)?;
+                let values = resample_to_grid(&image, &target, interpolation);
+                let resampled = NiftiImage {
+                    geometry: target,
+                    values,
+                    datatype: 64,
+                    transform_source: "sform",
+                    description: format!(
+                        "resampled under registration {} ({:?})",
+                        registration.id, registration.method
+                    ),
+                    intent_name: image.intent_name.clone(),
+                    units_declared_mm: true,
+                };
+                write_nifti(&resampled, &output)?;
+                println!("resampled volume at {}", output.display());
+                println!(
+                    "registration: {} ({:?})",
+                    registration.id, registration.method
+                );
+            }
+        },
         Some(Command::Position(args)) => match args.command {
             PositionCommand::Aim {
                 case,
@@ -5913,6 +6137,23 @@ fn write_new_json<T: serde::Serialize>(path: &Path, value: &T) -> io::Result<()>
     serde_json::to_writer_pretty(&mut file, value)?;
     file.write_all(b"\n")?;
     file.sync_all()
+}
+
+/// Content-bind an image file for a registration record: the file's
+/// name as id and a SHA-256 of its bytes.
+fn image_reference(
+    path: &Option<PathBuf>,
+) -> Result<Option<nctforge_core::ContentReference>, io::Error> {
+    path.as_ref()
+        .map(|path| {
+            let sha256 = nctforge_evidence::sha256_file(path)?;
+            let id = path
+                .file_name()
+                .map(|name| name.to_string_lossy().into_owned())
+                .unwrap_or_else(|| path.display().to_string());
+            Ok(nctforge_core::ContentReference { id, sha256 })
+        })
+        .transpose()
 }
 
 fn load_named_masks(pairs: &[String]) -> Result<Vec<RegionMask>, io::Error> {

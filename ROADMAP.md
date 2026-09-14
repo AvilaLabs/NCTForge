@@ -724,9 +724,20 @@ prerequisites for starting external review.
   ratio, compartment pharmacokinetics, time-dependent washout) producing
   boron fields with stated uncertainty. Depends on R6-07 for co-registering
   the PET volume to the case CT.
-- **R6-07 — rigid registration.** CT/MRI/PET rigid co-registration with
-  transform provenance bound into evidence. Acceptance: landmark-based
-  synthetic cases recovered within declared tolerance.
+- **R6-07 — rigid registration.** *(implemented)*
+  `nctforge.registration/0.1.0` records a moving→fixed rigid transform
+  (LPS mm, row-major 3×3 rotation + translation) with optional
+  content-bound moving/fixed image references. Two construction paths:
+  `landmark_least_squares` (Horn's closed-form quaternion fit over ≥3
+  non-degenerate landmark pairs, storing the pairs and the RMS residual
+  as evidence) and `declared` (operator-transcribed transform requiring
+  an explicit provenance note — no landmark evidence is fabricated).
+  `nctforge register landmarks|declare|info|apply` covers creation,
+  inspection, and NIfTI resampling onto a transport-case or dose-bundle
+  grid (trilinear or nearest). Synthetic landmark cases recover exact
+  transforms to ~1e-15 rad / machine-precision residuals; validation
+  rejects non-orthonormal rotations, reflections, degenerate point sets,
+  and declared transforms without provenance.
 - **R6-08 — systematic uncertainty propagation.** Beyond Monte Carlo
   statistics: declared boron-concentration, model-parameter, and
   positioning uncertainties propagated into component-dose and endpoint

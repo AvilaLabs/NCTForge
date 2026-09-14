@@ -859,6 +859,51 @@ trilinear). The affine handling is
 regression-tested against independent `nibabel` output including oblique
 sforms, and `.nii.gz` round-trips are verified in both directions.
 
+### Rigid registration
+
+`nctforge register` records rigid co-registrations between image volumes
+(e.g. CT↔PET for boron mapping) as versioned
+`nctforge.registration/0.1.0` documents. The transform maps moving-image
+patient coordinates (LPS mm) onto the fixed image's frame; the document
+optionally content-binds both source images by SHA-256. Two construction
+paths exist:
+
+- `landmarks` fits the closed-form least-squares rigid transform (Horn's
+  quaternion method) over three or more non-degenerate landmark pairs —
+  a JSON array of `moving_lps_mm`/`fixed_lps_mm` points — and stores the
+  pairs plus the RMS residual as evidence.
+- `declare` records an operator-transcribed transform (e.g. a matrix
+  exported from an external registration tool). It requires a provenance
+  note stating where the numbers came from; no landmark evidence is
+  fabricated for declared transforms.
+
+```text
+nctforge register landmarks \
+  --pairs LANDMARKS.json --id REG-001 \
+  --moving PET.nii.gz --fixed CT-STACK.nii.gz \
+  --note "fiducial + anatomy picks, OPERATOR, DATE" \
+  --output NEW-REGISTRATION.json
+nctforge register declare \
+  --id REG-002 --rotation "1,0,0,0,1,0,0,0,1" \
+  --translation-mm "0,0,0" \
+  --note "identity: PET and CT acquired in one session" \
+  --output NEW-REGISTRATION.json
+nctforge register info --registration REGISTRATION.json
+nctforge register apply \
+  --moving PET.nii.gz --registration REGISTRATION.json \
+  --target-grid DOSE-BUNDLE.json \
+  --interpolation trilinear --output NEW-PET-ON-GRID.nii.gz
+```
+
+`apply` moves the moving volume's frame through the transform and
+resamples onto a transport-case or dose-bundle grid; the output records
+the registration id and method in its NIfTI description. Validation
+rejects non-orthonormal rotations, reflections, fewer than three or
+degenerate (coincident/collinear) landmark sets, and declared
+registrations without a provenance note. Registration is a research
+interoperability feature; it makes no clinical assertion about alignment
+quality beyond the recorded landmark residual.
+
 `nctforge mask` combines and constructs `RegionMask` volumes for
 limiting-organ construction: subtraction (e.g. organ minus tumor), union,
 and intersection across mask JSONs, plus CT-threshold regions built from a
