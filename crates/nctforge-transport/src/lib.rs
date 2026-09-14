@@ -8,6 +8,7 @@ use nctforge_core::PhysicalDoseBundle;
 use serde::{Deserialize, Serialize};
 
 mod beam;
+mod beam_quality;
 mod model;
 mod positioning;
 mod response;
@@ -15,6 +16,11 @@ mod response;
 pub use beam::{
     BEAM_DESCRIPTION_SCHEMA, BeamDescription, BeamError, BeamProvenance, Citation,
     NormalizationBasis, PortGeometry, PortShape,
+};
+pub use beam_quality::{
+    BEAM_QUALITY_SCHEMA, BeamQualityError, BeamQualityReference, BeamQualityReport,
+    ComponentWeights, InAirMetrics, InPhantomMetrics, MetricComparison, ReferenceMetric,
+    evaluate_beam_quality, in_air_metrics, in_phantom_metrics,
 };
 pub use model::{
     AngularDistribution, EnergyDistribution, FixedSourceDefinition, IntervalConvention,

@@ -248,6 +248,28 @@ the MCNP deck emitter to `POS/AXS/RAD`, `DIR` cosine histograms, and
 `ERG` histograms. Cone half-angles are bounded below π/2 (no upstream
 emission) and must be coaxial with the port normal.
 
+`beam qa` emits a `nctforge.beam-quality/0.1.0` report: in-air metrics
+(TECDOC-1223 group fluence rates, fractions, current-to-fluence ratio,
+port area, mean energy) are exact properties of the declared source;
+`--reference` compares against published/measured values inside declared
+relative tolerances; `--dose` plus `--tumor-weights`/`--normal-weights`
+(`B=w,H=w,N=w,P=w` compound effectiveness factors) adds in-phantom
+metrics — depth profiles inside the aperture footprint, advantage depth,
+advantage ratio, and peak therapeutic ratio.
+
+```text
+nctforge beam qa --beam beams/fir1-k63.json \
+  --report-id nctforge.beam-quality.fir1-k63.v1 \
+  --reference beams/references/fir1-k63.json \
+  --output beams/qa/fir1-k63.json
+```
+
+The committed report reproduces the published group fluences within
+tolerance and honestly *fails* `current_to_fluence_ratio` (modeled 0.994
+vs measured 0.77): the fixture's conservative collimator-bound cone
+cannot reproduce measured penumbra divergence — the report records
+exactly that fidelity gap.
+
 ### OpenMC input generation
 
 With the sealed response set in place, generate the deterministic OpenMC deck

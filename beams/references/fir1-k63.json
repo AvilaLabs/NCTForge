@@ -1,0 +1,30 @@
+{
+  "values": [
+    {
+      "metric": "epithermal_fluence_rate_cm2_s",
+      "value": 1.07e9,
+      "relative_tolerance": 0.02
+    },
+    {
+      "metric": "fast_fluence_rate_cm2_s",
+      "value": 3.45e7,
+      "relative_tolerance": 0.02
+    },
+    {
+      "metric": "thermal_fluence_rate_cm2_s",
+      "value": 7.19e7,
+      "relative_tolerance": 0.02
+    },
+    {
+      "metric": "total_fluence_rate_cm2_s",
+      "value": 1.1769e9,
+      "relative_tolerance": 0.001
+    },
+    {
+      "metric": "current_to_fluence_ratio",
+      "value": 0.77,
+      "relative_tolerance": 0.05
+    }
+  ],
+  "note": "Measured free-beam values at the FiR 1 K63 14 cm aperture (Seppala 2002, HU-P-D103, Table 4). Fluence-rate tolerances are tight because the beam fixture's bin weights are the measured group fractions — the comparison verifies the encode-to-report path. The current_to_fluence_ratio comparison is expected to FAIL: the fixture's geometric collimator-bound cone (0.149 rad) is deliberately conservative, while the measured J/Phi = 0.77 reflects real penumbra scatter the group-integrated encoding does not carry. The failure is the honest evidence of what this fidelity tier cannot reproduce."
+}

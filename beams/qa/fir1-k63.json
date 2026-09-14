@@ -1,0 +1,65 @@
+{
+  "schema_version": "nctforge.beam-quality/0.1.0",
+  "id": "nctforge.beam-quality.fir1-k63.v1",
+  "beam": {
+    "id": "nctforge.beam.fir1-k63.v1",
+    "sha256": "sha256:a7266c040a7863ee685f0e67397fc68425dd248a648335d5cc853addee2c72a7"
+  },
+  "in_air": {
+    "thermal_fluence_rate_cm2_s": 71908590.0,
+    "epithermal_fluence_rate_cm2_s": 1070155170.0,
+    "fast_fluence_rate_cm2_s": 34836240.0,
+    "total_fluence_rate_cm2_s": 1176900000.0,
+    "thermal_fraction": 0.0611,
+    "fast_fraction": 0.0296,
+    "current_to_fluence_ratio": 0.9944525858924261,
+    "mean_energy_ev": 254814.7426003055,
+    "port_area_cm2": 153.93804002589985,
+    "unmodeled_channels": [
+      "photon"
+    ]
+  },
+  "in_phantom": null,
+  "reference_comparison": [
+    {
+      "metric": "epithermal_fluence_rate_cm2_s",
+      "computed": 1070155170.0,
+      "reference": 1070000000.0,
+      "relative_difference": 0.00014501869158878506,
+      "relative_tolerance": 0.02,
+      "passed": true
+    },
+    {
+      "metric": "fast_fluence_rate_cm2_s",
+      "computed": 34836240.0,
+      "reference": 34500000.0,
+      "relative_difference": 0.00974608695652174,
+      "relative_tolerance": 0.02,
+      "passed": true
+    },
+    {
+      "metric": "thermal_fluence_rate_cm2_s",
+      "computed": 71908590.0,
+      "reference": 71900000.0,
+      "relative_difference": 0.00011947148817802503,
+      "relative_tolerance": 0.02,
+      "passed": true
+    },
+    {
+      "metric": "total_fluence_rate_cm2_s",
+      "computed": 1176900000.0,
+      "reference": 1176900000.0,
+      "relative_difference": 0.0,
+      "relative_tolerance": 0.001,
+      "passed": true
+    },
+    {
+      "metric": "current_to_fluence_ratio",
+      "computed": 0.9944525858924261,
+      "reference": 0.77,
+      "relative_difference": 0.2914968647953586,
+      "relative_tolerance": 0.05,
+      "passed": false
+    }
+  ]
+}

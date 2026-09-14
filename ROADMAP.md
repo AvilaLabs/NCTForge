@@ -652,13 +652,25 @@ prerequisites for starting external review.
   emit bug: `reference_uvw` was written as an XML attribute that OpenMC
   ignores (silent +z default — coincidentally correct for the benchmark's
   beam); it is now emitted as the schema's child element.
-- **R6-02 — beam quality characterization.** IAEA TECDOC-1223-style
-  metrics computed through the transport backend on declared standard
-  geometry: in-air epithermal flux, fast-neutron and gamma contamination,
-  thermal fraction, current-to-flux; in-phantom advantage depth, advantage
-  ratio, and peak therapeutic ratio. Acceptance: analytic or published
-  reference values reproduced within predeclared tolerances on an encoded
-  beam.
+- **R6-02 — beam quality characterization.** *(implemented)* IAEA
+  TECDOC-1223-style metrics via `nctforge.beam-quality/0.1.0` reports
+  (`beam_quality.rs`) and `nctforge beam qa`: in-air thermal/epithermal/
+  fast/total fluence rates, spectral fractions, mean energy, and
+  current-to-fluence ratio are exact properties of the declared source
+  distribution (histogram bins are split by partial overlap at group
+  boundaries); optional `--dose` adds in-phantom advantage depth,
+  advantage ratio, and peak therapeutic ratio from a physical dose bundle
+  under declared compound effectiveness weights; `--reference` compares
+  each metric against published values inside per-metric relative
+  tolerances. `beams/references/fir1-k63.json` carries the Seppälä (2002)
+  measured values; `beams/qa/fir1-k63-phantom.json` is a generated report
+  from a 10M-history FiR 1 run through the NF-BNCT-001 phantom (AD 7.75
+  cm, AR 1.99, PTR 2.59). Group fluences reproduce within tolerance;
+  `current_to_fluence_ratio` honestly *fails* (modeled 0.994 vs measured
+  0.77) — the fixture's collimator-bound cone cannot represent measured
+  penumbra divergence, and the report records that fidelity gap rather
+  than hiding it. Gamma contamination remains an unmodeled channel listed
+  explicitly in the report.
 - **R6-03 — measurement import.** A measurement record schema covering
   foil activation, ion chamber, TLD, and TEPC lineal-energy spectra with
   units, absolute uncertainty, and position provenance, plus a

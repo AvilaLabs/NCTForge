@@ -286,6 +286,35 @@ enum BeamCommand {
         #[arg(long)]
         output: PathBuf,
     },
+    /// Characterize a beam: TECDOC-1223-style in-air metrics (exact from
+    /// the declared source) plus optional in-phantom metrics from a dose
+    /// bundle and an optional reference-value comparison.
+    Qa {
+        /// `nctforge.beam-description/0.1.0` JSON document.
+        #[arg(long)]
+        beam: PathBuf,
+        /// Report identifier, e.g. `nctforge.beam-quality.fir1-k63.v1`.
+        #[arg(long)]
+        report_id: String,
+        /// Optional physical dose bundle JSON from a phantom run of this
+        /// beam; enables in-phantom metrics.
+        #[arg(long)]
+        dose: Option<PathBuf>,
+        /// Per-component tumor weights `B=N,H=N,N=N,P=N` (required with
+        /// --dose); compound biological effectiveness factors.
+        #[arg(long, requires = "dose")]
+        tumor_weights: Option<String>,
+        /// Per-component normal-tissue weights `B=N,H=N,N=N,P=N`.
+        #[arg(long, requires = "dose")]
+        normal_weights: Option<String>,
+        /// Optional reference-values JSON: `{values: [{metric, value,
+        /// relative_tolerance}]}`.
+        #[arg(long)]
+        reference: Option<PathBuf>,
+        /// New output path for the beam-quality report JSON.
+        #[arg(long)]
+        output: PathBuf,
+    },
 }
 
 #[derive(Debug, Args)]
@@ -2103,6 +2132,100 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                 write_new_json(&output, &bound)?;
                 println!("bound {} onto {}", beam.id, bound.case_id);
                 println!("case: {}", output.display());
+            }
+            BeamCommand::Qa {
+                beam,
+                report_id,
+                dose,
+                tumor_weights,
+                normal_weights,
+                reference,
+                output,
+            } => {
+                let beam_bytes = fs::read(&beam)?;
+                let beam: nctforge_transport::BeamDescription =
+                    serde_json::from_slice(&beam_bytes)?;
+                let beam_reference = nctforge_transport::ContentReference {
+                    id: beam.id.clone(),
+                    sha256: format!("sha256:{}", nctforge_evidence::sha256_hex(&beam_bytes)),
+                };
+                let dose_inputs = match dose {
+                    Some(dose_path) => {
+                        let dose_bytes = fs::read(&dose_path)?;
+                        let bundle: nctforge_core::PhysicalDoseBundle =
+                            serde_json::from_slice(&dose_bytes)?;
+                        let dose_reference = nctforge_transport::ContentReference {
+                            id: format!("dose:{}", bundle.provenance_id),
+                            sha256: format!(
+                                "sha256:{}",
+                                nctforge_evidence::sha256_hex(&dose_bytes)
+                            ),
+                        };
+                        let tumor = parse_component_weights(
+                            tumor_weights.as_deref().unwrap_or_default(),
+                            "--tumor-weights",
+                        )?;
+                        let normal = parse_component_weights(
+                            normal_weights.as_deref().unwrap_or_default(),
+                            "--normal-weights",
+                        )?;
+                        Some((bundle, dose_reference, tumor, normal))
+                    }
+                    None => None,
+                };
+                let reference = reference
+                    .map(|path| {
+                        let reference: nctforge_transport::BeamQualityReference =
+                            serde_json::from_slice(&fs::read(&path)?)?;
+                        Ok::<_, io::Error>(reference)
+                    })
+                    .transpose()?;
+                let report = nctforge_transport::evaluate_beam_quality(
+                    &report_id,
+                    &beam,
+                    beam_reference,
+                    dose_inputs
+                        .as_ref()
+                        .map(|(bundle, reference, tumor, normal)| {
+                            (bundle, reference.clone(), tumor.clone(), normal.clone())
+                        }),
+                    reference.as_ref(),
+                )
+                .map_err(|error| io::Error::other(format!("beam qa: {error}")))?;
+                report
+                    .validate()
+                    .map_err(|error| io::Error::other(format!("beam qa report: {error}")))?;
+                write_new_json(&output, &report)?;
+                println!("beam qa: {}", report.id);
+                println!(
+                    "  epithermal {} / thermal {} / fast {} cm^-2 s^-1",
+                    report.in_air.epithermal_fluence_rate_cm2_s,
+                    report.in_air.thermal_fluence_rate_cm2_s,
+                    report.in_air.fast_fluence_rate_cm2_s
+                );
+                println!("  J/Phi = {:.4}", report.in_air.current_to_fluence_ratio);
+                if let Some(in_phantom) = &report.in_phantom {
+                    println!(
+                        "  AD {:.2} cm  AR {:.3}  PTR {:.3}",
+                        in_phantom.advantage_depth_cm,
+                        in_phantom.advantage_ratio,
+                        in_phantom.peak_therapeutic_ratio
+                    );
+                }
+                if let Some(comparisons) = &report.reference_comparison {
+                    for comparison in comparisons {
+                        println!(
+                            "  {} {}: computed {:.4} vs reference {:.4} (rel diff {:.3}, tol {:.3})",
+                            if comparison.passed { "PASS" } else { "FAIL" },
+                            comparison.metric,
+                            comparison.computed,
+                            comparison.reference,
+                            comparison.relative_difference,
+                            comparison.relative_tolerance
+                        );
+                    }
+                }
+                println!("report: {}", output.display());
             }
         },
         Some(Command::Openmc(args)) => match args.command {
@@ -5271,6 +5394,53 @@ fn write_new_text(path: &Path, bytes: &[u8]) -> io::Result<()> {
         .open(path)?;
     file.write_all(bytes)?;
     file.sync_all()
+}
+
+/// Parse `B=w,H=w,N=w,P=w` component effectiveness weights for beam-QA
+/// in-phantom metrics.
+fn parse_component_weights(
+    raw: &str,
+    flag: &str,
+) -> Result<nctforge_transport::ComponentWeights, io::Error> {
+    let mut weights = nctforge_transport::ComponentWeights {
+        boron: 0.0,
+        hydrogen: 0.0,
+        nitrogen: 0.0,
+        photon: 0.0,
+    };
+    let mut seen = 0_u8;
+    for pair in raw.split(',') {
+        let (name, value) = pair.trim().split_once('=').ok_or_else(|| {
+            io::Error::other(format!("{flag}: expected B=w,H=w,N=w,P=w, got {pair:?}"))
+        })?;
+        let value: f64 = value
+            .trim()
+            .parse()
+            .map_err(|_| io::Error::other(format!("{flag}: non-numeric weight in {pair:?}")))?;
+        if !value.is_finite() || value < 0.0 {
+            return Err(io::Error::other(format!(
+                "{flag}: weight must be finite >= 0"
+            )));
+        }
+        match name.trim().to_ascii_uppercase().as_str() {
+            "B" => weights.boron = value,
+            "H" => weights.hydrogen = value,
+            "N" => weights.nitrogen = value,
+            "P" => weights.photon = value,
+            other => {
+                return Err(io::Error::other(format!(
+                    "{flag}: unknown component {other:?} (B/H/N/P)"
+                )));
+            }
+        }
+        seen += 1;
+    }
+    if seen != 4 {
+        return Err(io::Error::other(format!(
+            "{flag}: all four components required (B,H,N,P)"
+        )));
+    }
+    Ok(weights)
 }
 
 fn print_beam_summary(beam: &nctforge_transport::BeamDescription) {

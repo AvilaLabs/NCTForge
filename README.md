@@ -56,6 +56,12 @@ bundling those systems.
   documents (spectrum, divergence, aperture, normalization, cited provenance)
   that bind onto a transport case (`nctforge beam info|list|bind`); the
   `beams/` registry ships the FiR 1 K63 literature beam.
+- **Beam quality characterization** — `nctforge beam qa` emits versioned
+  `nctforge.beam-quality/0.1.0` reports: TECDOC-1223-style in-air group
+  fluences and current-to-fluence ratio computed exactly from the declared
+  source, optional in-phantom advantage-depth/ratio and peak therapeutic
+  ratio from a dose bundle, and per-metric comparison against published
+  reference values.
 - **Three surfaces, one implementation** — CLI (`nctforge`), a native egui
   workbench (integrity-gated tri-planar viewer, dose wash, DVH/metrics,
   plan workspace, source positioning), and a bounded Python package —
