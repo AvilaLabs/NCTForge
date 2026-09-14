@@ -97,7 +97,8 @@ maturin build --manifest-path bindings/python/Cargo.toml
 - [`benchmarks/synthetic/nf-bnct-001/SPECIFICATION.md`](benchmarks/synthetic/nf-bnct-001/SPECIFICATION.md)
   — the frozen case and its predeclared acceptance gates
 - [`conformance/`](conformance/) — public fixture suites: interchange,
-  biological models, endpoints, and MCNP/PHITS adapters
+  biological and microdosimetric (MKM) models, endpoints, and
+  MCNP/PHITS adapters
 - [`docs/adr/`](docs/adr/) — architecture decision records
 - [`docs/research/TECHNICAL_BASELINE.md`](docs/research/TECHNICAL_BASELINE.md)
   — scientific rationale

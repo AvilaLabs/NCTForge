@@ -1,0 +1,119 @@
+{
+  "schema_version": "nctforge.biological-dose-bundle/0.2.0",
+  "case_id": "bio-conformance",
+  "geometry": {
+    "shape": [
+      2,
+      1,
+      1
+    ],
+    "spacing_mm": [
+      5.0,
+      5.0,
+      5.0
+    ],
+    "origin_mm": [
+      -2.5,
+      -2.5,
+      -2.5
+    ],
+    "direction": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  },
+  "physical_bundle_provenance": "conformance-physical-bundle",
+  "model": {
+    "id": "nctforge.conformance.mkm-spectrum.v1",
+    "sha256": "a8be0d59de07ef09770f455d51494dc75879d97a357ce250e3f6252048bb8692"
+  },
+  "weight_semantics": "microdosimetric_kinetic",
+  "unit": "mkm_weighted_gray_per_source_particle",
+  "components": [
+    {
+      "component": "boron",
+      "unit": "mkm_weighted_gray_per_source_particle",
+      "values": [
+        6.767756068104162e-12,
+        6.767756068104162e-12
+      ],
+      "absolute_standard_uncertainty": [
+        6.767756068088142e-14,
+        6.767756068088142e-14
+      ]
+    },
+    {
+      "component": "nitrogen",
+      "unit": "mkm_weighted_gray_per_source_particle",
+      "values": [
+        3.0941035830433273e-13,
+        3.0941035830433273e-13
+      ],
+      "absolute_standard_uncertainty": [
+        3.094103583043129e-15,
+        3.094103583043129e-15
+      ]
+    },
+    {
+      "component": "hydrogen",
+      "unit": "mkm_weighted_gray_per_source_particle",
+      "values": [
+        6.367629478804353e-14,
+        6.367629478804353e-14
+      ],
+      "absolute_standard_uncertainty": [
+        6.367629478804299e-16,
+        6.367629478804299e-16
+      ]
+    },
+    {
+      "component": "photon",
+      "unit": "mkm_weighted_gray_per_source_particle",
+      "values": [
+        3.082057768728247e-13,
+        3.082057768728247e-13
+      ],
+      "absolute_standard_uncertainty": [
+        3.0820577687282287e-15,
+        3.0820577687282287e-15
+      ]
+    }
+  ],
+  "total": {
+    "unit": "mkm_weighted_gray_per_source_particle",
+    "values": [
+      7.449048498069363e-12,
+      7.449048498069363e-12
+    ],
+    "absolute_standard_uncertainty": [
+      7.449048498053321e-14,
+      7.449048498053321e-14
+    ],
+    "uncertainty_method": "correlated_component_sum"
+  },
+  "regions_applied": [],
+  "qualification": "mkm_research_only_not_clinical",
+  "microdosimetry": {
+    "domain_radius_um": 1.0,
+    "domain_density_g_cm3": 1.0,
+    "dose_mean_lineal_energy_kev_um": {
+      "boron": 316.3003663003663,
+      "hydrogen": 15.0,
+      "nitrogen": 30.0,
+      "photon": 1.5
+    },
+    "spectra_applied": [
+      {
+        "id": "conformance.tepc-boron.v1",
+        "sha256": "8a5b58fed35e5a366c84d1a221d16e74af92be7f76a061b0233e738c0a65f692"
+      }
+    ]
+  }
+}

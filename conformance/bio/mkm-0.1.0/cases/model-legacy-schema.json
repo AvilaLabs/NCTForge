@@ -1,0 +1,14 @@
+{
+  "schema_version": "nctforge.microdosimetric-model/0.0.0",
+  "id": "nctforge.conformance.mkm-legacy.v1",
+  "input_unit": "gray_per_source_particle",
+  "domain_radius_um": 1.0,
+  "domain_density_g_cm3": 1.0,
+  "components": {
+    "boron": {"alpha_0": 0.172, "beta": 0.0615, "lineal_energy": {"kind": "constant", "dose_mean_lineal_energy_kev_um": 180.0}},
+    "nitrogen": {"alpha_0": 0.172, "beta": 0.0615, "lineal_energy": {"kind": "constant", "dose_mean_lineal_energy_kev_um": 30.0}},
+    "hydrogen": {"alpha_0": 0.172, "beta": 0.0615, "lineal_energy": {"kind": "constant", "dose_mean_lineal_energy_kev_um": 15.0}},
+    "photon": {"alpha_0": 0.172, "beta": 0.0615, "lineal_energy": {"kind": "constant", "dose_mean_lineal_energy_kev_um": 1.5}}
+  },
+  "validity_domain": "conformance stand-in — not clinical"
+}

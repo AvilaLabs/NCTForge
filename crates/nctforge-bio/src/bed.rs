@@ -498,6 +498,7 @@ mod tests {
             },
             regions_applied: vec![],
             qualification: "research".into(),
+            microdosimetry: None,
         }
     }
 

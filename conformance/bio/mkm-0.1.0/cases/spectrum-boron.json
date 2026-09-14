@@ -1,0 +1,9 @@
+{
+  "schema_version": "nctforge.lineal-spectrum/0.1.0",
+  "id": "conformance.tepc-boron.v1",
+  "bin_edges_kev_um": [50.0, 100.0, 150.0, 200.0, 300.0, 500.0],
+  "values": [0.05, 0.20, 0.35, 0.25, 0.15],
+  "weighting": "event_frequency",
+  "value_unit": "relative event frequency",
+  "note": "Synthetic TEPC-shaped event-frequency spectrum for the boron capture component; conformance stand-in, not a measured spectrum."
+}

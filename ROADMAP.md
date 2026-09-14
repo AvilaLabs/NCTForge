@@ -697,11 +697,29 @@ prerequisites for starting external review.
   grid within 8e-7 relative — the 32-bit quantization floor. RTSTRUCT
   contour export and RTPLAN linkage remain future scope; the export is
   not a commissioned planning artifact.
-- **R6-05 — microdosimetric model family.** MKM/stochastic microdosimetric
-  evaluation in the biological model registry with lineal-energy spectrum
-  import (TEPC-derived or published). Acceptance: conformance fixtures
-  from published parameter sets, explicit validity domains, kept distinct
-  from the photon-isoeffective family.
+- **R6-05 — microdosimetric model family.** *(implemented)*
+  `nctforge.microdosimetric-model/0.1.0` artifacts carry per-component
+  linearized-MKM parameters (α₀, β, lineal-energy source), the spherical
+  domain geometry, and a mandatory free-text validity domain; each
+  component's dose-mean lineal energy is either a published constant or
+  resolved at apply time from a `nctforge.lineal-spectrum/0.1.0` document
+  (TEPC-derived or published; event-frequency or dose-weighted bins with
+  exact piecewise-constant moments). Applying converts each component to
+  photon-equivalent dose through `α* = α₀ + β·z̄₁D`,
+  `z̄₁D = ȳ_D/(ρ·π·r_d²)`, LQ-inverted against the cell photon response;
+  the emitted bundle marks `microdosimetric_kinetic` semantics, an
+  `mkm_weighted_*` unit, and an `mkm_research_only_not_clinical`
+  qualification, and records the resolved ȳ_D plus content-bound spectra
+  in an `microdosimetry` provenance block. `nctforge bio apply` routes on
+  the model schema and takes repeatable `--spectrum`; `bio spectrum`
+  extracts a TEPC histogram from a measurement record; `bio lineal-mean`
+  reports ȳ_F/ȳ_D. Conformance fixtures live in
+  `conformance/bio/mkm-0.1.0/` (HSG-like LQ parameters traced to Kase
+  2006/2008; component lineal energies are representative stand-ins) with
+  derivation hashes verified by the suite. The family is kept distinct
+  from photon-isoeffective weighting: a weight-model declaring
+  `microdosimetric_kinetic` semantics is rejected, and MKM outputs assert
+  no clinical RBE/CBE/Gy-Eq claim.
 - **R6-06 — PET-derived boron.** SUV-to-B-10 mapping models (tumor:normal
   ratio, compartment pharmacokinetics, time-dependent washout) producing
   boron fields with stated uncertainty. Depends on R6-07 for co-registering

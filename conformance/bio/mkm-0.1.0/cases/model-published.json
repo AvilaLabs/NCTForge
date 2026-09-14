@@ -1,0 +1,50 @@
+{
+  "schema_version": "nctforge.microdosimetric-model/0.1.0",
+  "id": "nctforge.conformance.mkm-hsg.v1",
+  "input_unit": "gray_per_source_particle",
+  "domain_radius_um": 1.0,
+  "domain_density_g_cm3": 1.0,
+  "components": {
+    "boron": {
+      "alpha_0": 0.172,
+      "beta": 0.0615,
+      "lineal_energy": {
+        "kind": "constant",
+        "dose_mean_lineal_energy_kev_um": 180.0,
+        "note": "composite ȳ_D for 10B(n,α)7Li capture products; representative stand-in"
+      }
+    },
+    "nitrogen": {
+      "alpha_0": 0.172,
+      "beta": 0.0615,
+      "lineal_energy": {
+        "kind": "constant",
+        "dose_mean_lineal_energy_kev_um": 30.0,
+        "note": "composite ȳ_D for 14N(n,p)14C capture protons; representative stand-in"
+      }
+    },
+    "hydrogen": {
+      "alpha_0": 0.172,
+      "beta": 0.0615,
+      "lineal_energy": {
+        "kind": "constant",
+        "dose_mean_lineal_energy_kev_um": 15.0,
+        "note": "composite ȳ_D for recoil protons; representative stand-in"
+      }
+    },
+    "photon": {
+      "alpha_0": 0.172,
+      "beta": 0.0615,
+      "lineal_energy": {
+        "kind": "constant",
+        "dose_mean_lineal_energy_kev_um": 1.5,
+        "note": "composite ȳ_D for photon secondaries; representative stand-in"
+      }
+    }
+  },
+  "derivation": {
+    "id": "mkm-parameters-provenance",
+    "sha256": "bcd9a9f7946b797430f713b8e90005376f090a1490c8c29589d238ab10cfea56"
+  },
+  "validity_domain": "HSG-like cell LQ (alpha0=0.172 Gy^-1, beta=0.0615 Gy^-2) in a 1 um tissue-equivalent MKM domain; representative component lineal energies. Conformance stand-in — not a fitted or clinical model."
+}

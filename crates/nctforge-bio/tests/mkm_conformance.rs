@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
-//! Public conformance suite for `nctforge.biological-model/0.2.0` →
+//! Public conformance suite for `nctforge.microdosimetric-model/0.1.0` →
 //! `nctforge.biological-dose-bundle/0.2.0` application.
 //!
-//! Walks `conformance/bio/0.2.0/manifest.json`: every `expect: "ok"` case
-//! must apply and equal its reference bundle under `expected/`; every
-//! `expect: "reject"` case must fail with the named error token. Outputs are
-//! byte-fixed because bundle provenance embeds the model document's SHA-256.
+//! Walks `conformance/bio/mkm-0.1.0/manifest.json`: every `expect: "ok"`
+//! case must apply and equal its reference bundle under `expected/`; every
+//! `expect: "reject"` case must fail with the named error token. A model's
+//! `derivation` reference is verified against `cases/<id>.json` so the
+//! suite enforces hash-bound provenance. Outputs are byte-fixed because
+//! bundle provenance embeds the model and spectrum documents' SHA-256.
 //!
 //! Regenerate the reference bundles after an intentional model change with
 //! `NCTFORGE_UPDATE_CONFORMANCE=1 cargo test -p nctforge-bio`.
@@ -14,15 +16,18 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use nctforge_bio::{BioError, BiologicalDoseBundle, BiologicalModel, RegionMask};
+use nctforge_bio::{
+    BioError, BiologicalDoseBundle, LinealSpectrum, MicrodosimetricModel, RegionMask, SpectrumInput,
+};
 use nctforge_core::PhysicalDoseBundle;
 use serde::Deserialize;
+use sha2::{Digest, Sha256};
 
 fn suite_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../conformance/bio/0.2.0")
+        .join("../../conformance/bio/mkm-0.1.0")
         .canonicalize()
-        .expect("bio conformance suite directory")
+        .expect("mkm conformance suite directory")
 }
 
 #[derive(Deserialize)]
@@ -36,6 +41,8 @@ struct Case {
     dose: Option<String>,
     #[serde(default)]
     regions: Vec<String>,
+    #[serde(default)]
+    spectra: Vec<String>,
     expect: String,
     error: Option<String>,
     bundle: Option<String>,
@@ -46,15 +53,15 @@ struct Case {
 fn error_token(error: &BioError) -> &'static str {
     match error {
         BioError::UnsupportedSchema(_) => "unsupported_schema",
+        BioError::UnresolvedSpectrum(_) => "unresolved_spectrum",
         BioError::Invalid(message) if message.contains("no supplied mask") => "missing_region_mask",
         BioError::Invalid(message) if message.contains("does not match") => "unit_mismatch",
         BioError::Invalid(_) => "invalid",
-        BioError::UnresolvedSpectrum(_) => "unresolved_spectrum",
     }
 }
 
 #[test]
-fn biological_model_conformance_suite() {
+fn microdosimetric_model_conformance_suite() {
     let root = suite_dir();
     let manifest: Manifest =
         serde_json::from_slice(&fs::read(root.join("manifest.json")).expect("manifest.json"))
@@ -66,9 +73,27 @@ fn biological_model_conformance_suite() {
     for case in &manifest.cases {
         let model_bytes = fs::read(root.join(&case.file))
             .unwrap_or_else(|e| panic!("{}: read model: {e}", case.file));
-        let model: BiologicalModel = serde_json::from_slice(&model_bytes)
+        let model: MicrodosimetricModel = serde_json::from_slice(&model_bytes)
             .unwrap_or_else(|e| panic!("{}: parse model: {e}", case.file));
-        let dose_path = root.join(case.dose.as_deref().unwrap_or("cases/physical-bundle.json"));
+        // Every derivation reference must resolve to a suite artifact whose
+        // content hash matches — provenance is enforced, not just recorded.
+        if let Some(derivation) = &model.derivation {
+            let path = root.join("cases").join(format!("{}.json", derivation.id));
+            let bytes = fs::read(&path)
+                .unwrap_or_else(|e| panic!("{}: derivation {path:?} unreadable: {e}", case.file));
+            assert_eq!(
+                derivation.sha256,
+                format!("{:x}", Sha256::digest(&bytes)),
+                "{}: derivation hash does not match cases/{}.json",
+                case.file,
+                derivation.id
+            );
+        }
+        let dose_path = root.join(
+            case.dose
+                .as_deref()
+                .unwrap_or("../0.2.0/cases/physical-bundle.json"),
+        );
         let physical: PhysicalDoseBundle = serde_json::from_slice(
             &fs::read(&dose_path).unwrap_or_else(|e| panic!("{}: read dose: {e}", case.file)),
         )
@@ -84,16 +109,39 @@ fn biological_model_conformance_suite() {
                 .unwrap_or_else(|e| panic!("{region}: parse mask: {e}"))
             })
             .collect();
+        let spectrum_docs: Vec<(LinealSpectrum, Vec<u8>)> = case
+            .spectra
+            .iter()
+            .map(|spectrum| {
+                let bytes = fs::read(root.join(spectrum))
+                    .unwrap_or_else(|e| panic!("{spectrum}: read spectrum: {e}"));
+                let parsed: LinealSpectrum = serde_json::from_slice(&bytes)
+                    .unwrap_or_else(|e| panic!("{spectrum}: parse spectrum: {e}"));
+                (parsed, bytes)
+            })
+            .collect();
+        let inputs: Vec<SpectrumInput<'_>> = spectrum_docs
+            .iter()
+            .map(|(spectrum, bytes)| SpectrumInput {
+                spectrum,
+                document_bytes: bytes,
+            })
+            .collect();
         match case.expect.as_str() {
             "ok" => {
-                let bundle =
-                    nctforge_bio::apply_biological_model(&model, &model_bytes, &physical, &regions)
-                        .unwrap_or_else(|e| {
-                            panic!(
-                                "{}: expected apply, got {e} ({})",
-                                case.file, case.description
-                            )
-                        });
+                let bundle = nctforge_bio::apply_microdosimetric_model(
+                    &model,
+                    &model_bytes,
+                    &physical,
+                    &regions,
+                    &inputs,
+                )
+                .unwrap_or_else(|e| {
+                    panic!(
+                        "{}: expected apply, got {e} ({})",
+                        case.file, case.description
+                    )
+                });
                 let expected_path =
                     root.join(case.bundle.as_deref().expect("ok case names a bundle"));
                 if update {
@@ -117,9 +165,14 @@ fn biological_model_conformance_suite() {
                 ok_count += 1;
             }
             "reject" => {
-                let error =
-                    nctforge_bio::apply_biological_model(&model, &model_bytes, &physical, &regions)
-                        .expect_err(&format!("{}: expected rejection", case.file));
+                let error = nctforge_bio::apply_microdosimetric_model(
+                    &model,
+                    &model_bytes,
+                    &physical,
+                    &regions,
+                    &inputs,
+                )
+                .expect_err(&format!("{}: expected rejection", case.file));
                 assert_eq!(
                     error_token(&error),
                     case.error.as_deref().expect("reject case names an error"),

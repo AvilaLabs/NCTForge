@@ -19,6 +19,7 @@
 
 mod bed;
 mod endpoint;
+mod mkm;
 mod sweep;
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -37,6 +38,11 @@ pub use endpoint::{
     EndpointEvaluation, EndpointFunction, EndpointKind, EndpointModel, EvaluatedEndpoint,
     UtcpCombination, UtcpComponents, combine_utcp, evaluate_endpoint,
 };
+pub use mkm::{
+    LINEAL_SPECTRUM_SCHEMA, LinealEnergySource, LinealSpectrum, LinealWeighting,
+    MICRODOSIMETRIC_MODEL_SCHEMA, MicrodosimetricModel, MkmApplied, MkmComponent, MkmLq,
+    SpectrumInput, apply_microdosimetric_model, domain_mean_specific_energy_gy,
+};
 pub use sweep::{BIO_SWEEP_SCHEMA, SensitivitySweep, SweepParameter, SweepPoint, run_sweep};
 
 pub const BIOLOGICAL_MODEL_SCHEMA: &str = "nctforge.biological-model/0.2.0";
@@ -51,11 +57,17 @@ pub type WeightMap = BTreeMap<String, f64>;
 /// declares the weights are photon-isoeffect factors (RBE/CBE relative to
 /// the photon component), which requires every photon weight to be exactly
 /// 1.0 so the weighted sum is expressed in photon-equivalent dose.
+/// `microdosimetric_kinetic` marks bundles produced by a
+/// `nctforge.microdosimetric-model/0.1.0` MKM artifact — a separate model
+/// family whose component volumes are nonlinear photon-equivalent doses,
+/// not weighted ones; it cannot be declared on a weight-based
+/// `BiologicalModel`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum WeightSemantics {
     FixedPerComponent,
     PhotonIsoeffective,
+    MicrodosimetricKinetic,
 }
 
 /// Linear-quadratic fractionation parameters for the biological total.
@@ -153,6 +165,11 @@ impl BiologicalModel {
             }
             check(weights, "region_weights")?;
         }
+        if self.weight_semantics == WeightSemantics::MicrodosimetricKinetic {
+            return Err(BioError::Invalid(
+                "microdosimetric_kinetic semantics are not expressible as component weights; use an nctforge.microdosimetric-model/0.1.0 artifact".into(),
+            ));
+        }
         if self.weight_semantics == WeightSemantics::PhotonIsoeffective {
             let photon = component_name(DoseComponent::Photon);
             if self.component_weights[photon] != 1.0
@@ -209,7 +226,7 @@ impl BiologicalModel {
     }
 }
 
-fn component_name(component: DoseComponent) -> &'static str {
+pub(crate) fn component_name(component: DoseComponent) -> &'static str {
     match component {
         DoseComponent::Boron => "boron",
         DoseComponent::Nitrogen => "nitrogen",
@@ -278,6 +295,11 @@ pub struct BiologicalDoseBundle {
     /// Region names whose override weights were actually applied.
     pub regions_applied: Vec<String>,
     pub qualification: String,
+    /// MKM provenance block — present exactly when `weight_semantics`
+    /// is `microdosimetric_kinetic`; records the resolved lineal
+    /// energies and consumed spectra so the result is checkable.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub microdosimetry: Option<mkm::MkmApplied>,
 }
 
 impl BiologicalDoseBundle {
@@ -520,6 +542,7 @@ pub fn apply_biological_model(
         },
         regions_applied,
         qualification: "synthetic_research_only_not_clinical".into(),
+        microdosimetry: None,
     };
     bundle.validate()?;
     Ok(bundle)
@@ -531,6 +554,10 @@ pub enum BioError {
     UnsupportedSchema(String),
     #[error("invalid biological artifact: {0}")]
     Invalid(String),
+    /// An MKM component named a lineal spectrum that was not supplied
+    /// at apply time — a hard error, never a silent fallback.
+    #[error("lineal spectrum {0:?} was not supplied")]
+    UnresolvedSpectrum(String),
 }
 
 #[cfg(test)]

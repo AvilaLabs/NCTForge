@@ -1,0 +1,23 @@
+{
+  "id": "mkm-parameters-provenance",
+  "kind": "parameter_provenance_note",
+  "cell_lq": {
+    "alpha_0_Gy-1": 0.172,
+    "beta_Gy-2": 0.0615,
+    "domain_radius_um": 1.0,
+    "domain_density_g_cm3": 1.0,
+    "basis": "HSG (human salivary gland) cell linear-quadratic parameters as used in the linearized microdosimetric-kinetic model formalism"
+  },
+  "component_lineal_energy_kev_um": {
+    "boron": 180.0,
+    "nitrogen": 30.0,
+    "hydrogen": 15.0,
+    "photon": 1.5,
+    "basis": "literature-representative composite dose-mean lineal energies for the BNCT dose components (alpha + 7Li capture products, capture and recoil protons, photon secondaries). Representative stand-ins for conformance checking — not fitted to a measured lineal spectrum."
+  },
+  "citations": [
+    "Kase Y., Kanai T., Matsumoto Y., Furusawa Y., Okamoto H., Asaba T., Sakama M., Hantash N. Microdosimetric measurements and estimation of human cell survival for heavy-ion beams. Radiat. Res. 166(4):629-638, 2006.",
+    "Kase Y., Kanai T., Matsufuji N., Furusawa Y., Elsasser T., Scholz M. Biophysical calculation of cell survival probabilities using amorphous track structure models for heavy-ion irradiation. Phys. Med. Biol. 53(1):37-59, 2008."
+  ],
+  "note": "Conformance fixture provenance. Cell LQ parameters trace to published HSG MKM values; component lineal energies are representative stand-ins. This artifact does not assert clinical RBE, CBE, or Gy-Eq."
+}

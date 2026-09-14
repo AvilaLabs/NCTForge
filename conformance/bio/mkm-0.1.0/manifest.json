@@ -1,0 +1,96 @@
+{
+  "suite": "nctforge.microdosimetric-model-conformance/0.1.0",
+  "model_schema": "nctforge.microdosimetric-model/0.1.0",
+  "spectrum_schema": "nctforge.lineal-spectrum/0.1.0",
+  "dose_schema": "nctforge.physical-dose-bundle/0.2.0",
+  "bundle_schema": "nctforge.biological-dose-bundle/0.2.0",
+  "notes": [
+    "Each case names a microdosimetric model under cases/, a physical",
+    "dose bundle, optional lineal spectra, and region masks; expected",
+    "bundles are byte-fixed because provenance embeds content hashes.",
+    "expect=ok cases must apply; expect=reject cases must fail with the",
+    "named stable rejection token.",
+    "The shared physical bundle and region masks are reused from the",
+    "sibling biological-model suite via ../0.2.0/ paths.",
+    "A case model's `derivation` ContentReference is verified against",
+    "cases/<derivation.id>.json — the suite enforces hash-bound",
+    "provenance, not merely recorded provenance.",
+    "Fixture LQ parameters trace to published HSG MKM values and the",
+    "component lineal energies are representative stand-ins — they are",
+    "for conformance checking, not clinical model parameters."
+  ],
+  "cases": [
+    {
+      "file": "cases/model-published.json",
+      "dose": "../0.2.0/cases/physical-bundle.json",
+      "regions": [],
+      "spectra": [],
+      "expect": "ok",
+      "description": "published-parameter MKM set with constant component lineal energies",
+      "bundle": "expected/published.bundle.json"
+    },
+    {
+      "file": "cases/model-spectrum.json",
+      "dose": "../0.2.0/cases/physical-bundle.json",
+      "regions": [],
+      "spectra": ["cases/spectrum-boron.json"],
+      "expect": "ok",
+      "description": "boron lineal energy resolved from a supplied lineal spectrum",
+      "bundle": "expected/spectrum.bundle.json"
+    },
+    {
+      "file": "cases/model-fractionated.json",
+      "dose": "../0.2.0/cases/physical-bundle.json",
+      "regions": ["../0.2.0/cases/mask-core.json", "../0.2.0/cases/mask-margin.json"],
+      "spectra": [],
+      "expect": "ok",
+      "description": "MKM photon-equivalence per fraction then EQD2 rescale with region alpha/beta",
+      "bundle": "expected/fractionated.bundle.json"
+    },
+    {
+      "file": "cases/model-missing-spectrum.json",
+      "dose": "../0.2.0/cases/physical-bundle.json",
+      "regions": [],
+      "spectra": [],
+      "expect": "reject",
+      "error": "unresolved_spectrum",
+      "description": "component names a spectrum id that was not supplied"
+    },
+    {
+      "file": "cases/model-legacy-schema.json",
+      "dose": "../0.2.0/cases/physical-bundle.json",
+      "regions": [],
+      "spectra": [],
+      "expect": "reject",
+      "error": "unsupported_schema",
+      "description": "0.0.0 model under a 0.1.0-only reader"
+    },
+    {
+      "file": "cases/model-empty-domain.json",
+      "dose": "../0.2.0/cases/physical-bundle.json",
+      "regions": [],
+      "spectra": [],
+      "expect": "reject",
+      "error": "invalid",
+      "description": "microdosimetric models must declare a non-empty validity domain"
+    },
+    {
+      "file": "cases/model-unit-mismatch.json",
+      "dose": "../0.2.0/cases/physical-bundle.json",
+      "regions": [],
+      "spectra": [],
+      "expect": "reject",
+      "error": "unit_mismatch",
+      "description": "model declares gray input; the dose bundle is per-source-particle"
+    },
+    {
+      "file": "cases/model-regioned.json",
+      "dose": "../0.2.0/cases/physical-bundle.json",
+      "regions": ["../0.2.0/cases/mask-margin.json"],
+      "spectra": [],
+      "expect": "reject",
+      "error": "missing_region_mask",
+      "description": "model declares region core but no core mask is supplied"
+    }
+  ]
+}

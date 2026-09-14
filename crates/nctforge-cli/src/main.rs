@@ -11,7 +11,8 @@ use std::process::ExitCode;
 
 use clap::{Args, Parser, Subcommand};
 use nctforge_bio::{
-    BedQuantity, BiologicalModel, RegionMask, SweepParameter, apply_biological_model,
+    BedQuantity, BiologicalModel, LinealSpectrum, LinealWeighting, MicrodosimetricModel,
+    RegionMask, SpectrumInput, SweepParameter, apply_biological_model, apply_microdosimetric_model,
     bed_from_external, combine_biological_doses,
 };
 use nctforge_core::{ExposurePlan, PhysicalDoseBundle, ResampleMethod};
@@ -984,19 +985,51 @@ struct BioArgs {
 enum BioCommand {
     /// Produce a biological dose bundle from a physical dose bundle.
     Apply {
-        /// Biological model JSON (`nctforge.biological-model/0.2.0`).
+        /// Biological model JSON (`nctforge.biological-model/0.2.0`) or a
+        /// microdosimetric model (`nctforge.microdosimetric-model/0.1.0`);
+        /// routed on `schema_version`.
         #[arg(long)]
         model: PathBuf,
         /// Physical dose bundle JSON produced by `openmc collect`.
         #[arg(long)]
         physical_bundle: PathBuf,
         /// Region mask as `name=path` pairs; required when the model
-        /// declares region weight overrides.
+        /// declares region weight or LQ overrides.
         #[arg(long = "region-mask")]
         region_masks: Vec<String>,
+        /// Lineal spectrum JSON (`nctforge.lineal-spectrum/0.1.0`);
+        /// repeatable. Required when a microdosimetric model names
+        /// spectrum-sourced lineal energies.
+        #[arg(long = "spectrum")]
+        spectra: Vec<PathBuf>,
         /// New output path for the biological dose bundle JSON.
         #[arg(long)]
         output: PathBuf,
+    },
+    /// Extract a histogram measurement into a versioned lineal spectrum.
+    Spectrum {
+        /// Measurement record JSON (`nctforge.measurement-record/0.1.0`).
+        #[arg(long)]
+        record: PathBuf,
+        /// `id` of the histogram-valued measurement to extract.
+        #[arg(long)]
+        measurement: String,
+        /// Spectrum id for the emitted artifact (default: measurement id).
+        #[arg(long)]
+        id: Option<String>,
+        /// Bin-content interpretation: `event_frequency` or
+        /// `dose_weighted` (default `event_frequency`).
+        #[arg(long, default_value = "event_frequency")]
+        weighting: String,
+        /// New output path for the lineal spectrum JSON.
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Report the frequency- and dose-mean lineal energies of a spectrum.
+    LinealMean {
+        /// Lineal spectrum JSON (`nctforge.lineal-spectrum/0.1.0`).
+        #[arg(long)]
+        spectrum: PathBuf,
     },
     /// Convert an imported external dose bundle to a BED or EQD2 field.
     Bed {
@@ -4572,10 +4605,16 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                 model,
                 physical_bundle,
                 region_masks,
+                spectra,
                 output,
             } => {
                 let model_bytes = fs::read(&model)?;
-                let model: BiologicalModel = serde_json::from_slice(&model_bytes)?;
+                let peek: serde_json::Value = serde_json::from_slice(&model_bytes)?;
+                let schema = peek
+                    .get("schema_version")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or_default()
+                    .to_string();
                 let bundle_bytes = fs::read(&physical_bundle)?;
                 let physical: PhysicalDoseBundle = serde_json::from_slice(&bundle_bytes)?;
                 let mut masks = Vec::new();
@@ -4595,7 +4634,35 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                     }
                     masks.push(mask);
                 }
-                let bundle = apply_biological_model(&model, &model_bytes, &physical, &masks)?;
+                let bundle = if schema == nctforge_bio::MICRODOSIMETRIC_MODEL_SCHEMA {
+                    let model: MicrodosimetricModel = serde_json::from_slice(&model_bytes)?;
+                    let mut spectrum_docs = Vec::with_capacity(spectra.len());
+                    for path in &spectra {
+                        let bytes = fs::read(path)?;
+                        let spectrum: LinealSpectrum =
+                            serde_json::from_slice(&bytes).map_err(|e| {
+                                io::Error::other(format!("spectrum {}: {e}", path.display()))
+                            })?;
+                        spectrum_docs.push((spectrum, bytes));
+                    }
+                    let inputs: Vec<SpectrumInput<'_>> = spectrum_docs
+                        .iter()
+                        .map(|(spectrum, bytes)| SpectrumInput {
+                            spectrum,
+                            document_bytes: bytes,
+                        })
+                        .collect();
+                    apply_microdosimetric_model(&model, &model_bytes, &physical, &masks, &inputs)?
+                } else {
+                    if !spectra.is_empty() {
+                        return Err(io::Error::other(
+                            "--spectrum applies only to nctforge.microdosimetric-model/0.1.0 models",
+                        )
+                        .into());
+                    }
+                    let model: BiologicalModel = serde_json::from_slice(&model_bytes)?;
+                    apply_biological_model(&model, &model_bytes, &physical, &masks)?
+                };
                 let json = serde_json::to_vec_pretty(&bundle)?;
                 let mut file = fs::OpenOptions::new()
                     .write(true)
@@ -4605,10 +4672,113 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                 file.write_all(b"\n")?;
                 file.sync_all()?;
                 println!("biological dose bundle at {}", output.display());
-                println!("model: {} sha256:{}", model.id, bundle.model.sha256);
+                println!("model: {} sha256:{}", bundle.model.id, bundle.model.sha256);
+                println!("semantics: {:?}", bundle.weight_semantics);
                 println!("physical provenance: {}", bundle.physical_bundle_provenance);
                 println!("regions applied: {}", bundle.regions_applied.join(","));
+                if let Some(mkm) = &bundle.microdosimetry {
+                    for (component, y) in &mkm.dose_mean_lineal_energy_kev_um {
+                        println!("resolved ȳ_D[{component}]: {y:.6} keV/µm");
+                    }
+                    for applied in &mkm.spectra_applied {
+                        println!("spectrum: {} sha256:{}", applied.id, applied.sha256);
+                    }
+                }
                 println!("qualification: {}", bundle.qualification);
+            }
+            BioCommand::Spectrum {
+                record,
+                measurement,
+                id,
+                weighting,
+                output,
+            } => {
+                let record_bytes = fs::read(&record)?;
+                let record: nctforge_transport::MeasurementRecord =
+                    serde_json::from_slice(&record_bytes)?;
+                let measurement = record
+                    .measurements
+                    .iter()
+                    .find(|m| m.id == measurement)
+                    .ok_or_else(|| {
+                        io::Error::other(format!(
+                            "no measurement {measurement:?} in record {:?}",
+                            record.id
+                        ))
+                    })?;
+                let nctforge_transport::MeasurementValue::Histogram {
+                    bin_edges,
+                    bin_values,
+                    bin_uncertainties_1sigma,
+                } = &measurement.value
+                else {
+                    return Err(io::Error::other(format!(
+                        "measurement {:?} is scalar; only histogram measurements carry spectra",
+                        measurement.id
+                    ))
+                    .into());
+                };
+                if !measurement.unit.to_lowercase().contains("kev") {
+                    return Err(io::Error::other(format!(
+                        "measurement {:?} unit {:?} is not a lineal-energy unit (keV/µm)",
+                        measurement.id, measurement.unit
+                    ))
+                    .into());
+                }
+                let weighting =
+                    match weighting.as_str() {
+                        "event_frequency" => LinealWeighting::EventFrequency,
+                        "dose_weighted" => LinealWeighting::DoseWeighted,
+                        other => return Err(io::Error::other(format!(
+                            "unknown weighting {other:?}; expected event_frequency or dose_weighted"
+                        ))
+                        .into()),
+                    };
+                let spectrum = LinealSpectrum {
+                    schema_version: nctforge_bio::LINEAL_SPECTRUM_SCHEMA.into(),
+                    id: id.unwrap_or_else(|| measurement.id.clone()),
+                    bin_edges_kev_um: bin_edges.clone(),
+                    values: bin_values.clone(),
+                    absolute_standard_uncertainty: bin_uncertainties_1sigma.clone(),
+                    weighting,
+                    // The record fixes the edge unit (keV/µm) but not the
+                    // contents unit; record the metric interpretation.
+                    value_unit: format!("{} bin contents", measurement.metric),
+                    derivation: Some(nctforge_core::ContentReference {
+                        id: record.id.clone(),
+                        sha256: nctforge_evidence::sha256_hex(&record_bytes),
+                    }),
+                    note: Some(format!(
+                        "extracted from measurement record {} ({}): {}",
+                        record.id,
+                        measurement.metric,
+                        measurement.note.as_deref().unwrap_or("no note")
+                    )),
+                };
+                spectrum.validate()?;
+                let json = serde_json::to_vec_pretty(&spectrum)?;
+                let mut file = fs::OpenOptions::new()
+                    .write(true)
+                    .create_new(true)
+                    .open(&output)?;
+                file.write_all(&json)?;
+                file.write_all(b"\n")?;
+                file.sync_all()?;
+                println!("lineal spectrum at {}", output.display());
+                println!("id: {} weighting: {weighting:?}", spectrum.id);
+            }
+            BioCommand::LinealMean { spectrum } => {
+                let bytes = fs::read(&spectrum)?;
+                let spectrum: LinealSpectrum = serde_json::from_slice(&bytes)?;
+                spectrum.validate()?;
+                match spectrum.frequency_mean_kev_um()? {
+                    Some(yf) => println!("ȳ_F (frequency mean): {yf:.6} keV/µm"),
+                    None => println!("ȳ_F: undefined for a dose-weighted spectrum"),
+                }
+                println!(
+                    "ȳ_D (dose mean): {:.6} keV/µm",
+                    spectrum.dose_mean_kev_um()?
+                );
             }
             BioCommand::Bed {
                 dose,

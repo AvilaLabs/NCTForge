@@ -71,6 +71,7 @@ fn error_token(error: &BioError) -> &'static str {
         BioError::Invalid(message) if message.contains("UTCP inputs disagree") => "utcp_mismatch",
         BioError::Invalid(message) if message.contains("UTCP") => "utcp_invalid",
         BioError::Invalid(_) => "invalid_model",
+        BioError::UnresolvedSpectrum(_) => "unresolved_spectrum",
     }
 }
 

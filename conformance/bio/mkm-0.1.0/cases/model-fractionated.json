@@ -1,0 +1,54 @@
+{
+  "schema_version": "nctforge.microdosimetric-model/0.1.0",
+  "id": "nctforge.conformance.mkm-hsg-fractionated.v1",
+  "input_unit": "gray_per_source_particle",
+  "domain_radius_um": 1.0,
+  "domain_density_g_cm3": 1.0,
+  "components": {
+    "boron": {
+      "alpha_0": 0.172,
+      "beta": 0.0615,
+      "lineal_energy": {
+        "kind": "constant",
+        "dose_mean_lineal_energy_kev_um": 180.0
+      }
+    },
+    "nitrogen": {
+      "alpha_0": 0.172,
+      "beta": 0.0615,
+      "lineal_energy": {
+        "kind": "constant",
+        "dose_mean_lineal_energy_kev_um": 30.0
+      }
+    },
+    "hydrogen": {
+      "alpha_0": 0.172,
+      "beta": 0.0615,
+      "lineal_energy": {
+        "kind": "constant",
+        "dose_mean_lineal_energy_kev_um": 15.0
+      }
+    },
+    "photon": {
+      "alpha_0": 0.172,
+      "beta": 0.0615,
+      "lineal_energy": {
+        "kind": "constant",
+        "dose_mean_lineal_energy_kev_um": 1.5
+      }
+    }
+  },
+  "derivation": {
+    "id": "mkm-parameters-provenance",
+    "sha256": "bcd9a9f7946b797430f713b8e90005376f090a1490c8c29589d238ab10cfea56"
+  },
+  "validity_domain": "HSG-like cell LQ in a 1 um tissue-equivalent MKM domain; representative component lineal energies. Conformance stand-in — not a fitted or clinical model.",
+  "fractionation": {
+    "fraction_count": 30,
+    "source_particles_per_fraction": 1.0e9,
+    "default_alpha_beta": 3.0,
+    "region_alpha_beta": {
+      "core": 10.0
+    }
+  }
+}

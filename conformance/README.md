@@ -100,6 +100,30 @@ parameters.
 cargo test -p nctforge-bio --test bio_conformance
 ```
 
+## `bio/mkm-0.1.0/` — microdosimetric model application
+
+Covers `nctforge.microdosimetric-model/0.1.0` →
+`nctforge.biological-dose-bundle/0.2.0` application, including
+`nctforge.lineal-spectrum/0.1.0` spectrum inputs. The shared physical
+bundle and region masks are reused from `bio/0.2.0/` via relative paths,
+and a case model's `derivation` reference is verified against
+`cases/<id>.json` so provenance is hash-bound, not merely recorded:
+
+- `published` — HSG-like LQ parameters (Kase 2006/2008) with constant
+  component lineal energies
+- `spectrum` — boron ȳ_D resolved from a supplied lineal spectrum
+- `fractionated` — MKM photon-equivalence per fraction then the EQD2
+  rescale (the `mkm_weighted_eqd2` total)
+
+Reject cases pin `unresolved_spectrum`, `unsupported_schema`, `invalid`
+(empty validity domain), `unit_mismatch`, and `missing_region_mask`.
+Component lineal energies are representative stand-ins — not clinical
+model parameters.
+
+```text
+cargo test -p nctforge-bio --test mkm_conformance
+```
+
 ## `endpoints/0.1.0/` — endpoint model scoring
 
 Covers `nctforge.endpoint-model/0.1.0` →

@@ -505,6 +505,37 @@ schedule is recorded in the bundle. Weight and α/β region selections are
 independent — each uses the first matching mask in its own map's order.
 Models carry a free-text `validity_domain` for provenance.
 
+A second, separately versioned model family covers stochastic
+microdosimetry: `nctforge.microdosimetric-model/0.1.0` artifacts carry
+linearized-MKM parameters — per-component α₀/β (the cell system's photon
+LQ response) and each component's dose-mean lineal energy, either a
+constant or resolved from a `nctforge.lineal-spectrum/0.1.0` document —
+plus the spherical domain geometry and a mandatory `validity_domain`.
+`bio apply` routes on the model's `schema_version`, and components naming
+a spectrum source require a matching `--spectrum` document:
+
+```text
+nctforge bio spectrum \
+  --record TEPC-MEASUREMENT-RECORD.json \
+  --measurement boron-lineal \
+  --weighting event_frequency \
+  --output LINEAL-SPECTRUM.json
+nctforge bio lineal-mean --spectrum LINEAL-SPECTRUM.json
+nctforge bio apply \
+  --model MKM-MODEL.json \
+  --physical-bundle DOSE-BUNDLE.json \
+  --spectrum LINEAL-SPECTRUM.json \
+  --output NEW-BIO-BUNDLE.json
+```
+
+Each physical component is converted to a photon-equivalent dose via the
+MKM effective `α* = α₀ + β·z̄₁D` with `z̄₁D = ȳ_D/(ρ·π·r_d²)`, and the
+total sums them; the emitted bundle marks `microdosimetric_kinetic`
+semantics, an `mkm_weighted_*` unit, and a `microdosimetry` block binding
+the resolved lineal energies and spectrum hashes. MKM outputs are
+research artifacts — they assert no clinical RBE/CBE/Gy-Eq claim, and a
+weight model cannot claim `microdosimetric_kinetic` semantics.
+
 The NF-BNCT-001 specification's exclusion of CBE/RBE/Gy-Eq claims is
 preserved: biological bundles exist only when a model artifact is supplied,
 and demonstration models plus a core-region mask live under
