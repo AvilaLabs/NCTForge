@@ -81,6 +81,9 @@ enum Command {
     /// Inspect and bind versioned facility beam descriptions
     /// (`nctforge.beam-description/0.1.0`).
     Beam(BeamArgs),
+    /// Inspect measurement records and compare them against computed
+    /// artifacts (`nctforge.measurement-record/0.1.0`).
+    Measurement(MeasurementArgs),
     /// Prepare and audit OpenMC-specific research artifacts.
     Openmc(OpenMcArgs),
     /// Prepare deterministic NJOY response-generation artifacts.
@@ -312,6 +315,44 @@ enum BeamCommand {
         #[arg(long)]
         reference: Option<PathBuf>,
         /// New output path for the beam-quality report JSON.
+        #[arg(long)]
+        output: PathBuf,
+    },
+}
+
+#[derive(Debug, Args)]
+struct MeasurementArgs {
+    #[command(subcommand)]
+    command: MeasurementCommand,
+}
+
+#[derive(Debug, Subcommand)]
+enum MeasurementCommand {
+    /// Validate a measurement-record JSON and print its contents.
+    Info {
+        /// `nctforge.measurement-record/0.1.0` JSON document.
+        #[arg(long)]
+        record: PathBuf,
+    },
+    /// Compare a measurement record against a computed artifact —
+    /// currently a `nctforge.beam-quality/0.1.0` report — and write a
+    /// versioned `nctforge.measurement-comparison/0.1.0` record.
+    Compare {
+        /// `nctforge.measurement-record/0.1.0` JSON document.
+        #[arg(long)]
+        record: PathBuf,
+        /// Computed artifact JSON to compare against (a beam-quality
+        /// report).
+        #[arg(long)]
+        against: PathBuf,
+        /// Comparison record identifier.
+        #[arg(long)]
+        report_id: String,
+        /// Pass criterion in sigma units: |computed − measured| ≤ k·σ.
+        /// Points without a stated σ are reported, never auto-passed.
+        #[arg(long, default_value = "2.0")]
+        sigma_tolerance: f64,
+        /// New output path for the comparison record JSON.
         #[arg(long)]
         output: PathBuf,
     },
@@ -2224,6 +2265,109 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                             comparison.relative_tolerance
                         );
                     }
+                }
+                println!("report: {}", output.display());
+            }
+        },
+        Some(Command::Measurement(args)) => match args.command {
+            MeasurementCommand::Info { record } => {
+                let record: nctforge_transport::MeasurementRecord =
+                    serde_json::from_slice(&fs::read(&record)?)?;
+                record
+                    .validate()
+                    .map_err(|error| io::Error::other(format!("measurement record: {error}")))?;
+                println!(
+                    "{} — {} measurement(s)",
+                    record.id,
+                    record.measurements.len()
+                );
+                for measurement in &record.measurements {
+                    let value = match &measurement.value {
+                        nctforge_transport::MeasurementValue::Scalar {
+                            value,
+                            absolute_uncertainty_1sigma,
+                        } => match absolute_uncertainty_1sigma {
+                            Some(sigma) => format!("{value} ± {sigma}"),
+                            None => format!("{value} (σ not stated)"),
+                        },
+                        nctforge_transport::MeasurementValue::Histogram { bin_values, .. } => {
+                            format!("histogram, {} bins", bin_values.len())
+                        }
+                    };
+                    println!(
+                        "  {} [{}] {} {}",
+                        measurement.id, measurement.metric, value, measurement.unit
+                    );
+                }
+            }
+            MeasurementCommand::Compare {
+                record,
+                against,
+                report_id,
+                sigma_tolerance,
+                output,
+            } => {
+                let record_bytes = fs::read(&record)?;
+                let record: nctforge_transport::MeasurementRecord =
+                    serde_json::from_slice(&record_bytes)?;
+                let record_reference = nctforge_transport::ContentReference {
+                    id: record.id.clone(),
+                    sha256: format!("sha256:{}", nctforge_evidence::sha256_hex(&record_bytes)),
+                };
+                let against_bytes = fs::read(&against)?;
+                let report: nctforge_transport::BeamQualityReport =
+                    serde_json::from_slice(&against_bytes)?;
+                let computed_reference = nctforge_transport::ContentReference {
+                    id: report.id.clone(),
+                    sha256: format!("sha256:{}", nctforge_evidence::sha256_hex(&against_bytes)),
+                };
+                let comparison = nctforge_transport::compare_measurement_record(
+                    &report_id,
+                    &record,
+                    record_reference,
+                    &report,
+                    computed_reference,
+                    sigma_tolerance,
+                )
+                .map_err(|error| io::Error::other(format!("measurement compare: {error}")))?;
+                comparison
+                    .validate()
+                    .map_err(|error| io::Error::other(format!("comparison record: {error}")))?;
+                write_new_json(&output, &comparison)?;
+                println!("measurement compare: {}", comparison.id);
+                for entry in &comparison.comparisons {
+                    let status = match entry.passed {
+                        Some(true) => "PASS",
+                        Some(false) => "FAIL",
+                        None => "----",
+                    };
+                    let detail = match (entry.computed, entry.difference_sigma) {
+                        (Some(computed), Some(sigma)) => format!(
+                            "computed {computed:.4} vs measured {:.4} ({:.2}σ)",
+                            entry.measured, sigma
+                        ),
+                        (Some(computed), None) => format!(
+                            "computed {computed:.4} vs measured {:.4} (rel diff {:.3}, no σ)",
+                            entry.measured,
+                            entry.relative_difference.unwrap_or(f64::NAN)
+                        ),
+                        (None, _) => "unmatched metric".to_string(),
+                    };
+                    println!("  {status} {}: {detail}", entry.measurement_id);
+                }
+                println!(
+                    "  {} compared / {} passed / {} failed / {} unmatched / {} without σ",
+                    comparison.summary.compared,
+                    comparison.summary.passed,
+                    comparison.summary.failed,
+                    comparison.summary.unmatched,
+                    comparison.summary.without_uncertainty
+                );
+                if let Some(chi_square) = comparison.summary.chi_square {
+                    println!(
+                        "  chi-square {chi_square:.3} over {} dof",
+                        comparison.summary.degrees_of_freedom
+                    );
                 }
                 println!("report: {}", output.display());
             }

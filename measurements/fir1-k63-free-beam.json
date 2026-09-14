@@ -1,0 +1,132 @@
+{
+  "schema_version": "nctforge.measurement-record/0.1.0",
+  "id": "nctforge.measurement.fir1-k63-free-beam.v1",
+  "subject": {
+    "id": "nctforge.beam.fir1-k63.v1",
+    "sha256": "sha256:a7266c040a7863ee685f0e67397fc68425dd248a648335d5cc853addee2c72a7"
+  },
+  "measurements": [
+    {
+      "id": "epithermal-fluence-rate",
+      "metric": "epithermal_fluence_rate_cm2_s",
+      "method": {
+        "kind": "activation_foil",
+        "material": "Au, Cd-covered (multiple-foil set unfolded with LSL-M2)"
+      },
+      "value": {
+        "kind": "scalar",
+        "value": 1.07e9,
+        "absolute_uncertainty_1sigma": null
+      },
+      "unit": "cm^-2 s^-1",
+      "position": {
+        "frame": "port_plane",
+        "point_cm": [0.0, 0.0, 0.0],
+        "depth_cm": null
+      },
+      "note": "Free-beam value at the 14 cm K63 aperture, 250 kW. Seppala 2002 Table 4; the independent Seren/Auterinen characterization reports 1.06e9."
+    },
+    {
+      "id": "thermal-fluence-rate",
+      "metric": "thermal_fluence_rate_cm2_s",
+      "method": {
+        "kind": "activation_foil",
+        "material": "Au, bare (Cd-difference method)"
+      },
+      "value": {
+        "kind": "scalar",
+        "value": 7.19e7,
+        "absolute_uncertainty_1sigma": null
+      },
+      "unit": "cm^-2 s^-1",
+      "position": {
+        "frame": "port_plane",
+        "point_cm": [0.0, 0.0, 0.0],
+        "depth_cm": null
+      },
+      "note": null
+    },
+    {
+      "id": "fast-fluence-rate",
+      "metric": "fast_fluence_rate_cm2_s",
+      "method": {
+        "kind": "activation_foil",
+        "material": "threshold foils (multiple-foil set unfolded with LSL-M2)"
+      },
+      "value": {
+        "kind": "scalar",
+        "value": 3.45e7,
+        "absolute_uncertainty_1sigma": null
+      },
+      "unit": "cm^-2 s^-1",
+      "position": {
+        "frame": "port_plane",
+        "point_cm": [0.0, 0.0, 0.0],
+        "depth_cm": null
+      },
+      "note": null
+    },
+    {
+      "id": "total-fluence-rate",
+      "metric": "total_fluence_rate_cm2_s",
+      "method": {
+        "kind": "other",
+        "description": "sum of the foil-derived group fluence rates"
+      },
+      "value": {
+        "kind": "scalar",
+        "value": 1.1769e9,
+        "absolute_uncertainty_1sigma": null
+      },
+      "unit": "cm^-2 s^-1",
+      "position": {
+        "frame": "port_plane",
+        "point_cm": [0.0, 0.0, 0.0],
+        "depth_cm": null
+      },
+      "note": null
+    },
+    {
+      "id": "current-to-fluence-ratio",
+      "metric": "current_to_fluence_ratio",
+      "method": {
+        "kind": "activation_foil",
+        "material": "Au foil pair (bare/Cd) with divergence characterization"
+      },
+      "value": {
+        "kind": "scalar",
+        "value": 0.77,
+        "absolute_uncertainty_1sigma": null
+      },
+      "unit": "dimensionless",
+      "position": {
+        "frame": "port_plane",
+        "point_cm": [0.0, 0.0, 0.0],
+        "depth_cm": null
+      },
+      "note": "Measured J/Phi includes penumbra scatter the group-integrated beam fixture does not model; comparison against the reconstructed cone is expected to disagree — that is the fidelity gap the record documents."
+    }
+  ],
+  "provenance": {
+    "kind": "digitized_literature",
+    "citations": [
+      {
+        "authors": "Seppälä, T.",
+        "title": "FiR 1 epithermal neutron beam model and dose calculation for treatment planning in BNCT",
+        "venue": "University of Helsinki, Report Series in Physics HU-P-D103",
+        "year": 2002,
+        "doi": null,
+        "url": "http://hdl.handle.net/10138/23247"
+      },
+      {
+        "authors": "Serén, T.; Auterinen, I.; Kotiluoto, P.; Seppälä, T.",
+        "title": "Spectrum measurements and calculations in the epithermal neutron beam at the FiR 1 BNCT facility",
+        "venue": "Proc. 8th Int. Symp. on Neutron Capture Therapy for Cancer",
+        "year": 1999,
+        "doi": null,
+        "url": null
+      }
+    ],
+    "derivation_note": "Table values digitized from Seppälä 2002 (HU-P-D103) Table 4 free-beam characterization at the K63 port: group fluence rates on the TECDOC-1223 convention and the measured J/Phi = 0.77. Per-quantity one-sigma uncertainties reported in the source were not transcribed in this record (absolute_uncertainty_1sigma is null) — comparisons therefore report relative differences without sigma-normalized pass/fail rather than inventing uncertainties. Measurement methods follow the multiple-foil activation + LSL-M2 unfolding described in Serén et al. 1999 and the dissertation text."
+  }
+}

@@ -671,12 +671,21 @@ prerequisites for starting external review.
   penumbra divergence, and the report records that fidelity gap rather
   than hiding it. Gamma contamination remains an unmodeled channel listed
   explicitly in the report.
-- **R6-03 — measurement import.** A measurement record schema covering
-  foil activation, ion chamber, TLD, and TEPC lineal-energy spectra with
-  units, absolute uncertainty, and position provenance, plus a
-  measurement-vs-tally comparison record. Acceptance: a digitized
-  published beam-QA dataset imported and compared; real facility data
-  remains an R5 collaboration item.
+- **R6-03 — measurement import.** *(implemented)* `nctforge.measurement-
+  record/0.1.0` covers activation foil, ion chamber, TLD, TEPC, and
+  fission-chamber measurements with explicit units, optional one-sigma
+  uncertainty, position provenance, and scalar or histogram (lineal-
+  energy spectrum) values; `nctforge.measurement-comparison/0.1.0` binds
+  a record to a computed artifact (currently a beam-quality report) by
+  content hash and reports per-point relative difference,
+  sigma-normalized difference, and chi-square over σ-bearing points.
+  `nctforge measurement info|compare` drives both. The committed fixture
+  `measurements/fir1-k63-free-beam.json` digitizes Seppälä (2002) Table 4
+  free-beam values; its uncertainties were not transcribed, so points
+  compare by relative difference only — the schema reports
+  `without_uncertainty` rather than inventing sigmas. Comparing a
+  measurement record against raw tally outputs (not just beam-quality
+  reports) is the remaining extension.
 - **R6-04 — RT Dose export.** Write physical and biological dose bundles
   as DICOM RT Dose referencing the source CT/RTSTRUCT. Acceptance:
   exported RTDOSE loads in an independent DICOM toolkit and reproduces the

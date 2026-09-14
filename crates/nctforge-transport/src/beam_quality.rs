@@ -443,29 +443,20 @@ pub fn evaluate_beam_quality(
             in_phantom_metrics(beam, bundle, reference, &tumor, &normal)
         })
         .transpose()?;
-    let reference_comparison = reference.map(|reference| {
-        let computed = |name: &str| -> Option<f64> {
-            Some(match name {
-                "thermal_fluence_rate_cm2_s" => in_air.thermal_fluence_rate_cm2_s,
-                "epithermal_fluence_rate_cm2_s" => in_air.epithermal_fluence_rate_cm2_s,
-                "fast_fluence_rate_cm2_s" => in_air.fast_fluence_rate_cm2_s,
-                "total_fluence_rate_cm2_s" => in_air.total_fluence_rate_cm2_s,
-                "thermal_fraction" => in_air.thermal_fraction,
-                "fast_fraction" => in_air.fast_fraction,
-                "current_to_fluence_ratio" => in_air.current_to_fluence_ratio,
-                "mean_energy_ev" => in_air.mean_energy_ev,
-                "port_area_cm2" => in_air.port_area_cm2,
-                "advantage_depth_cm" => in_phantom.as_ref()?.advantage_depth_cm,
-                "advantage_ratio" => in_phantom.as_ref()?.advantage_ratio,
-                "peak_therapeutic_ratio" => in_phantom.as_ref()?.peak_therapeutic_ratio,
-                _ => return None,
-            })
-        };
+    let mut report = BeamQualityReport {
+        schema_version: BEAM_QUALITY_SCHEMA.into(),
+        id: report_id.into(),
+        beam: beam_reference,
+        in_air,
+        in_phantom,
+        reference_comparison: None,
+    };
+    report.reference_comparison = reference.map(|reference| {
         reference
             .values
             .iter()
             .filter_map(|metric| {
-                computed(&metric.metric).map(|computed| {
+                crate::measurement::beam_quality_metric(&report, &metric.metric).map(|computed| {
                     let relative_difference = if metric.value == 0.0 {
                         if computed == 0.0 { 0.0 } else { f64::INFINITY }
                     } else {
@@ -483,14 +474,7 @@ pub fn evaluate_beam_quality(
             })
             .collect()
     });
-    Ok(BeamQualityReport {
-        schema_version: BEAM_QUALITY_SCHEMA.into(),
-        id: report_id.into(),
-        beam: beam_reference,
-        in_air,
-        in_phantom,
-        reference_comparison,
-    })
+    Ok(report)
 }
 
 impl BeamQualityReport {

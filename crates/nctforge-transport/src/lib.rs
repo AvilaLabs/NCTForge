@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 
 mod beam;
 mod beam_quality;
+mod measurement;
 mod model;
 mod positioning;
 mod response;
@@ -21,6 +22,12 @@ pub use beam_quality::{
     BEAM_QUALITY_SCHEMA, BeamQualityError, BeamQualityReference, BeamQualityReport,
     ComponentWeights, InAirMetrics, InPhantomMetrics, MetricComparison, ReferenceMetric,
     evaluate_beam_quality, in_air_metrics, in_phantom_metrics,
+};
+pub use measurement::{
+    ComparisonSummary, MEASUREMENT_COMPARISON_SCHEMA, MEASUREMENT_RECORD_SCHEMA, Measurement,
+    MeasurementComparison, MeasurementComparisonReport, MeasurementError, MeasurementMethod,
+    MeasurementPosition, MeasurementProvenance, MeasurementRecord, MeasurementValue,
+    beam_quality_metric, compare_measurement_record, compare_with_beam_quality,
 };
 pub use model::{
     AngularDistribution, EnergyDistribution, FixedSourceDefinition, IntervalConvention,

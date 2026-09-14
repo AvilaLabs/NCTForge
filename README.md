@@ -62,6 +62,11 @@ bundling those systems.
   source, optional in-phantom advantage-depth/ratio and peak therapeutic
   ratio from a dose bundle, and per-metric comparison against published
   reference values.
+- **Measurement import** — `nctforge.measurement-record/0.1.0` documents
+  (foil, ion chamber, TLD, TEPC spectra) compare against computed
+  artifacts via `nctforge measurement compare`, emitting a
+  hash-bound `nctforge.measurement-comparison/0.1.0` record with
+  sigma-normalized and relative differences.
 - **Three surfaces, one implementation** — CLI (`nctforge`), a native egui
   workbench (integrity-gated tri-planar viewer, dose wash, DVH/metrics,
   plan workspace, source positioning), and a bounded Python package —

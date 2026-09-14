@@ -270,6 +270,33 @@ vs measured 0.77): the fixture's conservative collimator-bound cone
 cannot reproduce measured penumbra divergence — the report records
 exactly that fidelity gap.
 
+### Measurement import and comparison
+
+Verification against measurements uses two more versioned documents.
+`nctforge.measurement-record/0.1.0` records measured points with method
+(activation foil, ion chamber, TLD, TEPC, fission chamber), explicit
+unit, position provenance, and one-sigma uncertainty — scalar or
+histogram (lineal-energy spectrum) values. `nctforge measurement
+compare` resolves each measurement's canonical metric name against a
+beam-quality report and emits a `nctforge.measurement-comparison/0.1.0`
+record binding both inputs by content hash: per-point relative
+difference, sigma-normalized difference, and a chi-square summary.
+
+```text
+nctforge measurement info --record measurements/fir1-k63-free-beam.json
+nctforge measurement compare --record measurements/fir1-k63-free-beam.json \
+  --against beams/qa/fir1-k63-phantom.json \
+  --report-id nctforge.measurement-comparison.fir1-k63.v1 \
+  --output measurements/fir1-k63-vs-beam-quality.json
+```
+
+Points whose source states no uncertainty are compared by relative
+difference only and counted as `without_uncertainty` — the record never
+invents a sigma to produce a pass. The committed FiR 1 record is such a
+case: Seppälä's Table 4 values are digitized but their reported
+uncertainties were not transcribed, so all five points compare honestly
+without pass/fail — including the expected 29% J/Φ gap.
+
 ### OpenMC input generation
 
 With the sealed response set in place, generate the deterministic OpenMC deck

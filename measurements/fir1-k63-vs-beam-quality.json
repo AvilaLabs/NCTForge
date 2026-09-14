@@ -1,0 +1,74 @@
+{
+  "schema_version": "nctforge.measurement-comparison/0.1.0",
+  "id": "nctforge.measurement-comparison.fir1-k63.v1",
+  "measurements": {
+    "id": "nctforge.measurement.fir1-k63-free-beam.v1",
+    "sha256": "sha256:558a226d8bccb725014ee2ba13062d83d360a3510e0968799598cc2f8b13ee53"
+  },
+  "computed": {
+    "id": "nctforge.beam-quality.fir1-k63-phantom.v1",
+    "sha256": "sha256:7c67b43272d9cc9b40394775f05d2fa46bcadf70d4f94bcff43daf5ab35affc1"
+  },
+  "sigma_tolerance": 2.0,
+  "comparisons": [
+    {
+      "measurement_id": "epithermal-fluence-rate",
+      "metric": "epithermal_fluence_rate_cm2_s",
+      "measured": 1070000000.0,
+      "uncertainty_1sigma": null,
+      "computed": 1070155170.0,
+      "relative_difference": 0.00014501869158878506,
+      "difference_sigma": null,
+      "passed": null
+    },
+    {
+      "measurement_id": "thermal-fluence-rate",
+      "metric": "thermal_fluence_rate_cm2_s",
+      "measured": 71900000.0,
+      "uncertainty_1sigma": null,
+      "computed": 71908590.0,
+      "relative_difference": 0.00011947148817802503,
+      "difference_sigma": null,
+      "passed": null
+    },
+    {
+      "measurement_id": "fast-fluence-rate",
+      "metric": "fast_fluence_rate_cm2_s",
+      "measured": 34500000.0,
+      "uncertainty_1sigma": null,
+      "computed": 34836240.0,
+      "relative_difference": 0.00974608695652174,
+      "difference_sigma": null,
+      "passed": null
+    },
+    {
+      "measurement_id": "total-fluence-rate",
+      "metric": "total_fluence_rate_cm2_s",
+      "measured": 1176900000.0,
+      "uncertainty_1sigma": null,
+      "computed": 1176900000.0,
+      "relative_difference": 0.0,
+      "difference_sigma": null,
+      "passed": null
+    },
+    {
+      "measurement_id": "current-to-fluence-ratio",
+      "metric": "current_to_fluence_ratio",
+      "measured": 0.77,
+      "uncertainty_1sigma": null,
+      "computed": 0.9944525858924261,
+      "relative_difference": 0.2914968647953586,
+      "difference_sigma": null,
+      "passed": null
+    }
+  ],
+  "summary": {
+    "compared": 5,
+    "unmatched": 0,
+    "passed": 0,
+    "failed": 0,
+    "without_uncertainty": 5,
+    "chi_square": null,
+    "degrees_of_freedom": 0
+  }
+}
