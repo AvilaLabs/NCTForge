@@ -7,6 +7,7 @@ mod external_dose;
 mod interchange;
 mod registration;
 mod stats;
+mod systematic;
 
 use std::collections::BTreeSet;
 
@@ -32,6 +33,12 @@ pub use registration::{
 };
 pub use stats::{
     dose_covering_percent, equivalent_uniform_dose, masked_values, mean, volume_at_least,
+};
+pub use systematic::{
+    RegionUncertainty, SYSTEMATIC_UNCERTAINTY_QUALIFICATION, SYSTEMATIC_UNCERTAINTY_SCHEMA,
+    SourceSummary, SystematicError, SystematicUncertaintyReport, UncertaintySource,
+    boron_field_sigma, combine_total_sigma, combine_voxel_sigma, positioning_sigma,
+    region_uncertainty, relative_component_sigma, summarize_source,
 };
 
 /// A regular patient-coordinate voxel grid.

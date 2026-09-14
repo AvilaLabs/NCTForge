@@ -753,10 +753,21 @@ prerequisites for starting external review.
   transforms to ~1e-15 rad / machine-precision residuals; validation
   rejects non-orthonormal rotations, reflections, degenerate point sets,
   and declared transforms without provenance.
-- **R6-08 — systematic uncertainty propagation.** Beyond Monte Carlo
-  statistics: declared boron-concentration, model-parameter, and
-  positioning uncertainties propagated into component-dose and endpoint
-  uncertainty in the evidence bundle.
+- **R6-08 — systematic uncertainty propagation.** *(implemented)*
+  `nctforge.systematic-uncertainty/0.1.0` reports propagate declared
+  systematic sources over a physical dose bundle: `boron_concentration`
+  (fractional per-voxel σ of a content-bound `boron-field` scaling the
+  boron dose component), `positioning` (`|∇D|·σ_mm` first-order
+  displacement shift, optionally bound to a registration whose RMS
+  residual supplies σ), and `relative_component` (declared relative σ on
+  a named component). The correlation model is explicit: per voxel,
+  sources combine in quadrature; for region means, Monte Carlo σ is
+  voxelwise-independent (`sqrt(Σσ²)/N`) while each systematic source
+  contributes its mean per-voxel σ fully correlated across voxels —
+  the structure that makes boron loading the dominant BNCT uncertainty.
+  `nctforge uq apply|info` emits and inspects reports; the dose bundle's
+  own σ stays pure Monte Carlo — the systematic layer is additive, never
+  relabeled.
 - **R6-09 — variance reduction.** Weight-window or equivalent variance
   reduction for the OpenMC path. Acceptance: the frozen benchmark passes
   its photon precision gate at materially reduced histories with

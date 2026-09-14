@@ -198,6 +198,10 @@ enum Command {
     /// material assignment (`nctforge.boron-uptake-model/0.1.0`,
     /// `nctforge.boron-field/0.1.0`).
     Boron(BoronArgs),
+    /// Propagate declared systematic uncertainties (boron concentration,
+    /// positioning, component-relative) into per-voxel and region-mean
+    /// dose uncertainty (`nctforge.systematic-uncertainty/0.1.0`).
+    Uq(UqArgs),
     /// Evaluate organ-limited irradiation time over a per-source-particle
     /// dose endpoint, reporting the limiting structure and assumptions.
     IrradiationTime {
@@ -419,6 +423,56 @@ enum BoronCommand {
         /// `openmc generate --assignment`).
         #[arg(long)]
         output: PathBuf,
+    },
+}
+
+#[derive(Debug, Args)]
+struct UqArgs {
+    #[command(subcommand)]
+    command: UqCommand,
+}
+
+#[derive(Debug, Subcommand)]
+enum UqCommand {
+    /// Propagate declared systematic sources over a physical dose bundle,
+    /// emitting a `nctforge.systematic-uncertainty/0.1.0` report.
+    Apply {
+        /// Physical dose bundle JSON.
+        #[arg(long)]
+        dose: PathBuf,
+        /// `nctforge.boron-field/0.1.0` JSON: its fractional per-voxel
+        /// uncertainty scales the boron dose component.
+        #[arg(long)]
+        boron_field: Option<PathBuf>,
+        /// Declared relative 1σ on a component as `name=sigma` (e.g.
+        /// `photon=0.05`); repeatable.
+        #[arg(long)]
+        relative: Vec<String>,
+        /// Declared positioning 1σ in millimetres; contributes
+        /// `|∇D|·σ_mm` per voxel.
+        #[arg(long)]
+        positioning_sigma_mm: Option<f64>,
+        /// Registration document bound as positioning provenance; its
+        /// RMS landmark residual supplies σ when
+        /// `--positioning-sigma-mm` is absent.
+        #[arg(long)]
+        positioning_registration: Option<PathBuf>,
+        /// Region masks as `NAME=path` for region-mean results;
+        /// repeatable.
+        #[arg(long = "mask")]
+        masks: Vec<String>,
+        /// Report id.
+        #[arg(long)]
+        id: String,
+        /// New output path for the report JSON.
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Validate and print a systematic-uncertainty report.
+    Info {
+        /// `nctforge.systematic-uncertainty/0.1.0` JSON document.
+        #[arg(long)]
+        report: PathBuf,
     },
 }
 
@@ -6156,6 +6210,280 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                 write_new_json(&output, &assignment)?;
                 println!("material assignment at {}", output.display());
                 println!("tiers populated: {}", assignment.regions.len());
+            }
+        },
+        Some(Command::Uq(args)) => match args.command {
+            UqCommand::Info { report } => {
+                let report: nctforge_core::SystematicUncertaintyReport =
+                    serde_json::from_slice(&fs::read(&report)?)?;
+                report
+                    .validate()
+                    .map_err(|error| io::Error::other(error.to_string()))?;
+                println!("id: {}", report.id);
+                println!("quantity: {}", report.quantity);
+                println!(
+                    "dose bundle: {} sha256:{}",
+                    report.dose_bundle.id, report.dose_bundle.sha256
+                );
+                println!("sources: {}", report.sources.len());
+                for (source, summary) in report.sources.iter().zip(report.source_summaries.iter()) {
+                    let declaration = match source {
+                        nctforge_core::UncertaintySource::BoronConcentration { field } => {
+                            format!(
+                                "boron_concentration field={} sha256:{}",
+                                field.id, field.sha256
+                            )
+                        }
+                        nctforge_core::UncertaintySource::Positioning {
+                            sigma_mm,
+                            registration,
+                        } => format!(
+                            "positioning sigma_mm={sigma_mm}{}",
+                            registration
+                                .as_ref()
+                                .map(|r| format!(" registration={}", r.id))
+                                .unwrap_or_default()
+                        ),
+                        nctforge_core::UncertaintySource::RelativeComponent {
+                            component,
+                            relative_1sigma,
+                        } => {
+                            format!("relative_component {component} rel={relative_1sigma}")
+                        }
+                    };
+                    println!(
+                        "  {declaration}: mean σ {:.4e}, max σ {:.4e}, skipped {}",
+                        summary.mean_1sigma, summary.max_1sigma, summary.skipped_voxels
+                    );
+                }
+                for region in &report.regions {
+                    println!(
+                        "region {}: mean {:.4e}, mc σ {:?}, systematic σ {:.4e}, combined σ {:?}",
+                        region.region,
+                        region.mean_dose,
+                        region.monte_carlo_1sigma,
+                        region.systematic_1sigma,
+                        region.combined_1sigma
+                    );
+                }
+            }
+            UqCommand::Apply {
+                dose,
+                boron_field,
+                relative,
+                positioning_sigma_mm,
+                positioning_registration,
+                masks,
+                id,
+                output,
+            } => {
+                let bundle: PhysicalDoseBundle = serde_json::from_slice(&fs::read(&dose)?)?;
+                bundle
+                    .validate()
+                    .map_err(|error| io::Error::other(error.to_string()))?;
+                let n = bundle
+                    .geometry
+                    .voxel_count()
+                    .map_err(|error| io::Error::other(error.to_string()))?;
+
+                let component_volume = |component: nctforge_core::DoseComponent| {
+                    bundle
+                        .components
+                        .iter()
+                        .find(|volume| volume.component == component)
+                        .map(|volume| volume.values.as_slice())
+                };
+
+                let mut sources: Vec<nctforge_core::UncertaintySource> = Vec::new();
+                let mut maps: Vec<Vec<f64>> = Vec::new();
+                let mut summaries: Vec<nctforge_core::SourceSummary> = Vec::new();
+
+                if let Some(field_path) = &boron_field {
+                    let field: nctforge_boron::BoronField =
+                        serde_json::from_slice(&fs::read(field_path)?)?;
+                    field
+                        .validate()
+                        .map_err(|error| io::Error::other(error.to_string()))?;
+                    if field.geometry != bundle.geometry {
+                        return Err(io::Error::other(
+                            "boron field geometry does not match the dose bundle grid",
+                        )
+                        .into());
+                    }
+                    if field.case_id != bundle.case_id {
+                        return Err(io::Error::other(format!(
+                            "boron field case {:?} does not match dose bundle case {:?}",
+                            field.case_id, bundle.case_id
+                        ))
+                        .into());
+                    }
+                    let boron =
+                        component_volume(nctforge_core::DoseComponent::Boron).ok_or_else(|| {
+                            io::Error::other("dose bundle carries no boron component")
+                        })?;
+                    let (map, skipped) = nctforge_core::boron_field_sigma(
+                        boron,
+                        &field.values,
+                        &field.uncertainty_1sigma,
+                    );
+                    summaries.push(nctforge_core::summarize_source(
+                        "boron_concentration",
+                        &map,
+                        skipped,
+                    ));
+                    maps.push(map);
+                    sources.push(nctforge_core::UncertaintySource::BoronConcentration {
+                        field: nctforge_core::ContentReference {
+                            id: field.id.clone(),
+                            sha256: nctforge_evidence::sha256_file(field_path)?,
+                        },
+                    });
+                }
+
+                for spec in &relative {
+                    let (name, sigma_text) = spec.split_once('=').ok_or_else(|| {
+                        io::Error::other(format!(
+                            "--relative {spec:?} must be written as component=sigma"
+                        ))
+                    })?;
+                    let component = parse_component_name(name)?;
+                    let sigma: f64 = sigma_text.parse().map_err(|_| {
+                        io::Error::other(format!("--relative {spec:?}: sigma is not a number"))
+                    })?;
+                    if !sigma.is_finite() || sigma < 0.0 {
+                        return Err(io::Error::other(format!(
+                            "--relative {spec:?}: sigma must be a non-negative finite value"
+                        ))
+                        .into());
+                    }
+                    let dose_values = component_volume(component).ok_or_else(|| {
+                        io::Error::other(format!("dose bundle carries no {name:?} component"))
+                    })?;
+                    let map = nctforge_core::relative_component_sigma(dose_values, sigma);
+                    summaries.push(nctforge_core::summarize_source(
+                        &format!("relative_component:{name}"),
+                        &map,
+                        0,
+                    ));
+                    maps.push(map);
+                    sources.push(nctforge_core::UncertaintySource::RelativeComponent {
+                        component: name.to_string(),
+                        relative_1sigma: sigma,
+                    });
+                }
+
+                if positioning_sigma_mm.is_some() || positioning_registration.is_some() {
+                    let registration_doc: Option<nctforge_core::Registration> =
+                        positioning_registration
+                            .as_ref()
+                            .map(|path| -> Result<nctforge_core::Registration, io::Error> {
+                                let doc: nctforge_core::Registration =
+                                    serde_json::from_slice(&fs::read(path)?)?;
+                                doc.validate()
+                                    .map_err(|error| io::Error::other(error.to_string()))?;
+                                Ok(doc)
+                            })
+                            .transpose()?;
+                    let sigma_mm = match (positioning_sigma_mm, &registration_doc) {
+                        (Some(sigma), _) => sigma,
+                        (None, Some(doc)) => doc.rms_residual_mm.ok_or_else(|| {
+                            io::Error::other(
+                                "registration carries no RMS residual; pass --positioning-sigma-mm",
+                            )
+                        })?,
+                        (None, None) => unreachable!(),
+                    };
+                    if !sigma_mm.is_finite() || sigma_mm < 0.0 {
+                        return Err(io::Error::other(
+                            "positioning sigma must be a non-negative finite value",
+                        )
+                        .into());
+                    }
+                    let map = nctforge_core::positioning_sigma(
+                        &bundle.physical_total.values,
+                        &bundle.geometry,
+                        sigma_mm,
+                    );
+                    summaries.push(nctforge_core::summarize_source("positioning", &map, 0));
+                    maps.push(map);
+                    sources.push(nctforge_core::UncertaintySource::Positioning {
+                        sigma_mm,
+                        registration: image_reference(&positioning_registration)?,
+                    });
+                }
+
+                if sources.is_empty() {
+                    return Err(io::Error::other(
+                        "no systematic sources declared (--boron-field, --relative, --positioning-*)",
+                    )
+                    .into());
+                }
+
+                let systematic = nctforge_core::combine_voxel_sigma(&maps);
+                let combined = nctforge_core::combine_total_sigma(
+                    bundle
+                        .physical_total
+                        .absolute_standard_uncertainty
+                        .as_deref(),
+                    &systematic,
+                );
+
+                let mask_list = load_named_masks(&masks)?;
+                for mask in &mask_list {
+                    if mask.voxels.len() != n {
+                        return Err(io::Error::other(format!(
+                            "mask {}: {} voxels, grid expects {}",
+                            mask.name,
+                            mask.voxels.len(),
+                            n
+                        ))
+                        .into());
+                    }
+                }
+                let regions = mask_list
+                    .iter()
+                    .map(|mask| {
+                        nctforge_core::region_uncertainty(
+                            &mask.name,
+                            &bundle.physical_total.values,
+                            bundle
+                                .physical_total
+                                .absolute_standard_uncertainty
+                                .as_deref(),
+                            &maps,
+                            mask,
+                        )
+                    })
+                    .collect();
+
+                let report = nctforge_core::SystematicUncertaintyReport {
+                    schema_version: nctforge_core::SYSTEMATIC_UNCERTAINTY_SCHEMA.into(),
+                    id,
+                    dose_bundle: nctforge_core::ContentReference {
+                        id: bundle.provenance_id.clone(),
+                        sha256: nctforge_evidence::sha256_file(&dose)?,
+                    },
+                    quantity: "physical_total".into(),
+                    sources,
+                    source_summaries: summaries,
+                    systematic_1sigma: systematic,
+                    combined_1sigma: combined,
+                    regions,
+                    qualification: nctforge_core::SYSTEMATIC_UNCERTAINTY_QUALIFICATION.into(),
+                    provenance_id: format!("systematic-uncertainty:{}", bundle.case_id),
+                };
+                report
+                    .validate()
+                    .map_err(|error| io::Error::other(error.to_string()))?;
+                write_new_json(&output, &report)?;
+                println!("systematic-uncertainty report at {}", output.display());
+                println!("sources: {}", report.sources.len());
+                let sys_max = report
+                    .systematic_1sigma
+                    .iter()
+                    .copied()
+                    .fold(0.0_f64, f64::max);
+                println!("max per-voxel systematic σ: {sys_max:.4e}");
             }
         },
         Some(Command::Position(args)) => match args.command {

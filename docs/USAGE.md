@@ -952,6 +952,41 @@ distinct material in the deck. The emitted field asserts
 `pet_derived_boron_research_only_not_clinical`: it is a modeled estimate
 with propagated parameter uncertainty, not an assayed measurement.
 
+### Systematic uncertainty
+
+`nctforge uq` propagates *declared* systematic uncertainties over a
+physical dose bundle into a `nctforge.systematic-uncertainty/0.1.0`
+report. Sources:
+
+- `--boron-field FIELD.json` — a PET-derived boron field's fractional
+  per-voxel σ scales the boron dose component
+  (`σ(v) = D_b(v)·σ_B(v)/B(v)`); this is the dominant BNCT systematic.
+- `--relative component=sigma` — a declared relative 1σ on a named
+  component (response calibration, model parameter).
+- `--positioning-sigma-mm X` — translational positioning σ contributing
+  `|∇D(v)|·X` per voxel (first-order dose-shift under displacement).
+  `--positioning-registration REG.json` binds a registration document
+  as provenance and defaults σ to its RMS landmark residual.
+
+Per voxel, independent sources combine in quadrature and then with the
+bundle's Monte Carlo σ into `combined_1sigma`. For region means
+(`--mask NAME=path`), the correlation model is explicit: MC σ is
+voxelwise-independent (`sqrt(Σσ²)/N`) while each systematic source
+contributes its mean per-voxel σ fully correlated across voxels —
+systematics do not average down. The dose bundle's own σ remains pure
+Monte Carlo; the report is a separate, additive layer.
+
+```text
+nctforge uq apply \
+  --dose BUNDLE.json \
+  --boron-field FIELD.json \
+  --relative photon=0.05 \
+  --positioning-registration REGISTRATION.json \
+  --mask TARGET=mask.json \
+  --id UQ-001 --output NEW-UQ-REPORT.json
+nctforge uq info --report UQ-REPORT.json
+```
+
 `nctforge mask` combines and constructs `RegionMask` volumes for
 limiting-organ construction: subtraction (e.g. organ minus tumor), union,
 and intersection across mask JSONs, plus CT-threshold regions built from a
