@@ -7,9 +7,12 @@ processing and transported-photon suitability evidence rejected and
 dispositioned as explained (ADR 0031); component response tables generated and
 deterministically verified; OpenMC smoke execution complete with the ADR 0007
 estimator comparisons frozen as evidence; statepoint import into the platform
-result model implemented and verified on the smoke statepoint; reference
-transport results remain unqualified pending a reference-statistics execution
-under the predeclared acceptance gates
+result model implemented and verified on the smoke statepoint; the
+reference-statistics execution passed every predeclared acceptance gate at
+600M histories per frozen seed (reports at
+`transport/openmc-acceptance-report-300M.json` and
+`transport/openmc-acceptance-report-600M.json`); the candidate remains
+unpromoted to reference output pending the cross-code reproduction gate
 
 **Qualification ceiling:** Synthetic research only
 

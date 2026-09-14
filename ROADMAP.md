@@ -385,22 +385,26 @@ Implementation status:
   folded components by the atom-density ratio (density × mass fraction),
   residual folds by the density ratio alone. Rotated grids, overlaps,
   out-of-grid indices, and duplicated voxels are all rejected;
-- complete (negative result): candidate-reference execution — all three
-  frozen-seed 300M-history runs completed under the predeclared acceptance
-  contract and the evaluation report is committed at
-  `transport/openmc-acceptance-report-300M.json` (sha256 e68ba744…a820).
-  Every estimator comparison (291) and chi-square seed-consistency check
-  (378) passed, as did boron/nitrogen/hydrogen voxel precision; the photon
-  heating component missed the predeclared voxel-precision bounds on all
-  three seeds (median RSE ≈ 3.72% vs the 3.0% gate; p95 ≈ 5.08% vs the
-  5.0% gate). The candidate is therefore **not** promoted to reference
-  status — acceptance requires a higher-statistics execution under the
-  same frozen contract (same seeds, min_batches is a floor, not a cap).
-  That extension is in flight: `*-b100` execution profiles declare 100
-  batches (600M histories) per seed upfront and each run was continued
-  from its 50-batch statepoint via OpenMC restart, which restores the RNG
-  stream and tally accumulators — statistically identical to a fresh
-  600M run at half the compute;
+- complete (negative result): the first candidate-reference evaluation at
+  300M histories missed only the photon voxel-precision gates — report
+  committed at `transport/openmc-acceptance-report-300M.json` (sha256
+  e68ba744…a820), estimator comparisons (291) and chi-square (378) all
+  passed, photon median RSE ≈ 3.72% vs the 3.0% gate;
+- complete (passed at 600M): the specification's stated protocol —
+  "particle count is increased until the precision gates are met" — was
+  executed via OpenMC restart: `*-b100` profiles declared 100 batches /
+  600M histories per frozen seed upfront and each run continued from its
+  50-batch statepoint (identical RNG stream and tally accumulators). All
+  gates passed on all three seeds: photon median RSE ≈ 2.67% vs 3.0%,
+  p95 ≈ 3.5% vs 5.0%, every estimator comparison (291) and chi-square
+  seed-consistency check (378) green — report committed at
+  `transport/openmc-acceptance-report-600M.json` (sha256 5f57a0fc…b220).
+  Per-seed immutable bundles are retained under
+  `.nctforge-data/nctforge/nf-bnct-001-reference-600M/`;
+- pending: reference promotion — the specification's cross-code
+  reproduction gate still requires a separately implemented transport path
+  (Geant4, or licensed MCNP/PHITS produced by a licensed user) reproducing
+  the frozen case before the candidate becomes a reference output;
 - complete (OP-02, continued): `benchmark derive-materials --mask NAME=path`
   binds map keys to external `RegionMask` JSONs (e.g. `nifti to-mask`
   output) instead of RT Structure Set ROIs, with name/voxel-count checks —
