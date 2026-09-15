@@ -83,11 +83,40 @@ difference anchored to the reference maximum, and the within-sigma voxel
 fraction per component — a measured agreement statement, not an
 equivalence claim.
 
+## 6. PHITS variant
+
+The same loop exists for PHITS `[t-deposit]` xyz-mesh output (ANGEL
+format). The operator runs their own PHITS input with an `axis = xy`
+deposit tally per component on the shared mesh; each output file plus
+its `FILE_err.out` sibling carries values and relative errors:
+
+```text
+openbnct import phits \
+  --case-id nf-bnct-001 \
+  --unit gray_per_source_particle \
+  --normalization "per-source-particle deposit; no response folding" \
+  --producer-version "PHITS-3.33" \
+  --component boron=dep-boron.out \
+  --component nitrogen=dep-nitrogen.out \
+  --component hydrogen=dep-hydrogen.out \
+  --component photon=dep-photon.out \
+  --output phits-dose.json
+```
+
+Two format details worth noting for deck authors: the tally echo
+declares bin *edges* (`xmin`/`xmax`/`nx`), while the bundle's
+`origin_mm` stores voxel *centers* — a PHITS mesh of −10…+10 cm with
+`nx = 40` reproduces the benchmark's −97.5 mm origin exactly. Each
+z-slice is one `#newpage:` page of x-fastest `(x-lo, x-hi, y-lo, y-hi,
+value)` rows.
+
 ## Verified state
 
 As of the recorded commit, the import-and-compare half of this recipe is
-verified end-to-end at benchmark scale: a component meshtal synthesized
-from a completed 140M-history OpenMC run (64,000 voxels, four components)
-re-imported and compared with 100% of voxels within 2σ. The unverified
-step is the licensed-engine run itself — that remains the open acceptance
-gate this recipe exists to satisfy.
+verified end-to-end at benchmark scale for **both** external formats: a
+component meshtal and a four-file PHITS `t-deposit` set were each
+synthesized from a completed 140M-history OpenMC run (64,000 voxels,
+four components), re-imported, and compared with 100% of voxels within
+2σ (max |Δ| ≈ 5e-20 Gy/source, physical total ≈ 1.6e-16). The unverified
+step is the licensed-engine run itself — that remains the open
+acceptance gate this recipe exists to satisfy.
