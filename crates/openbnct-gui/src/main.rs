@@ -43,7 +43,7 @@ fn main() -> eframe::Result {
         "OpenBNCT",
         options,
         Box::new(move |creation_context| {
-            configure_style(&creation_context.egui_ctx, false);
+            configure_style(&creation_context.egui_ctx);
             Ok(Box::new(OpenBnctApp::new(
                 initial_case,
                 &creation_context.egui_ctx,
@@ -1247,46 +1247,47 @@ impl eframe::App for OpenBnctApp {
             self.handle_dropped(&dropped);
         }
 
-        let window_rect = ui.max_rect();
         let mut tour_targets = TourTargets::default();
         let dark_before = self.dark_mode;
-        self.show_menu_bar(ui, &mut tour_targets);
+        egui::Panel::top("openbnct-menu-bar").show(ui, |ui| {
+            self.show_menu_bar(ui, &mut tour_targets);
+        });
         if self.dark_mode != dark_before {
-            configure_style(ui.ctx(), self.dark_mode);
+            ui.ctx().set_theme(if self.dark_mode {
+                egui::ThemePreference::Dark
+            } else {
+                egui::ThemePreference::Light
+            });
         }
-        let theme = Theme::resolve(self.dark_mode);
-        // The Ui eframe hands us has no panel behind it; without this fill the
-        // window clear color (black) shows through between the menu bar,
-        // header, and workbench.
-        ui.painter().rect_filled(window_rect, 0.0, theme.panel_fill);
-        show_app_header(
-            ui,
-            self.case.as_ref(),
-            self.brand_logo.as_ref(),
-            theme,
-            &mut tour_targets,
-        );
-        ui.add_space(8.0);
-        let enter_pressed = ui.input(|input| input.key_pressed(egui::Key::Enter));
-        let load_requested = show_case_loader(
-            ui,
-            &mut self.case_path,
-            self.case.as_ref(),
-            enter_pressed,
-            &mut tour_targets,
-            &mut self.template_status,
-        );
-        if load_requested {
-            self.load_case();
-        }
-        if let Some(error) = &self.load_error {
-            ui.colored_label(theme.error, format!("Load rejected: {error}"));
-        }
-        if let Some(status) = &self.template_status {
-            ui.label(status);
-        }
-        ui.add_space(8.0);
-        ui.separator();
+        let theme = Theme::resolve(ui.visuals().dark_mode);
+        egui::Panel::top("openbnct-header").show(ui, |ui| {
+            show_app_header(
+                ui,
+                self.case.as_ref(),
+                self.brand_logo.as_ref(),
+                theme,
+                &mut tour_targets,
+            );
+            ui.add_space(8.0);
+            let enter_pressed = ui.input(|input| input.key_pressed(egui::Key::Enter));
+            let load_requested = show_case_loader(
+                ui,
+                &mut self.case_path,
+                self.case.as_ref(),
+                enter_pressed,
+                &mut tour_targets,
+                &mut self.template_status,
+            );
+            if load_requested {
+                self.load_case();
+            }
+            if let Some(error) = &self.load_error {
+                ui.colored_label(theme.error, format!("Load rejected: {error}"));
+            }
+            if let Some(status) = &self.template_status {
+                ui.label(status);
+            }
+        });
         show_workbench(
             ui,
             &mut self.workspace,
@@ -1302,26 +1303,39 @@ impl eframe::App for OpenBnctApp {
     }
 }
 
-fn configure_style(context: &egui::Context, dark_mode: bool) {
-    let mut visuals = if dark_mode {
-        egui::Visuals::dark()
-    } else {
-        egui::Visuals::light()
-    };
-    if dark_mode {
-        visuals.panel_fill = egui::Color32::from_rgb(17, 21, 29);
-        visuals.window_fill = egui::Color32::from_rgb(21, 26, 36);
-        visuals.extreme_bg_color = egui::Color32::from_rgb(10, 13, 19);
-        visuals.faint_bg_color = egui::Color32::from_rgb(27, 33, 44);
-        visuals.selection.bg_fill = egui::Color32::from_rgb(30, 116, 138);
-        visuals.selection.stroke = egui::Stroke::new(1.0, egui::Color32::from_rgb(144, 231, 239));
-    }
-    context.set_visuals(visuals);
+/// Installs the OpenBNCT palette into egui's own light and dark visuals so
+/// every native surface — panels, menus, popups, tooltips, text fields —
+/// follows the theme, not just the custom frames. Called once at startup;
+/// the View menu only flips `ThemePreference` afterward.
+fn configure_style(context: &egui::Context) {
+    let mut light = egui::Visuals::light();
+    light.panel_fill = egui::Color32::from_rgb(235, 237, 242);
+    light.window_fill = egui::Color32::WHITE;
+    light.faint_bg_color = egui::Color32::from_rgb(242, 244, 248);
+    light.extreme_bg_color = egui::Color32::WHITE;
+    light.hyperlink_color = egui::Color32::from_rgb(8, 102, 112);
+    light.selection.bg_fill = egui::Color32::from_rgb(178, 224, 230);
+    light.selection.stroke = egui::Stroke::new(1.0, egui::Color32::from_rgb(8, 102, 112));
+    context.set_visuals_of(egui::Theme::Light, light);
+    context.style_mut_of(egui::Theme::Light, apply_spacing);
 
-    context.global_style_mut(|style| {
-        style.spacing.item_spacing = egui::vec2(10.0, 8.0);
-        style.spacing.button_padding = egui::vec2(12.0, 7.0);
-    });
+    let mut dark = egui::Visuals::dark();
+    dark.panel_fill = egui::Color32::from_rgb(17, 21, 29);
+    dark.window_fill = egui::Color32::from_rgb(21, 26, 36);
+    dark.faint_bg_color = egui::Color32::from_rgb(27, 33, 44);
+    dark.extreme_bg_color = egui::Color32::from_rgb(10, 13, 19);
+    dark.hyperlink_color = egui::Color32::from_rgb(139, 229, 235);
+    dark.selection.bg_fill = egui::Color32::from_rgb(30, 116, 138);
+    dark.selection.stroke = egui::Stroke::new(1.0, egui::Color32::from_rgb(144, 231, 239));
+    context.set_visuals_of(egui::Theme::Dark, dark);
+    context.style_mut_of(egui::Theme::Dark, apply_spacing);
+
+    context.set_theme(egui::ThemePreference::Light);
+}
+
+fn apply_spacing(style: &mut egui::Style) {
+    style.spacing.item_spacing = egui::vec2(10.0, 8.0);
+    style.spacing.button_padding = egui::vec2(12.0, 7.0);
 }
 
 fn show_app_header(
@@ -3596,7 +3610,7 @@ mod tests {
     #[test]
     fn every_empty_workspace_renders_at_the_minimum_viewport() {
         let context = egui::Context::default();
-        configure_style(&context, false);
+        configure_style(&context);
         for mut workspace in WorkspaceTab::ALL {
             let input = egui::RawInput {
                 screen_rect: Some(egui::Rect::from_min_size(
