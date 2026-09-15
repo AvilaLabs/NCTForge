@@ -157,7 +157,6 @@ impl GateState {
 /// that would otherwise be a hardcoded dark-theme literal routes through here.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct Theme {
-    dark: bool,
     banner_fill: egui::Color32,
     nav_fill: egui::Color32,
     panel_fill: egui::Color32,
@@ -171,14 +170,9 @@ pub(crate) struct Theme {
 }
 
 impl Theme {
-    const fn dark(self) -> bool {
-        self.dark
-    }
-
     fn resolve(dark: bool) -> Self {
         if dark {
             Self {
-                dark,
                 banner_fill: egui::Color32::from_rgb(21, 30, 40),
                 nav_fill: egui::Color32::from_rgb(15, 19, 27),
                 panel_fill: egui::Color32::from_rgb(17, 21, 29),
@@ -192,7 +186,6 @@ impl Theme {
             }
         } else {
             Self {
-                dark,
                 banner_fill: egui::Color32::from_rgb(226, 236, 242),
                 nav_fill: egui::Color32::from_rgb(242, 244, 248),
                 panel_fill: egui::Color32::from_rgb(235, 237, 242),
@@ -1161,6 +1154,48 @@ impl OpenBnctApp {
         }
     }
 
+    /// Traditional top-left menu bar. File owns case/template actions,
+    /// View owns the theme toggle, Help owns the help center.
+    fn show_menu_bar(&mut self, ui: &mut egui::Ui, tour_targets: &mut TourTargets) {
+        egui::MenuBar::new().ui(ui, |ui| {
+            ui.menu_button("File", |ui| {
+                if ui.button("Open case…").clicked() {
+                    if let Some(dir) = rfd::FileDialog::new().pick_folder() {
+                        self.case_path = dir.display().to_string();
+                        self.load_case();
+                    }
+                    ui.close();
+                }
+                if ui.button("Export case template…").clicked() {
+                    if let Some(dir) = rfd::FileDialog::new().pick_folder() {
+                        self.template_status = Some(match export_case_template(&dir) {
+                            Ok(count) => format!(
+                                "template written to {} ({count} files — edit before use)",
+                                dir.display()
+                            ),
+                            Err(error) => format!("template export failed: {error}"),
+                        });
+                    }
+                    ui.close();
+                }
+                ui.separator();
+                if ui.button("Quit").clicked() {
+                    ui.send_viewport_cmd(egui::ViewportCommand::Close);
+                }
+            });
+            ui.menu_button("View", |ui| {
+                ui.checkbox(&mut self.dark_mode, "Dark mode");
+            });
+            let help = ui.menu_button("Help", |ui| {
+                if ui.button("Help and guided tours").clicked() {
+                    self.help.toggle_center();
+                    ui.close();
+                }
+            });
+            tour_targets.set(TourTarget::HelpButton, help.response.rect);
+        });
+    }
+
     /// Route an OS-dropped path onto the matching workbench surface: a
     /// directory loads as a case, a `.json` as a dose bundle, and a
     /// `.nii`/`.nii.gz` as a NIfTI volume.
@@ -1212,22 +1247,25 @@ impl eframe::App for OpenBnctApp {
             self.handle_dropped(&dropped);
         }
 
-        let theme = Theme::resolve(self.dark_mode);
+        let window_rect = ui.max_rect();
         let mut tour_targets = TourTargets::default();
-        let (help_clicked, theme_clicked) = show_app_header(
+        let dark_before = self.dark_mode;
+        self.show_menu_bar(ui, &mut tour_targets);
+        if self.dark_mode != dark_before {
+            configure_style(ui.ctx(), self.dark_mode);
+        }
+        let theme = Theme::resolve(self.dark_mode);
+        // The Ui eframe hands us has no panel behind it; without this fill the
+        // window clear color (black) shows through between the menu bar,
+        // header, and workbench.
+        ui.painter().rect_filled(window_rect, 0.0, theme.panel_fill);
+        show_app_header(
             ui,
             self.case.as_ref(),
             self.brand_logo.as_ref(),
             theme,
             &mut tour_targets,
         );
-        if help_clicked {
-            self.help.toggle_center();
-        }
-        if theme_clicked {
-            self.dark_mode = !self.dark_mode;
-            configure_style(ui.ctx(), self.dark_mode);
-        }
         ui.add_space(8.0);
         let enter_pressed = ui.input(|input| input.key_pressed(egui::Key::Enter));
         let load_requested = show_case_loader(
@@ -1292,9 +1330,7 @@ fn show_app_header(
     brand_logo: Option<&egui::TextureHandle>,
     theme: Theme,
     tour_targets: &mut TourTargets,
-) -> (bool, bool) {
-    let mut help_clicked = false;
-    let mut theme_clicked = false;
+) {
     egui::Frame::new()
         .fill(theme.banner_fill)
         .corner_radius(8)
@@ -1338,26 +1374,6 @@ fn show_app_header(
                     );
                 });
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    let response = ui
-                        .add_sized(
-                            [36.0, 36.0],
-                            egui::Button::new(egui::RichText::new("?").size(19.0).strong()),
-                        )
-                        .on_hover_text("Help, common questions, and guided tours (F1)");
-                    help_clicked = response.clicked();
-                    tour_targets.set(TourTarget::HelpButton, response.rect);
-                    let theme_label = if theme.dark() { "☀" } else { "☾" };
-                    let theme_response = ui
-                        .add_sized(
-                            [36.0, 36.0],
-                            egui::Button::new(egui::RichText::new(theme_label).size(17.0).strong()),
-                        )
-                        .on_hover_text(if theme.dark() {
-                            "Switch to light mode"
-                        } else {
-                            "Switch to dark mode"
-                        });
-                    theme_clicked = theme_response.clicked();
                     status_badge(ui, GateState::Pending, "RESEARCH ONLY");
                     if case.is_some() {
                         status_badge(ui, GateState::Verified, "CASE VERIFIED");
@@ -1372,7 +1388,6 @@ fn show_app_header(
         );
         ui.label("No dose, prescription, or treatment-delivery claim is available in this build.");
     });
-    (help_clicked, theme_clicked)
 }
 
 /// The transport-side authoring contracts, embedded from the benchmark so

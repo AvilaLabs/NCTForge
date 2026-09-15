@@ -121,7 +121,7 @@ const QUICK_START_STEPS: [TourStep; 5] = [
         target: TourTarget::HelpButton,
         workspace: None,
         title: "Help is always here",
-        instruction: "Open this question-mark button for contextual guidance, bundled answers, or another guided tour. Press Escape at any point to leave a tour.",
+        instruction: "Open the Help menu for contextual guidance, bundled answers, or another guided tour. Press Escape at any point to leave a tour.",
     },
 ];
 
