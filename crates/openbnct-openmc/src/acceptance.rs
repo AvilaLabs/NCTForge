@@ -1191,6 +1191,109 @@ mod tests {
         directory.to_path_buf()
     }
 
+    /// A run directory written before the rename keeps `nctforge-*`
+    /// artifact filenames, `nctforge.*` schema ids, and `nctforge.*`
+    /// tally names in both manifest and statepoint. Evaluation must
+    /// still pass: file resolution falls back to the legacy names,
+    /// schema ids normalize on load, and tally lookups match by
+    /// normalized contract id.
+    #[test]
+    fn evaluates_pre_rename_run_directory() {
+        fn legacy_ids(value: &mut serde_json::Value) {
+            match value {
+                serde_json::Value::String(s) => {
+                    *s = s
+                        .replace("openbnct.", "nctforge.")
+                        .replace("openbnct-", "nctforge-");
+                }
+                serde_json::Value::Array(items) => items.iter_mut().for_each(legacy_ids),
+                serde_json::Value::Object(map) => map.values_mut().for_each(legacy_ids),
+                _ => {}
+            }
+        }
+
+        let temp = tempfile::tempdir().unwrap();
+        let dirs: Vec<PathBuf> = CANDIDATE_REFERENCE_SEEDS
+            .iter()
+            .map(|seed| {
+                let dir = write_run(&temp.path().join(format!("run-{seed}")), *seed, 1.0);
+
+                // Legacy filenames + legacy identifiers in the JSON artifacts.
+                // The contract is rewritten first so the manifest's bound
+                // sha256 can be updated to the legacy bytes — a real
+                // pre-rename run bound the hash of its own era's contract.
+                let mut contract: serde_json::Value = serde_json::from_slice(
+                    &std::fs::read(dir.join(ACCEPTANCE_CONTRACT_FILE)).unwrap(),
+                )
+                .unwrap();
+                legacy_ids(&mut contract);
+                let contract_bytes = serde_json::to_vec_pretty(&contract).unwrap();
+                std::fs::write(
+                    dir.join("nctforge-acceptance-contract.json"),
+                    &contract_bytes,
+                )
+                .unwrap();
+                std::fs::remove_file(dir.join(ACCEPTANCE_CONTRACT_FILE)).unwrap();
+                let contract_sha256 = format!("{:x}", Sha256::digest(&contract_bytes));
+
+                let mut manifest: serde_json::Value = serde_json::from_slice(
+                    &std::fs::read(dir.join(OPENMC_INPUT_MANIFEST_FILE)).unwrap(),
+                )
+                .unwrap();
+                legacy_ids(&mut manifest);
+                manifest["bindings"]["acceptance"]["sha256"] =
+                    serde_json::Value::String(contract_sha256);
+                std::fs::write(
+                    dir.join("nctforge-input-manifest.json"),
+                    serde_json::to_vec_pretty(&manifest).unwrap(),
+                )
+                .unwrap();
+                std::fs::remove_file(dir.join(OPENMC_INPUT_MANIFEST_FILE)).unwrap();
+
+                // The statepoint tally names must carry the legacy namespace
+                // too — a real pre-rename run wrote them that way.
+                let mut tallies = scoring_tallies();
+                let mut core = region_tallies(
+                    "core",
+                    21,
+                    1,
+                    8.0,
+                    8.0e-3,
+                    &[[1.0e-12, 2.0e-13, 5.0e-14, 3.2e-13]],
+                );
+                let mut axis = region_tallies(
+                    "axis",
+                    30,
+                    2,
+                    0.5,
+                    5.0e-4,
+                    &[
+                        [2.0e-12, 4.0e-13, 1.0e-13, 6.4e-13],
+                        [1.0e-12, 2.0e-13, 5.0e-14, 3.2e-13],
+                    ],
+                );
+                tallies.append(&mut core);
+                tallies.append(&mut axis);
+                for spec in &mut tallies {
+                    spec.name = spec.name.replace("openbnct.", "nctforge.");
+                }
+                write_statepoint(
+                    &dir.join(format!("statepoint.{REALIZATIONS}.h5")),
+                    &tallies,
+                    *seed,
+                );
+                dir
+            })
+            .collect();
+
+        let refs: Vec<&Path> = dirs.iter().map(PathBuf::as_path).collect();
+        let report = evaluate_runs(&refs, &[0, 0, 0]).unwrap();
+        assert!(report.gates_passed);
+        assert!(report.estimator_comparisons.iter().all(|c| c.passed));
+        assert!(report.voxel_precision.iter().all(|v| v.passed));
+        assert!(report.chi_square.iter().all(|c| c.passed));
+    }
+
     #[test]
     fn evaluates_and_passes_consistent_runs() {
         let temp = tempfile::tempdir().unwrap();
