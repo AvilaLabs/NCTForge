@@ -6685,6 +6685,12 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
                     report.comparisons.len(),
                     z_limit
                 );
+                if !report.skipped.is_empty() {
+                    println!("skipped unpaired groups: {}", report.skipped.len());
+                    for group in &report.skipped {
+                        println!("  {} / {} — {}", group.region, group.tally, group.reason);
+                    }
+                }
                 println!("vr acceptance gates passed: {}", report.vr_gates_passed);
                 let worst = report
                     .comparisons

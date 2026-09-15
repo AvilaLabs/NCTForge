@@ -25,6 +25,7 @@
 //!   the reference; the achieved reduction factor is recorded, not
 //!   assumed.
 
+use std::collections::BTreeMap;
 use std::path::Path;
 
 use nctforge_core::{ContentReference, DoseComponent};
@@ -36,7 +37,9 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use thiserror::Error;
 
-use crate::acceptance::{OpenMcAcceptanceError, OpenMcAcceptanceReport, evaluate_runs};
+use crate::acceptance::{
+    OpenMcAcceptanceError, OpenMcAcceptanceReport, OpenMcRegionResult, evaluate_runs,
+};
 use crate::input::OpenMcInputManifest;
 use crate::statepoint::{OpenMcStatepoint, latest_statepoint};
 
@@ -278,6 +281,16 @@ pub struct VrComparison {
     pub passed: bool,
 }
 
+/// A (region, tally) group that could not be paired between the VR and
+/// reference reports — recorded, never silently treated as agreement.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct VrSkippedGroup {
+    pub region: String,
+    pub tally: String,
+    pub reason: String,
+}
+
 /// `nctforge.vr-validation/0.1.0` — unbiasedness and efficiency evidence
 /// for a variance-reduced run against an analog reference.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -293,6 +306,10 @@ pub struct VrValidationReport {
     /// run's particle budget was.
     pub history_reduction_factor: f64,
     pub comparisons: Vec<VrComparison>,
+    /// Shared (region, tally) groups that could not be position-aligned
+    /// between the two reports.
+    #[serde(default)]
+    pub skipped: Vec<VrSkippedGroup>,
     /// Every shared region/tally agreed within `z_limit`.
     pub unbiased: bool,
     /// The VR run's own acceptance report passed all declared gates —
@@ -371,55 +388,97 @@ pub fn validate_variance_reduction(
     let vr_histories = manifest.execution.batches as u64 * manifest.execution.particles_per_batch;
     let resolved_ww = manifest.bindings.variance_reduction.clone();
 
-    // Pair each VR region result with every reference result sharing its
-    // (region, tally): a multi-seed reference report contributes one entry
-    // per seed, and the VR run must agree with each independent analog
-    // realization — not merely the most convenient one. Unshared results
-    // are skipped, never silently treated as agreement.
-    // Reference reports carry one `region_results` entry per evaluated
-    // run; the runs are manifest-identical, so a result index maps back
-    // to its seed by a uniform block size.
-    let results_per_run = if reference.runs.is_empty() {
-        0
-    } else {
-        reference.region_results.len() / reference.runs.len()
-    };
+    // Pair results position-aligned within each (region, tally) group.
+    // Profile-style regions emit one result per bin, and a multi-seed
+    // reference report contributes one contiguous block per run — the
+    // runs are manifest-identical, hence identically ordered. Each VR
+    // bin must agree with the same ordinal bin of every reference seed,
+    // never with every bin of every seed. Groups that cannot be aligned
+    // are recorded as skipped rather than silently treated as agreement.
+    let n_reference_runs = reference.runs.len();
+    let n_vr_runs = vr_report.runs.len().max(1);
+    let mut reference_groups: BTreeMap<(&str, &str), Vec<&OpenMcRegionResult>> = BTreeMap::new();
+    for result in &reference.region_results {
+        reference_groups
+            .entry((result.region.as_str(), result.tally.as_str()))
+            .or_default()
+            .push(result);
+    }
+    let mut vr_groups: BTreeMap<(&str, &str), Vec<&OpenMcRegionResult>> = BTreeMap::new();
+    for result in &vr_report.region_results {
+        vr_groups
+            .entry((result.region.as_str(), result.tally.as_str()))
+            .or_default()
+            .push(result);
+    }
     let mut comparisons = Vec::new();
+    let mut skipped = Vec::new();
     let mut unbiased = true;
-    for vr in &vr_report.region_results {
-        for (reference_result_index, reference_result) in reference
-            .region_results
-            .iter()
-            .enumerate()
-            .filter(|(_, r)| r.region == vr.region && r.tally == vr.tally)
-        {
-            let reference_seed = reference_result_index
-                .checked_div(results_per_run)
-                .and_then(|run_index| reference.runs.get(run_index))
-                .map(|run| run.seed);
-            let sigma = vr.reported_sigma.hypot(reference_result.reported_sigma);
-            let z = if sigma > 0.0 {
-                (vr.reported - reference_result.reported).abs() / sigma
-            } else if vr.reported == reference_result.reported {
-                0.0
-            } else {
-                f64::INFINITY
-            };
-            let passed = z <= z_limit;
-            unbiased &= passed;
-            comparisons.push(VrComparison {
-                region: vr.region.clone(),
-                tally: vr.tally.clone(),
-                component: vr.component,
-                reference_seed,
-                vr_reported: vr.reported,
-                vr_sigma: vr.reported_sigma,
-                reference_reported: reference_result.reported,
-                reference_sigma: reference_result.reported_sigma,
-                z_score: z,
-                z_limit,
-                passed,
+    for ((region, tally), vr_group) in &vr_groups {
+        let Some(reference_group) = reference_groups.get(&(*region, *tally)) else {
+            skipped.push(VrSkippedGroup {
+                region: (*region).into(),
+                tally: (*tally).into(),
+                reason: "not present in the reference report".into(),
             });
+            continue;
+        };
+        let Some(vr_bins) = vr_group.len().checked_div(n_vr_runs) else {
+            continue;
+        };
+        let Some(reference_bins) = reference_group.len().checked_div(n_reference_runs) else {
+            continue;
+        };
+        if vr_group.len() % n_vr_runs != 0
+            || reference_group.len() % n_reference_runs != 0
+            || vr_bins != reference_bins
+        {
+            skipped.push(VrSkippedGroup {
+                region: (*region).into(),
+                tally: (*tally).into(),
+                reason: format!(
+                    "result blocks do not align: {n_vr_runs} vr run(s) x \
+                     {vr_bins} bins vs {n_reference_runs} reference run(s) x \
+                     {reference_bins} bins"
+                ),
+            });
+            continue;
+        }
+        for vr_run_index in 0..n_vr_runs {
+            for (bin, vr) in vr_group[vr_run_index * vr_bins..(vr_run_index + 1) * vr_bins]
+                .iter()
+                .enumerate()
+            {
+                for reference_run_index in 0..n_reference_runs {
+                    let reference_result =
+                        reference_group[reference_run_index * reference_bins + bin];
+                    let reference_seed =
+                        reference.runs.get(reference_run_index).map(|run| run.seed);
+                    let sigma = vr.reported_sigma.hypot(reference_result.reported_sigma);
+                    let z = if sigma > 0.0 {
+                        (vr.reported - reference_result.reported).abs() / sigma
+                    } else if vr.reported == reference_result.reported {
+                        0.0
+                    } else {
+                        f64::INFINITY
+                    };
+                    let passed = z <= z_limit;
+                    unbiased &= passed;
+                    comparisons.push(VrComparison {
+                        region: vr.region.clone(),
+                        tally: vr.tally.clone(),
+                        component: vr.component,
+                        reference_seed,
+                        vr_reported: vr.reported,
+                        vr_sigma: vr.reported_sigma,
+                        reference_reported: reference_result.reported,
+                        reference_sigma: reference_result.reported_sigma,
+                        z_score: z,
+                        z_limit,
+                        passed,
+                    });
+                }
+            }
         }
     }
     if comparisons.is_empty() {
@@ -443,6 +502,7 @@ pub fn validate_variance_reduction(
         },
         history_reduction_factor: reduction,
         comparisons,
+        skipped,
         unbiased,
         vr_gates_passed: vr_report.gates_passed,
         gates_passed,
