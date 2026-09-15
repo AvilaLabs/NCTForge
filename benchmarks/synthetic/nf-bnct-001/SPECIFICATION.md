@@ -18,7 +18,7 @@ unpromoted to reference output pending the cross-code reproduction gate
 
 ## Purpose
 
-`NF-BNCT-001` is the first end-to-end NCTForge conformance case. It tests one
+`NF-BNCT-001` is the first end-to-end OpenBNCT conformance case. It tests one
 traceable path from synthetic DICOM geometry to a transport-neutral material and
 source model, component-resolved macroscopic absorbed dose, uncertainty, and an
 evidence bundle.
@@ -50,14 +50,14 @@ DICOM `2.25.<UUID integer>` form.
 | RTSTRUCT Instance | `2.25.277528316852233615277963392913905893031` |
 
 CT SOP Instance UIDs are generated from
-`https://nctforge.org/benchmarks/nf-bnct-001/ct-slice-NNN`, where `NNN` is the
+`https://openbnct.org/benchmarks/nf-bnct-001/ct-slice-NNN`, where `NNN` is the
 zero-padded slice index.
 
 The first and last derived CT SOP Instance UIDs are respectively
 `2.25.43546999367060429143037900891741988095` and
 `2.25.224181827055039319855832006853907618875`. Part 10 files use the frozen
 implementation-class UID `2.25.265222385035053258666337852178839144876`,
-implementation version `NCTFORGE_0_1`, and synthetic content date/time
+implementation version `OPENBNCT_0_1`, and synthetic content date/time
 `20260101 / 000000` where those attributes belong to the IOD. These values make
 independently generated artifacts byte-comparable; they do not assert clinical
 acquisition history.
@@ -67,7 +67,7 @@ acquisition history.
 - Patient-based right-handed LPS coordinates in millimetres.
 - Positive x is patient-left, positive y is posterior, and positive z is toward
   the head.
-- NCTForge array order is `[column, row, slice]`.
+- OpenBNCT array order is `[column, row, slice]`.
 - OpenMC uses the same axis directions in centimetres.
 
 For voxel index `(i, j, k)`, its centre is:
@@ -101,13 +101,13 @@ becoming an uncontrolled input.
 The generator sets all patient identity fields to visibly synthetic values and
 contains no source patient data.
 
-The source implementation is in `crates/nctforge-dicom/src/synthetic.rs`. The
+The source implementation is in `crates/openbnct-dicom/src/synthetic.rs`. The
 acceptance oracle is maintained separately in
-`crates/nctforge-dicom/src/benchmark.rs` so generation and verification do not
+`crates/openbnct-dicom/src/benchmark.rs` so generation and verification do not
 share ROI mask calculations.
 
 Generation also writes `case.json` using schema identifier
-`nctforge.case-manifest/0.1.0`. It records the frozen coordinate system and
+`openbnct.case-manifest/0.1.0`. It records the frozen coordinate system and
 geometry, DICOM UIDs, ROI truth values, material/source model identifiers, and
 SHA-256 for all 40 CT instances plus the RT Structure Set. The verifier rejects
 missing, modified, duplicated, path-escaping, or unexpected DICOM artifacts.
@@ -119,7 +119,7 @@ The generated files are checked with dicom3tools snapshot `20240118131615`:
 instances or the RT Structure Set, and `dcentvfy` must accept the 41-instance
 collection without entity-consistency findings. See
 `scripts/validate-dicom-iod.sh`. This external mechanical check is intentionally
-in addition to NCTForge's semantic geometry oracle and is not described as
+in addition to OpenBNCT's semantic geometry oracle and is not described as
 DICOM certification.
 
 ## RTSTRUCT
@@ -220,7 +220,7 @@ backend-specific particle counter.
 
 ## Required component output
 
-The output profile is `nctforge.macroscopic-absorbed-dose.v1` as defined in
+The output profile is `openbnct.macroscopic-absorbed-dose.v1` as defined in
 ADR 0002. Each voxel contains the mean and, when statistically defined, the
 one-sigma absolute standard uncertainty in `Gy/source neutron` for:
 
@@ -427,7 +427,7 @@ history count selected to bring the diffuse photon-heating precision gates
 inside tolerance with margin. Deck generation refuses a candidate-reference
 profile without a bound acceptance contract and refuses to bind a contract to
 any other purpose; the acceptance report is produced by
-`nctforge openmc evaluate` and gates are described below.
+`openbnct openmc evaluate` and gates are described below.
 
 ## Predeclared acceptance gates
 
@@ -500,7 +500,7 @@ nuclear-data differences declared. A same-underlying-data comparison with MCNP
 is the stronger way to separate code behavior from evaluated-data differences
 and is desired when a licensed collaborator is available. MCNP and PHITS result
 imports must be produced by licensed users and those codes cannot be bundled
-with NCTForge.
+with OpenBNCT.
 
 ## Evidence bundle
 
@@ -517,11 +517,11 @@ engine-manifest.json
 data-acquisition-profile.json
 data-acquisition-receipt.json
 evaluated-neutron-source-selection.json
-nctforge-njoy-input-manifest.json
-nctforge-njoy-execution-receipt.json
-nctforge-njoy-transported-photon-suitability.json
-nctforge-openmc-neutron-transport-domain.json
-nctforge-njoy-transported-photon-domain-aware-suitability.json
+openbnct-njoy-input-manifest.json
+openbnct-njoy-execution-receipt.json
+openbnct-njoy-transported-photon-suitability.json
+openbnct-openmc-neutron-transport-domain.json
+openbnct-njoy-transported-photon-domain-aware-suitability.json
 openmc-njoy-mt301-comparison.json
 njoy-inputs/
 njoy-outputs/
@@ -586,7 +586,7 @@ on the smoke statepoint: `openmc collect` binds the run header, recorded
 OpenMC version, and tally contracts to the input manifest, normalizes the
 component tallies into gray per source neutron with per-voxel uncertainties,
 takes the coupled-heating tally as the dedicated physical total, and emits a
-validated `nctforge.physical-dose-bundle/0.2.0` whose provenance binds the
+validated `openbnct.physical-dose-bundle/0.2.0` whose provenance binds the
 manifest and statepoint digests. The smoke bundle is execution evidence only;
 reference transport results remain unqualified pending a
 reference-statistics execution under the predeclared acceptance gates. The

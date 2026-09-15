@@ -1,6 +1,6 @@
 # Research and Medical-Use Disclaimer
 
-NCTForge is experimental research software. It is not a medical device, has not
+OpenBNCT is experimental research software. It is not a medical device, has not
 been clinically validated or commissioned for any treatment facility, and has
 not received regulatory authorization for diagnosis, treatment planning,
 treatment delivery, or any other clinical purpose.
@@ -10,7 +10,7 @@ Transport calculations, material mappings, nuclear data, boron distributions,
 biological models, coordinate transformations, normalizations, and uncertainty
 estimates require independent verification by appropriately qualified experts.
 
-Do not use NCTForge output as the sole or primary basis for patient care,
+Do not use OpenBNCT output as the sole or primary basis for patient care,
 clinical decisions, treatment delivery, or regulatory submissions.
 
 The Apache-2.0 license permits use for any purpose; this document describes the

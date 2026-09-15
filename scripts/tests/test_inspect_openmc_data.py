@@ -26,7 +26,7 @@ def sha256(path: Path) -> str:
 def write_acquisition_evidence(root: Path, archive: Path) -> tuple[Path, Path]:
     source_uri = "https://example.invalid/data.tar.xz"
     profile = {
-        "schema_version": "nctforge.data-acquisition-profile/0.2.0",
+        "schema_version": "openbnct.data-acquisition-profile/0.2.0",
         "id": "synthetic-openmc-data-profile",
         "artifact_role": "openmc_continuous_energy_library",
         "publication": {
@@ -54,7 +54,7 @@ def write_acquisition_evidence(root: Path, archive: Path) -> tuple[Path, Path]:
         json.dumps(profile, indent=2) + "\n", encoding="utf-8", newline="\n"
     )
     receipt = {
-        "schema_version": "nctforge.data-acquisition-receipt/0.1.0",
+        "schema_version": "openbnct.data-acquisition-receipt/0.1.0",
         "profile_id": profile["id"],
         "profile_sha256": sha256(profile_path),
         "artifact_role": profile["artifact_role"],

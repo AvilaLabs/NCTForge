@@ -7,7 +7,7 @@
 ## Context
 
 Incorrect row/column interpretation, slice ordering, or frame linkage can yield
-plausible-looking but spatially wrong dose comparisons. NCTForge therefore
+plausible-looking but spatially wrong dose comparisons. OpenBNCT therefore
 needs a small, reviewable DICOM boundary whose successful return means more than
 "the file parsed."
 
@@ -28,8 +28,8 @@ Primary references:
 
 1. Use `dicom-rs` 0.10.0 for DICOM Part 10 parsing and writing. Pin the three
    parsing-boundary crates exactly in the workspace manifest.
-2. Keep NCTForge's coordinate and semantic checks in a dedicated
-   `nctforge-dicom` crate. No `dicom-rs` object crosses into the core model.
+2. Keep OpenBNCT's coordinate and semantic checks in a dedicated
+   `openbnct-dicom` crate. No `dicom-rs` object crosses into the core model.
 3. Represent grids as `[column, row, slice]`. The origin is the first voxel
    centre in DICOM LPS millimetres. Direction-matrix columns are the increasing
    column, row, and slice axes; the matrix must be right-handed and orthonormal.
@@ -52,7 +52,7 @@ Primary references:
 ## Consequences
 
 The initial importer supports a deliberately narrow subset of real-world CT and
-RTSTRUCT. This is preferable to silently accepting geometry NCTForge cannot yet
+RTSTRUCT. This is preferable to silently accepting geometry OpenBNCT cannot yet
 represent faithfully. Every broadened input class requires a malformed case and
 an orientation-sensitive acceptance case.
 

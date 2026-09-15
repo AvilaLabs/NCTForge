@@ -14,7 +14,7 @@ missing reaction as a zero score would create a plausible but invalid result.
 
 The official OpenMC ENDF/B-VIII.1 distribution includes incident-neutron,
 photoatomic, atomic-relaxation, and thermal-scattering data and was processed
-with NJOY2016.78. NCTForge's free-gas baseline needs no thermal-scattering table,
+with NJOY2016.78. OpenBNCT's free-gas baseline needs no thermal-scattering table,
 but coupled photon transport still requires element-specific photon data for
 every element in the material.
 
@@ -85,11 +85,11 @@ receipt remains `acquisition_only`; see ADR 0010.
 - This preflight establishes data identity and declared capabilities; it does
   not validate evaluated nuclear physics or qualify a response table.
 - The official selection passes the transport capability preflight. A separate
-  pointwise comparison confirms its MT 301 tables agree with NCTForge's
+  pointwise comparison confirms its MT 301 tables agree with OpenBNCT's
   NJOY2016.78 production outputs, while also showing effective local-photon
   fallback for O-17 and O-18. That finding remains a response-generation
   blocker rather than a transport-manifest failure.
-- HDF5 inspection remains an evidence-producing setup step. NCTForge's Rust
+- HDF5 inspection remains an evidence-producing setup step. OpenBNCT's Rust
   runtime does not take a system HDF5 linkage dependency.
 
 ## Primary sources

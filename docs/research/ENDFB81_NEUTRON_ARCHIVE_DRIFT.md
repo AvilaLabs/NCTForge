@@ -7,7 +7,7 @@ responses match the official OpenMC processed tables within tolerance
 
 ## Finding
 
-NCTForge's first real evaluated-data acquisition stopped on the publisher
+OpenBNCT's first real evaluated-data acquisition stopped on the publisher
 digest check. The stable NNDC URI returned the expected `343,724,780` bytes,
 but those bytes did not match the MD5 frozen in OpenMC's merged ENDF/B-VIII.1
 generation recipe.

@@ -1,9 +1,9 @@
 {
-  "suite": "nctforge.microdosimetric-model-conformance/0.1.0",
-  "model_schema": "nctforge.microdosimetric-model/0.1.0",
-  "spectrum_schema": "nctforge.lineal-spectrum/0.1.0",
-  "dose_schema": "nctforge.physical-dose-bundle/0.2.0",
-  "bundle_schema": "nctforge.biological-dose-bundle/0.2.0",
+  "suite": "openbnct.microdosimetric-model-conformance/0.1.0",
+  "model_schema": "openbnct.microdosimetric-model/0.1.0",
+  "spectrum_schema": "openbnct.lineal-spectrum/0.1.0",
+  "dose_schema": "openbnct.physical-dose-bundle/0.2.0",
+  "bundle_schema": "openbnct.biological-dose-bundle/0.2.0",
   "notes": [
     "Each case names a microdosimetric model under cases/, a physical",
     "dose bundle, optional lineal spectra, and region masks; expected",

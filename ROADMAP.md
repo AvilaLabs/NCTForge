@@ -1,7 +1,7 @@
 # OpenBNCT Development Roadmap
 
-*(Formerly NCTForge — internal crate names, the `nctforge` CLI/Python package,
-and `nctforge.*` schema identifiers retain the original namespace.)*
+*(Formerly OpenBNCT — internal crate names, the `openbnct` CLI/Python package,
+and `openbnct.*` schema identifiers retain the original namespace.)*
 
 **Adopted:** 2026-08-31
 
@@ -23,7 +23,7 @@ uncertainty, and provenance comparable between codes and institutions.
 
 **Adopted:** 2026-09-12, at the project owner's direction.
 
-NCTForge's completion target is a full BNCT research workbench that matches
+OpenBNCT's completion target is a full BNCT research workbench that matches
 every verified OpenPINT research capability and demonstrates advantages in
 accuracy, usability, performance, interoperability, and reproducibility.
 Independent verification is an integrated capability, not a reason to omit
@@ -53,14 +53,14 @@ Source paths at that revision:
 - [MCNP deck generation](https://github.com/ipostuma/OpenPINT/blob/7d035fbfc1b764cab0b112e45acee39e6b909efb/OpenPINT/mcgenerator/mcnp.py)
 
 The prior R3/R4 wording did not guarantee this breadth. In particular,
-NCTForge's fixed-component biological weights do not establish parity with
+OpenBNCT's fixed-component biological weights do not establish parity with
 photon-isoeffective models, fractionation, TCP/NTCP, or combined-treatment
 analysis. An abstract backend interface does not establish working MCNP/PHITS
 support. Each row below is required and remains open until its evidence passes.
 
 ### Required capability matrix
 
-| ID / milestone | OpenPINT baseline | Required NCTForge deliverable | Acceptance evidence |
+| ID / milestone | OpenPINT baseline | Required OpenBNCT deliverable | Acceptance evidence |
 | --- | --- | --- | --- |
 | OP-01 / R3 | NIfTI dose and mask workflows; CT-aligned mesh conversion | NIfTI import/export alongside DICOM; explicit LPS/RAS, affine, units, masks, interpolation and resampling semantics | Synthetic oblique, translated and anisotropic cases; landmark and volume checks; component round-trips; grid-resolution convergence with tolerances declared before execution |
 | OP-02 / R3 | Synthetic patient masks, bounding boxes, material lattice generation | General heterogeneous synthetic anatomy and segmented-volume material/density mapping, including explicit tissue boron inputs | Multi-material head and cylindrical cases; analytic region volumes and densities; ambiguous mappings rejected; reproducible decks |
@@ -92,7 +92,7 @@ support. Each row below is required and remains open until its evidence passes.
    tasks. Track upstream plans separately from demonstrated functions.
 
 For each OP task, maintain an evidence record containing implementation status,
-NCTForge and comparator revisions, test inputs, expected outputs or independent
+OpenBNCT and comparator revisions, test inputs, expected outputs or independent
 reference, acceptance tolerances, actual results, limitations and artifact
 locations. Record unsupported and untested workflows as open.
 
@@ -108,7 +108,7 @@ Use independently generated synthetic data and published methods.
   component/region error, statistical uncertainty, grid convergence and model
   assumptions; any material disadvantage gets a corrective roadmap task.
 - **Performance:** compare identical analysis workloads on declared hardware;
-  report wall time and peak memory. Separate NCTForge processing overhead from
+  report wall time and peak memory. Separate OpenBNCT processing overhead from
   transport-engine time. Compare transport at equivalent precision, not merely
   equal particle histories. Rust alone is not evidence of greater speed.
 - **Usability:** measure clean installation, time to first result, completion
@@ -269,7 +269,7 @@ Implementation status:
   N-15's independent capture-balance rejection;
 - complete: expose that evidence-aware gate through Avila Core's hash-bound
   external-checker protocol, preserving the categorical qualification and
-  exact remaining-finding count as separate claims while NCTForge retains all
+  exact remaining-finding count as separate claims while OpenBNCT retains all
   domain logic;
 - complete: partition the 102 remaining in-domain JEFF-4.0 findings into 59
   source-data-blocked C-13/O-18 findings and a 43-finding O-17 reaction queue;
@@ -320,7 +320,7 @@ Implementation status:
   manifest, normalizes the component tallies into gray per source neutron
   with per-voxel 1-sigma uncertainties, takes the coupled-heating tally as
   the dedicated physical total, and emits a validated
-  `nctforge.physical-dose-bundle/0.2.0` whose provenance id binds the
+  `openbnct.physical-dose-bundle/0.2.0` whose provenance id binds the
   input-manifest and statepoint SHA-256 digests. The smoke bundle is
   execution evidence only; reference results still require a
   reference-statistics execution under the predeclared acceptance gates.
@@ -343,9 +343,9 @@ Exit evidence:
 
 Implementation status:
 
-- complete: biological interpretation layer — `nctforge-bio` applies a
-  separately versioned `nctforge.biological-model/0.2.0` artifact to a
-  physical dose bundle, producing `nctforge.biological-dose-bundle/0.2.0`
+- complete: biological interpretation layer — `openbnct-bio` applies a
+  separately versioned `openbnct.biological-model/0.2.0` artifact to a
+  physical dose bundle, producing `openbnct.biological-dose-bundle/0.2.0`
   whose `weighted_gray*`/`weighted_eqd2` units and `synthetic_research_only`
   qualification can never alias physical dose;
 - complete (OP-08, first slice): biological model families — models now
@@ -360,17 +360,17 @@ Implementation status:
   `deny_unknown_fields` makes the new fields forward-incompatible.
   Published reference cases now live in `conformance/bio/0.2.0/` — one
   byte-fixed golden bundle per model family plus stable rejection tokens
-  (`cargo test -p nctforge-bio --test bio_conformance`). Parameter
-  sensitivity is covered by `nctforge bio sweep` / Python
-  `sweep_biological_model` — a `nctforge.bio-sensitivity-sweep/0.1.0`
+  (`cargo test -p openbnct-bio --test bio_conformance`). Parameter
+  sensitivity is covered by `openbnct bio sweep` / Python
+  `sweep_biological_model` — a `openbnct.bio-sensitivity-sweep/0.1.0`
   record sweeping component weights, region overrides, or fractionation
   parameters with per-point re-validation and region-masked
   min/mean/max;
-- complete: deterministic `nctforge.dose-volume-histogram/0.1.0` over named
+- complete: deterministic `openbnct.dose-volume-histogram/0.1.0` over named
   voxel masks for any bundle component or total;
 - complete: evidence-bundle export — `evidence export` collects inputs,
   deck files, logs, statepoints, and dose bundles into a
-  `nctforge.evidence-bundle-manifest/0.1.0` directory; `evidence verify`
+  `openbnct.evidence-bundle-manifest/0.1.0` directory; `evidence verify`
   re-checks every artifact hash and rejects tampering;
 - complete: one-command `openmc run` chaining prepare, execute, and
   collect, with optional `--evidence-root` export;
@@ -383,7 +383,7 @@ Implementation status:
   Rust contracts, with an extended wheel-level parity suite;
 - complete (OP-02, first slice): DICOM-derived material assignment —
   `benchmark derive-materials` emits a transport-neutral
-  `nctforge.material-assignment/0.2.0` from verified ROI masks. Box-exact
+  `openbnct.material-assignment/0.2.0` from verified ROI masks. Box-exact
   masks become CSG cell regions; arbitrary masks become `voxel_set` regions
   realized as a rectilinear material lattice (one universe per distinct
   material, one element per voxel). Region densities may differ from the
@@ -406,7 +406,7 @@ Implementation status:
   seed-consistency check (378) green — report committed at
   `transport/openmc-acceptance-report-600M.json` (sha256 5f57a0fc…b220).
   Per-seed immutable bundles are retained under
-  `.nctforge-data/nctforge/nf-bnct-001-reference-600M/`;
+  `.openbnct-data/openbnct/nf-bnct-001-reference-600M/`;
 - pending: reference promotion — the specification's cross-code
   reproduction gate still requires a separately implemented transport path
   (Geant4, or licensed MCNP/PHITS produced by a licensed user) reproducing
@@ -415,18 +415,18 @@ Implementation status:
   binds map keys to external `RegionMask` JSONs (e.g. `nifti to-mask`
   output) instead of RT Structure Set ROIs, with name/voxel-count checks —
   segmented NIfTI volumes now drive material assignment end-to-end;
-- complete (OP-12, first slice): mask operations — `nctforge mask`
+- complete (OP-12, first slice): mask operations — `openbnct mask`
   subtract/union/intersect `RegionMask` volumes with shared-frame and
   non-empty-result checks, and `mask threshold` builds regions from a DICOM
   CT modality (HU) window for limiting-organ construction;
 - complete (OP-07, first slice): organ-limited irradiation time —
-  `nctforge irradiation-time` evaluates per-source-particle endpoints
+  `openbnct irradiation-time` evaluates per-source-particle endpoints
   (physical or biological weighted) under per-region max/mean limits,
-  emitting `nctforge.irradiation-time-report/0.1.0` with the limiting
+  emitting `openbnct.irradiation-time-report/0.1.0` with the limiting
   structure, per-region time and particle budgets, and declared
   assumptions; zero-statistic regions are unbounded and absolute-unit
   endpoints are rejected;
-- complete (OP-03, first slice): positioning helpers — `nctforge position
+- complete (OP-03, first slice): positioning helpers — `openbnct position
   aim` derives a `UniformAxisPlane` source whose beam axis passes through a
   mask centroid (axis approaches and oblique directions), reporting the
   entry face/point and source-to-centroid distance; `position rotate`
@@ -435,12 +435,12 @@ Implementation status:
   `rotate_source`, `PositionReport`) and a GUI positioning panel in the
   transport workspace (ROI or mask-file target, approach axis, quarter-turn
   rotate, report/source export) now match the CLI — all three surfaces run
-  the same `nctforge_transport` functions;
-- complete (OP-01): NIfTI imaging I/O — `nctforge-nifti` reads and writes
+  the same `openbnct_transport` functions;
+- complete (OP-01): NIfTI imaging I/O — `openbnct-nifti` reads and writes
   NIfTI-1 `.nii`/`.nii.gz` 3-D scalar volumes (`u8`–`f64`), prefers sform
   over qform, converts RAS+ to patient LPS with transform provenance,
   accepts explicit-mm or unspecified units, and rejects unsupported
-  dimensions/datatypes/transforms/non-mm units. `nctforge nifti` provides
+  dimensions/datatypes/transforms/non-mm units. `openbnct nifti` provides
   `info`, `to-mask`, `export-dose`, and `resample` (nearest/trilinear);
   affine handling is regression-tested against independent `nibabel`
   output including an oblique sform. The GUI dose workspace surfaces the
@@ -455,19 +455,19 @@ Implementation status:
   CT-aligned `GridGeometry` through the shared `read_target_geometry`
   path, which also accepts dose bundles and refuses unknown schemas;
 - complete (OP-06): weighted exposure/fraction aggregation — the
-  `nctforge.exposure-plan/0.1.0` contract binds each exposure's dose bundle
+  `openbnct.exposure-plan/0.1.0` contract binds each exposure's dose bundle
   by SHA-256 with an explicit weight, weight basis, duration, and boron
-  assumption; `nctforge accumulate` sums weighted doses with quadrature
+  assumption; `openbnct accumulate` sums weighted doses with quadrature
   1-sigma propagation under declared inter-exposure independence, emitting
   an ordinary physical dose bundle that flows through DVH, biological
   models, and the GUI;
 - complete (OP-09, first slice): dose-volume metrics and endpoint models —
-  `nctforge metrics` computes exact `D_x`/`V_x`/min/mean/max/EUD readings
-  over a region mask (`nctforge.dose-metrics/0.1.0`), and `nctforge
-  endpoint` scores `nctforge.endpoint-model/0.1.0` artifacts —
+  `openbnct metrics` computes exact `D_x`/`V_x`/min/mean/max/EUD readings
+  over a region mask (`openbnct.dose-metrics/0.1.0`), and `openbnct
+  endpoint` scores `openbnct.endpoint-model/0.1.0` artifacts —
   `voxel_poisson_tcp` (voxel-level LQ Poisson TCP over per-particle dose),
   `logistic`, and `probit` (Lyman) functions over mean/min/max/EUD
-  statistics — emitting `nctforge.endpoint-evaluation/0.1.0`, with `endpoint
+  statistics — emitting `openbnct.endpoint-evaluation/0.1.0`, with `endpoint
   utcp` combining TCP+NTCP under `p_plus`/`difference` after matching
   case/region/quantity/source checks. Python exposes the same functions,
   and the GUI dose workspace overlays region metrics through the shared
@@ -475,12 +475,12 @@ Implementation status:
   reference fixtures live in `conformance/endpoints/0.1.0/` covering all
   three function families and both UTCP combinations;
 - complete (OP-11, first slice): plan tables and diagnostics — the
-  `nctforge-plan` crate round-trips `nctforge.exposure-plan/0.1.0` through
+  `openbnct-plan` crate round-trips `openbnct.exposure-plan/0.1.0` through
   CSV (`# key:` metadata) and XLSX (`plan`+`exposures` sheets), reporting
   every malformed row with its row number and hashing bundles on import
-  when `sha256` cells are blank; `nctforge plan import|export|validate`,
+  when `sha256` cells are blank; `openbnct plan import|export|validate`,
   `ExposurePlan::validate_diagnostics`, and
-  `nctforge_plan::accumulate_plan_file` serve CLI, Python
+  `openbnct_plan::accumulate_plan_file` serve CLI, Python
   (`load_exposure_plan`, `exposure_plan_diagnostics`,
   `accumulate_exposures`, `plan_table_read`, `plan_table_write`), and the
   GUI Plan workspace identically;
@@ -509,11 +509,11 @@ Exit evidence:
 Implementation status:
 
 - complete (first slice): published interchange schema + generic importer —
-  `nctforge.component-dose-interchange/0.1.0` records the producing system,
+  `openbnct.component-dose-interchange/0.1.0` records the producing system,
   version, and normalization, the transport-neutral grid, and the four
-  physical component volumes with optional per-voxel sigmas. `nctforge
+  physical component volumes with optional per-voxel sigmas. `openbnct
   import interchange` and Python `import_component_dose` share one Rust
-  path validating it into `nctforge.physical-dose-bundle/0.2.0`.
+  path validating it into `openbnct.physical-dose-bundle/0.2.0`.
   `dedicated` totals keep their estimator sigmas; `component_sum` totals
   record `unavailable` uncertainty rather than claiming a dedicated
   estimator. Bundle provenance binds the document SHA-256
@@ -525,23 +525,23 @@ Implementation status:
   `conformance/interchange/0.1.0/` ships a manifest-driven fixture set (4
   valid documents with byte-fixed golden bundles, 15 rejection cases with
   stable error tokens) exercised by
-  `cargo test -p nctforge-core --test interchange_conformance`;
+  `cargo test -p openbnct-core --test interchange_conformance`;
   `conformance/adapters/0.1.0/` extends coverage end-to-end — documented
   MCNP meshtal and PHITS `xyz`-mesh inputs replay through each adapter into
   byte-fixed interchange documents and bundles
-  (`cargo test -p nctforge-mcnp|nctforge-phits --test adapter_conformance`,
-  same `NCTFORGE_UPDATE_CONFORMANCE` regeneration convention);
+  (`cargo test -p openbnct-mcnp|openbnct-phits --test adapter_conformance`,
+  same `OPENBNCT_UPDATE_CONFORMANCE` regeneration convention);
 - complete (documented-format slice): MCNP/PHITS import adapters — the
-  `nctforge-mcnp` crate parses ASCII `meshtal` files (tally + optional
+  `openbnct-mcnp` crate parses ASCII `meshtal` files (tally + optional
   energy-bin selection, `Rel Error` → absolute sigmas) and the
-  `nctforge-phits` crate parses `xyz`-mesh `.out` files (echo-parsed grid,
+  `openbnct-phits` crate parses `xyz`-mesh `.out` files (echo-parsed grid,
   `#newpage` axis pages, inline `r.err` preferred over `_err` siblings,
   incomplete error coverage rejected). Both emit the interchange document
-  and validate through the shared importer; `nctforge import mcnp|phits`
+  and validate through the shared importer; `openbnct import mcnp|phits`
   and Python `import_mcnp_meshtal`/`import_phits` are parity surfaces with
   document-hash provenance. Parser fixtures are authored to documented
   formats — real-engine acceptance remains the open gate;
-- complete (documented-format slice): MCNP deck export — `nctforge export
+- complete (documented-format slice): MCNP deck export — `openbnct export
   mcnp` and Python `export_mcnp_deck` emit a deterministic deck from a
   transport case: grid `RPP` box, `voxel_box` regions as carved CSG cells,
   `voxel_set` regions via a `LAT=1` lattice `FILL` array (one universe per
@@ -553,16 +553,16 @@ Implementation status:
   Source planes outside the grid are rejected. Execution against real MCNP
   remains the open acceptance gate;
 - complete (first slice): OP-10 external-dose/BED combined analysis —
-  `nctforge.external-dose/0.1.0` imports one absolute-dose course with
+  `openbnct.external-dose/0.1.0` imports one absolute-dose course with
   declared fractionation (uniform or explicit, hash-bound provenance);
-  `nctforge bio bed` converts it to a BED/EQD2 field under declared
-  (optionally per-region) α/β with first-order sigma propagation; `nctforge
+  `openbnct bio bed` converts it to a BED/EQD2 field under declared
+  (optionally per-region) α/β with first-order sigma propagation; `openbnct
   bio combine` adds an external `eqd2` field to a photon-isoeffective
   `weighted_eqd2` bundle — the only admitted combination — under a required
   operator-stated additivity assumption, with strict trilinear
   co-registration (`--resample trilinear`) when grids differ and rejection
   of every incompatible-quantity or uncovered-target path. The
-  `nctforge.combined-dose/0.1.0` record binds both input content hashes,
+  `openbnct.combined-dose/0.1.0` record binds both input content hashes,
   both provenance chains, and the declared assumption. CLI/Python parity
   (`import_external_dose`, `bed_from_external_dose`,
   `combine_biological_doses`) with analytic BED fixtures in unit and parity
@@ -571,10 +571,10 @@ Implementation status:
 - pending: committed real-engine parser fixtures per producing system for
   OP-04;
 - complete (infrastructure slice): cross-code frozen-case comparison —
-  `nctforge compare` and Python `compare_dose_bundles` measure voxelwise
+  `openbnct compare` and Python `compare_dose_bundles` measure voxelwise
   agreement between two physical dose bundles on the same case (equal
   `case_id`, equivalent grid, same components/unit — all enforced) and emit
-  `nctforge.dose-comparison/0.1.0`: per-component and total max/mean/RMS
+  `openbnct.dose-comparison/0.1.0`: per-component and total max/mean/RMS
   absolute difference, normalized difference anchored to the reference
   maximum, and a combined-sigma coverage fraction when both sides state
   uncertainties, with both content hashes and provenance chains bound into
@@ -611,7 +611,7 @@ Implementation status:
   description/license/repository; publication still needs `version` fields
   on all ~20 internal path dependencies (bare `path` deps cannot publish),
   a per-crate or shared `readme` field, and a decision on which crates are
-  public API (library crates plausibly; `nctforge`/`nctforge-gui` binaries
+  public API (library crates plausibly; `openbnct`/`openbnct-gui` binaries
   optionally via `cargo install`);
 - pending: produce signed native desktop release artifacts.
 
@@ -639,12 +639,12 @@ prerequisites for starting external review.
   (published reference or measured characterization). Acceptance: schema,
   a published-beam registry encoding at least one literature epithermal
   beam with citation, and a transport case binding the beam that executes.
-  **Status: implemented.** `nctforge.beam-description/0.1.0` is live
+  **Status: implemented.** `openbnct.beam-description/0.1.0` is live
   (`beam.rs`); the transport model gained `uniform_disk` space,
   `isotropic_cone` angle, and `tabulated_histogram` energy variants; the
   OpenMC emitter maps them to `cylindrical`/`mu-phi`/`tabular`
   distributions and the MCNP deck emitter to `POS/AXS/RAD`, `DIR` cosine
-  histograms, and `ERG` histograms; `nctforge beam info|list|bind` is on
+  histograms, and `ERG` histograms; `openbnct beam info|list|bind` is on
   the CLI; `beams/fir1-k63.json` encodes the FiR 1 K63 beam from
   Seppälä (2002, HU-P-D103) group-integrated fluences and is labeled a
   literature reconstruction. A bound FiR 1 case generated a deck and
@@ -653,8 +653,8 @@ prerequisites for starting external review.
   ignores (silent +z default — coincidentally correct for the benchmark's
   beam); it is now emitted as the schema's child element.
 - **R6-02 — beam quality characterization.** *(implemented)* IAEA
-  TECDOC-1223-style metrics via `nctforge.beam-quality/0.1.0` reports
-  (`beam_quality.rs`) and `nctforge beam qa`: in-air thermal/epithermal/
+  TECDOC-1223-style metrics via `openbnct.beam-quality/0.1.0` reports
+  (`beam_quality.rs`) and `openbnct beam qa`: in-air thermal/epithermal/
   fast/total fluence rates, spectral fractions, mean energy, and
   current-to-fluence ratio are exact properties of the declared source
   distribution (histogram bins are split by partial overlap at group
@@ -671,22 +671,22 @@ prerequisites for starting external review.
   penumbra divergence, and the report records that fidelity gap rather
   than hiding it. Gamma contamination remains an unmodeled channel listed
   explicitly in the report.
-- **R6-03 — measurement import.** *(implemented)* `nctforge.measurement-
+- **R6-03 — measurement import.** *(implemented)* `openbnct.measurement-
   record/0.1.0` covers activation foil, ion chamber, TLD, TEPC, and
   fission-chamber measurements with explicit units, optional one-sigma
   uncertainty, position provenance, and scalar or histogram (lineal-
-  energy spectrum) values; `nctforge.measurement-comparison/0.1.0` binds
+  energy spectrum) values; `openbnct.measurement-comparison/0.1.0` binds
   a record to a computed artifact (currently a beam-quality report) by
   content hash and reports per-point relative difference,
   sigma-normalized difference, and chi-square over σ-bearing points.
-  `nctforge measurement info|compare` drives both. The committed fixture
+  `openbnct measurement info|compare` drives both. The committed fixture
   `measurements/fir1-k63-free-beam.json` digitizes Seppälä (2002) Table 4
   free-beam values; its uncertainties were not transcribed, so points
   compare by relative difference only — the schema reports
   `without_uncertainty` rather than inventing sigmas. Comparing a
   measurement record against raw tally outputs (not just beam-quality
   reports) is the remaining extension.
-- **R6-04 — RT Dose export.** *(implemented)* `nctforge dicom
+- **R6-04 — RT Dose export.** *(implemented)* `openbnct dicom
   export-rtdose` writes any dose-bundle volume (physical total or named
   component) as a multi-frame RT Dose object: 32-bit pixels with
   DoseGridScaling, full IPP/IOP/GFOV grid addressing, deterministic
@@ -698,11 +698,11 @@ prerequisites for starting external review.
   contour export and RTPLAN linkage remain future scope; the export is
   not a commissioned planning artifact.
 - **R6-05 — microdosimetric model family.** *(implemented)*
-  `nctforge.microdosimetric-model/0.1.0` artifacts carry per-component
+  `openbnct.microdosimetric-model/0.1.0` artifacts carry per-component
   linearized-MKM parameters (α₀, β, lineal-energy source), the spherical
   domain geometry, and a mandatory free-text validity domain; each
   component's dose-mean lineal energy is either a published constant or
-  resolved at apply time from a `nctforge.lineal-spectrum/0.1.0` document
+  resolved at apply time from a `openbnct.lineal-spectrum/0.1.0` document
   (TEPC-derived or published; event-frequency or dose-weighted bins with
   exact piecewise-constant moments). Applying converts each component to
   photon-equivalent dose through `α* = α₀ + β·z̄₁D`,
@@ -710,7 +710,7 @@ prerequisites for starting external review.
   the emitted bundle marks `microdosimetric_kinetic` semantics, an
   `mkm_weighted_*` unit, and an `mkm_research_only_not_clinical`
   qualification, and records the resolved ȳ_D plus content-bound spectra
-  in an `microdosimetry` provenance block. `nctforge bio apply` routes on
+  in an `microdosimetry` provenance block. `openbnct bio apply` routes on
   the model schema and takes repeatable `--spectrum`; `bio spectrum`
   extracts a TEPC histogram from a measurement record; `bio lineal-mean`
   reports ȳ_F/ȳ_D. Conformance fixtures live in
@@ -721,7 +721,7 @@ prerequisites for starting external review.
   `microdosimetric_kinetic` semantics is rejected, and MKM outputs assert
   no clinical RBE/CBE/Gy-Eq claim.
 - **R6-06 — PET-derived boron.** *(implemented)*
-  `nctforge.boron-uptake-model/0.1.0` maps a co-registered SUV volume to a
+  `openbnct.boron-uptake-model/0.1.0` maps a co-registered SUV volume to a
   per-voxel B-10 concentration field: `suv_ratio` (measured blood-pool
   reference scaling — the tumor:blood-ratio method, with a B-10
   isotopic-fraction parameter for total-boron assays), `linear_suv`
@@ -731,8 +731,8 @@ prerequisites for starting external review.
   uncertainty. Model parameters carry 1σ uncertainties propagated to
   per-voxel field σ; the mandatory `validity_domain` states the protocol
   assumptions, and negative mapped values clamp to zero with the count
-  recorded. Output is `nctforge.boron-field/0.1.0`, content-binding the
-  model, SUV image, and registration. `nctforge boron info|apply|
+  recorded. Output is `openbnct.boron-field/0.1.0`, content-binding the
+  model, SUV image, and registration. `openbnct boron info|apply|
   materialize` covers inspection, field generation (optionally chaining
   `--registration` to co-register the PET volume first), and realization
   into a tiered `MaterialAssignment` for `--assignment` deck generation.
@@ -740,21 +740,21 @@ prerequisites for starting external review.
   research estimate (`pet_derived_boron_research_only_not_clinical`), not
   an assayed patient measurement.
 - **R6-07 — rigid registration.** *(implemented)*
-  `nctforge.registration/0.1.0` records a moving→fixed rigid transform
+  `openbnct.registration/0.1.0` records a moving→fixed rigid transform
   (LPS mm, row-major 3×3 rotation + translation) with optional
   content-bound moving/fixed image references. Two construction paths:
   `landmark_least_squares` (Horn's closed-form quaternion fit over ≥3
   non-degenerate landmark pairs, storing the pairs and the RMS residual
   as evidence) and `declared` (operator-transcribed transform requiring
   an explicit provenance note — no landmark evidence is fabricated).
-  `nctforge register landmarks|declare|info|apply` covers creation,
+  `openbnct register landmarks|declare|info|apply` covers creation,
   inspection, and NIfTI resampling onto a transport-case or dose-bundle
   grid (trilinear or nearest). Synthetic landmark cases recover exact
   transforms to ~1e-15 rad / machine-precision residuals; validation
   rejects non-orthonormal rotations, reflections, degenerate point sets,
   and declared transforms without provenance.
 - **R6-08 — systematic uncertainty propagation.** *(implemented)*
-  `nctforge.systematic-uncertainty/0.1.0` reports propagate declared
+  `openbnct.systematic-uncertainty/0.1.0` reports propagate declared
   systematic sources over a physical dose bundle: `boron_concentration`
   (fractional per-voxel σ of a content-bound `boron-field` scaling the
   boron dose component), `positioning` (`|∇D|·σ_mm` first-order
@@ -765,14 +765,14 @@ prerequisites for starting external review.
   voxelwise-independent (`sqrt(Σσ²)/N`) while each systematic source
   contributes its mean per-voxel σ fully correlated across voxels —
   the structure that makes boron loading the dominant BNCT uncertainty.
-  `nctforge uq apply|info` emits and inspects reports; the dose bundle's
+  `openbnct uq apply|info` emits and inspects reports; the dose bundle's
   own σ stays pure Monte Carlo — the systematic layer is additive, never
   relabeled.
 - **R6-09 — variance reduction.** *(implemented)* Weight-window
   variance reduction for the OpenMC path. A
-  `nctforge.variance-reduction/0.1.0` spec declares per-particle regular
+  `openbnct.variance-reduction/0.1.0` spec declares per-particle regular
   meshes with uniform, explicit, or forward-flux-derived bounds;
-  `vr resolve` turns it into a `nctforge.weight-windows/0.1.0` artifact
+  `vr resolve` turns it into a `openbnct.weight-windows/0.1.0` artifact
   (forward-flux resolution implements OpenMC's MAGIC-equivalent
   volume-normalized, group-maximum-normalized derivation from a
   completed analog statepoint, disabling cells above a relative-error
@@ -781,7 +781,7 @@ prerequisites for starting external review.
   re-runs the ordinary acceptance evaluation on the reduced-history
   result and compares shared region/tally means against a reference
   acceptance report under combined uncertainty, recording the achieved
-  history-reduction factor in a `nctforge.vr-validation/0.1.0` report.
+  history-reduction factor in a `openbnct.vr-validation/0.1.0` report.
 
 Out of scope for R6 remains the deferred list below — in particular plan
 optimization stays behind the IP boundary and nothing in R6 is a clinical

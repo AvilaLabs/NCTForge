@@ -27,7 +27,7 @@ MT 301 tables as ordinary inputs would silently change the component meaning.
 
 ## Decision
 
-NCTForge adds an execution-derived, fail-closed suitability stage for the
+OpenBNCT adds an execution-derived, fail-closed suitability stage for the
 requirement
 `transported_photon_kerma_with_coupled_photon_transport`.
 

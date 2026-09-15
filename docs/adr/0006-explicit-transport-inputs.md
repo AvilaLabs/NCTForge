@@ -18,7 +18,7 @@ than one site per history or uses non-unit statistical weights.
 
 ## Decision
 
-Transport-ready NCTForge materials contain explicit, normalized nuclide mass
+Transport-ready OpenBNCT materials contain explicit, normalized nuclide mass
 fractions. A backend may not repeat natural-element expansion or substitute a
 natural-element evaluation. Missing named nuclides are a failed data preflight,
 not permission to renormalize, merge, or omit a constituent.

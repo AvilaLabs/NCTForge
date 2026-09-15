@@ -1,5 +1,5 @@
 {
-  "schema_version": "nctforge.component-dose-interchange/0.1.0",
+  "schema_version": "openbnct.component-dose-interchange/0.1.0",
   "case_id": "adapter-conformance",
   "frame_of_reference_uid": null,
   "geometry": {

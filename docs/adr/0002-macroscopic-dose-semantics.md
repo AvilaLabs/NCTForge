@@ -19,7 +19,7 @@ total neutron heating.
 
 ## Decision
 
-The first scientific profile is `nctforge.macroscopic-absorbed-dose.v1` and
+The first scientific profile is `openbnct.macroscopic-absorbed-dose.v1` and
 contains four canonical components:
 
 - `boron` (`D_B`);

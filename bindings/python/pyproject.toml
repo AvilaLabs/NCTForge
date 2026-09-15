@@ -3,7 +3,7 @@ requires = ["maturin>=1.7,<2"]
 build-backend = "maturin"
 
 [project]
-name = "nctforge"
+name = "openbnct"
 version = "0.1.0"
 description = "Transport-neutral BNCT research verification workbench (research software, not a dose calculator)"
 readme = "README.md"
@@ -25,6 +25,6 @@ Repository = "https://github.com/AvilaLabs/OpenBNCT"
 Disclaimer = "https://github.com/AvilaLabs/OpenBNCT/blob/main/DISCLAIMER.md"
 
 [tool.maturin]
-module-name = "nctforge._nctforge"
+module-name = "openbnct._openbnct"
 python-source = "python"
 features = ["pyo3/extension-module"]

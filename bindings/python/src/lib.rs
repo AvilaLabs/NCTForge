@@ -12,18 +12,18 @@ use std::fmt::Display;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use nctforge_bio::{
+use openbnct_bio::{
     AppliedFractionation, BiologicalDoseBundle, BiologicalModel, RegionMask,
     apply_biological_model,
 };
-use nctforge_core::{ContentReference, PhysicalDoseBundle, ResampleMethod};
-use nctforge_dicom::{
+use openbnct_core::{ContentReference, PhysicalDoseBundle, ResampleMethod};
+use openbnct_dicom::{
     BenchmarkReport, VerifiedBenchmarkCase, load_nf_bnct_001, synthetic::generate_nf_bnct_001,
     verify_nf_bnct_001,
 };
-use nctforge_evidence::{CaseManifest, EvidenceBundleManifest, sha256_file};
-use nctforge_openmc::OpenMcBackend;
-use nctforge_transport::{
+use openbnct_evidence::{CaseManifest, EvidenceBundleManifest, sha256_file};
+use openbnct_openmc::OpenMcBackend;
+use openbnct_transport::{
     BackendDescriptor, CompletedRun, ComponentDefinitionProfile, FixedSourceDefinition,
     MaterialAssignment, MaterialDefinition, NeutronResponseSet, ResponseGenerationMethod,
     TransportBackend, TransportCase,
@@ -34,7 +34,7 @@ use pyo3::prelude::*;
 use serde::de::DeserializeOwned;
 
 create_exception!(
-    nctforge,
+    openbnct,
     NctForgeError,
     PyException,
     "An NCTForge contract, verification, or evidence check failed."
@@ -118,47 +118,47 @@ macro_rules! contract_check {
 contract_check!(
     MaterialDefinition,
     validate,
-    nctforge_transport::TransportModelError
+    openbnct_transport::TransportModelError
 );
 contract_check!(
     FixedSourceDefinition,
     validate,
-    nctforge_transport::TransportModelError
+    openbnct_transport::TransportModelError
 );
 contract_check!(
     ComponentDefinitionProfile,
     validate,
-    nctforge_transport::ResponseMethodError
+    openbnct_transport::ResponseMethodError
 );
 contract_check!(
     ResponseGenerationMethod,
     validate,
-    nctforge_transport::ResponseMethodError
+    openbnct_transport::ResponseMethodError
 );
 contract_check!(
     NeutronResponseSet,
     validate,
-    nctforge_transport::ResponseSetError
+    openbnct_transport::ResponseSetError
 );
-contract_check!(CaseManifest, validate, nctforge_evidence::ManifestError);
+contract_check!(CaseManifest, validate, openbnct_evidence::ManifestError);
 contract_check!(
-    nctforge_core::ExposurePlan,
+    openbnct_core::ExposurePlan,
     validate,
-    nctforge_core::ExposurePlanError
+    openbnct_core::ExposurePlanError
 );
 
 /// Schema-token check for artifact types whose validation ran at import.
-impl ContractCheck for nctforge_core::ExternalDoseBundle {
+impl ContractCheck for openbnct_core::ExternalDoseBundle {
     fn check(&self) -> Result<(), String> {
-        (self.schema_version == nctforge_core::EXTERNAL_DOSE_SCHEMA)
+        (self.schema_version == openbnct_core::EXTERNAL_DOSE_SCHEMA)
             .then_some(())
             .ok_or_else(|| format!("unsupported schema_version {:?}", self.schema_version))
     }
 }
 
-impl ContractCheck for nctforge_bio::BedBundle {
+impl ContractCheck for openbnct_bio::BedBundle {
     fn check(&self) -> Result<(), String> {
-        (self.schema_version == nctforge_bio::BED_BUNDLE_SCHEMA)
+        (self.schema_version == openbnct_bio::BED_BUNDLE_SCHEMA)
             .then_some(())
             .ok_or_else(|| format!("unsupported schema_version {:?}", self.schema_version))
     }
@@ -415,7 +415,7 @@ impl PyVerifiedCase {
 /// Validated CT lattice geometry in the DICOM LPS patient frame.
 #[pyclass(frozen, name = "Geometry")]
 struct PyGeometry {
-    inner: nctforge_core::GridGeometry,
+    inner: openbnct_core::GridGeometry,
 }
 
 #[pymethods]
@@ -780,7 +780,7 @@ fn load_fixed_source(path: PathBuf) -> PyResult<PyFixedSource> {
 /// A deterministic report of how a source was positioned on a case.
 #[pyclass(frozen, name = "PositionReport")]
 struct PyPositionReport {
-    inner: nctforge_transport::PositionReport,
+    inner: openbnct_transport::PositionReport,
 }
 
 #[pymethods]
@@ -848,7 +848,7 @@ impl PyPositionReport {
 }
 
 /// Aim a source so the beam axis passes through a mask's centroid (same path
-/// as `nctforge position aim`). `approach` is `+x|-x|+y|-y|+z|-z` or
+/// as `openbnct position aim`). `approach` is `+x|-x|+y|-y|+z|-z` or
 /// `direction_lps` an arbitrary `(dx, dy, dz)`. `case_id` is stamped into the
 /// report. Returns `(positioned_source, report)`.
 #[pyfunction]
@@ -869,7 +869,7 @@ fn aim_source(
     let direction = if let Some(direction) = direction_lps {
         [direction.0, direction.1, direction.2]
     } else if let Some(approach) = approach {
-        nctforge_transport::AxisApproach::parse(approach)
+        openbnct_transport::AxisApproach::parse(approach)
             .map_err(|e| PyValueError::new_err(e.to_string()))?
             .unit_vector()
     } else {
@@ -877,7 +877,7 @@ fn aim_source(
             "supply approach (+x|-x|+y|-y|+z|-z) or direction_lps",
         ));
     };
-    let (positioned, mut report) = nctforge_transport::aim_source_at_centroid(
+    let (positioned, mut report) = openbnct_transport::aim_source_at_centroid(
         &source.inner,
         &geometry.inner,
         &mask,
@@ -894,7 +894,7 @@ fn aim_source(
 }
 
 /// Rotate a source about a world axis through `center_lps_mm` by a multiple
-/// of 90 degrees (same path as `nctforge position rotate`).
+/// of 90 degrees (same path as `openbnct position rotate`).
 #[pyfunction]
 fn rotate_source(
     source: &PyFixedSource,
@@ -903,16 +903,16 @@ fn rotate_source(
     degrees: f64,
 ) -> PyResult<PyFixedSource> {
     let axis = match axis {
-        "x" => nctforge_transport::PlaneAxis::X,
-        "y" => nctforge_transport::PlaneAxis::Y,
-        "z" => nctforge_transport::PlaneAxis::Z,
+        "x" => openbnct_transport::PlaneAxis::X,
+        "y" => openbnct_transport::PlaneAxis::Y,
+        "z" => openbnct_transport::PlaneAxis::Z,
         other => {
             return Err(PyValueError::new_err(format!(
                 "axis must be x|y|z, got {other:?}"
             )));
         }
     };
-    let rotated = nctforge_transport::rotate_source(
+    let rotated = openbnct_transport::rotate_source(
         &source.inner,
         [center_lps_mm.0, center_lps_mm.1, center_lps_mm.2],
         axis,
@@ -949,10 +949,10 @@ fn load_response_set(path: PathBuf) -> PyResult<PyResponseSet> {
 contract_check!(
     PhysicalDoseBundle,
     validate,
-    nctforge_core::ValidationError
+    openbnct_core::ValidationError
 );
-contract_check!(BiologicalModel, validate, nctforge_bio::BioError);
-contract_check!(BiologicalDoseBundle, validate, nctforge_bio::BioError);
+contract_check!(BiologicalModel, validate, openbnct_bio::BioError);
+contract_check!(BiologicalDoseBundle, validate, openbnct_bio::BioError);
 
 /// One component's dose values over the case grid.
 #[pyclass(frozen, name = "DoseVolume")]
@@ -1007,10 +1007,10 @@ fn snake_token(value: &impl serde::Serialize) -> String {
         .unwrap_or_default()
 }
 
-fn dose_unit_name(unit: nctforge_core::DoseUnit) -> String {
+fn dose_unit_name(unit: openbnct_core::DoseUnit) -> String {
     match unit {
-        nctforge_core::DoseUnit::Gray => "gray".into(),
-        nctforge_core::DoseUnit::GrayPerSourceParticle => "gray_per_source_particle".into(),
+        openbnct_core::DoseUnit::Gray => "gray".into(),
+        openbnct_core::DoseUnit::GrayPerSourceParticle => "gray_per_source_particle".into(),
     }
 }
 
@@ -1083,7 +1083,7 @@ impl PyPhysicalDoseBundle {
     }
 }
 
-/// Load and validate a `nctforge.physical-dose-bundle/0.2.0` artifact.
+/// Load and validate a `openbnct.physical-dose-bundle/0.2.0` artifact.
 #[pyfunction]
 fn load_physical_dose_bundle(path: PathBuf) -> PyResult<PyPhysicalDoseBundle> {
     Ok(PyPhysicalDoseBundle {
@@ -1109,7 +1109,7 @@ fn collect_run(working_directory: PathBuf) -> PyResult<PyPhysicalDoseBundle> {
 
 #[pyclass(frozen, name = "Exposure")]
 struct PyExposure {
-    inner: nctforge_core::Exposure,
+    inner: openbnct_core::Exposure,
 }
 
 #[pymethods]
@@ -1155,10 +1155,10 @@ impl PyExposure {
     }
 }
 
-/// A validated `nctforge.exposure-plan/0.1.0` weighted-exposure plan.
+/// A validated `openbnct.exposure-plan/0.1.0` weighted-exposure plan.
 #[pyclass(frozen, name = "ExposurePlan")]
 struct PyExposurePlan {
-    inner: nctforge_core::ExposurePlan,
+    inner: openbnct_core::ExposurePlan,
 }
 
 #[pymethods]
@@ -1208,7 +1208,7 @@ impl PyExposurePlan {
     }
 }
 
-/// Load a `nctforge.exposure-plan/0.1.0` document.
+/// Load a `openbnct.exposure-plan/0.1.0` document.
 #[pyfunction]
 fn load_exposure_plan(path: PathBuf) -> PyResult<PyExposurePlan> {
     Ok(PyExposurePlan {
@@ -1217,13 +1217,13 @@ fn load_exposure_plan(path: PathBuf) -> PyResult<PyExposurePlan> {
 }
 
 /// Inspect a possibly-malformed plan file and return every detectable
-/// issue — the Python counterpart of `nctforge plan validate`. Unlike
+/// issue — the Python counterpart of `openbnct plan validate`. Unlike
 /// `load_exposure_plan`, this reports on the raw document without rejecting
 /// it, so diagnostics are reachable for broken plans.
 #[pyfunction]
 fn exposure_plan_diagnostics(path: PathBuf) -> PyResult<Vec<String>> {
     let bytes = fs::read(&path).map_err(reject)?;
-    let plan: nctforge_core::ExposurePlan =
+    let plan: openbnct_core::ExposurePlan =
         serde_json::from_slice(&bytes).map_err(reject)?;
     Ok(plan
         .validate_diagnostics()
@@ -1234,16 +1234,16 @@ fn exposure_plan_diagnostics(path: PathBuf) -> PyResult<Vec<String>> {
 
 /// Run a saved exposure plan end to end — verify each bound bundle's
 /// recorded hash, then accumulate the weighted exposures — using the same
-/// Rust path as `nctforge accumulate`.
+/// Rust path as `openbnct accumulate`.
 #[pyfunction]
 fn accumulate_exposures(plan_path: PathBuf) -> PyResult<PyPhysicalDoseBundle> {
     Ok(PyPhysicalDoseBundle {
-        inner: nctforge_plan::accumulate_plan_file(&plan_path).map_err(reject)?,
+        inner: openbnct_plan::accumulate_plan_file(&plan_path).map_err(reject)?,
     })
 }
 
 /// Import a `.csv`/`.xlsx` exposure table into an exposure-plan JSON file
-/// at `output` (same path as `nctforge plan import`).
+/// at `output` (same path as `openbnct plan import`).
 #[pyfunction]
 #[pyo3(signature = (table, output, id=None, case_id=None, bundles_dir=None))]
 fn plan_table_read(
@@ -1253,12 +1253,12 @@ fn plan_table_read(
     case_id: Option<String>,
     bundles_dir: Option<PathBuf>,
 ) -> PyResult<()> {
-    let options = nctforge_plan::TableImportOptions {
+    let options = openbnct_plan::TableImportOptions {
         id,
         case_id,
         bundles_dir,
     };
-    let plan = nctforge_plan::read_table(&table, &options).map_err(reject)?;
+    let plan = openbnct_plan::read_table(&table, &options).map_err(reject)?;
     let bytes = serde_json::to_vec_pretty(&plan).map_err(reject)?;
     std::fs::OpenOptions::new()
         .write(true)
@@ -1272,42 +1272,42 @@ fn plan_table_read(
 }
 
 /// Export an exposure-plan JSON file to a `.csv` or `.xlsx` exposure table
-/// (same path as `nctforge plan export`).
+/// (same path as `openbnct plan export`).
 #[pyfunction]
 fn plan_table_write(plan: PathBuf, output: PathBuf) -> PyResult<()> {
-    let plan: nctforge_core::ExposurePlan = load_contract(plan)?;
-    nctforge_plan::write_table(&output, &plan).map_err(reject)
+    let plan: openbnct_core::ExposurePlan = load_contract(plan)?;
+    openbnct_plan::write_table(&output, &plan).map_err(reject)
 }
 
-/// Import a `nctforge.component-dose-interchange/0.1.0` document produced by
+/// Import a `openbnct.component-dose-interchange/0.1.0` document produced by
 /// an external transport pipeline into a validated physical dose bundle
-/// (same path as `nctforge import interchange`).
+/// (same path as `openbnct import interchange`).
 #[pyfunction]
 fn import_component_dose(interchange: PathBuf) -> PyResult<PyPhysicalDoseBundle> {
     let bytes = fs::read(&interchange).map_err(reject)?;
-    let document: nctforge_core::ComponentDoseInterchange =
+    let document: openbnct_core::ComponentDoseInterchange =
         serde_json::from_slice(&bytes).map_err(reject)?;
     use sha2::Digest;
     let sha256 = format!("{:x}", sha2::Sha256::digest(&bytes));
     Ok(PyPhysicalDoseBundle {
-        inner: nctforge_core::import_component_dose(&document, &sha256).map_err(reject)?,
+        inner: openbnct_core::import_component_dose(&document, &sha256).map_err(reject)?,
     })
 }
 
-fn dose_unit(unit: &str) -> PyResult<nctforge_core::DoseUnit> {
+fn dose_unit(unit: &str) -> PyResult<openbnct_core::DoseUnit> {
     match unit {
-        "gray" => Ok(nctforge_core::DoseUnit::Gray),
-        "gray_per_source_particle" => Ok(nctforge_core::DoseUnit::GrayPerSourceParticle),
+        "gray" => Ok(openbnct_core::DoseUnit::Gray),
+        "gray_per_source_particle" => Ok(openbnct_core::DoseUnit::GrayPerSourceParticle),
         other => Err(PyValueError::new_err(format!("unknown dose unit {other:?}"))),
     }
 }
 
-fn dose_component(name: &str) -> PyResult<nctforge_core::DoseComponent> {
+fn dose_component(name: &str) -> PyResult<openbnct_core::DoseComponent> {
     match name {
-        "boron" => Ok(nctforge_core::DoseComponent::Boron),
-        "nitrogen" => Ok(nctforge_core::DoseComponent::Nitrogen),
-        "hydrogen" => Ok(nctforge_core::DoseComponent::Hydrogen),
-        "photon" => Ok(nctforge_core::DoseComponent::Photon),
+        "boron" => Ok(openbnct_core::DoseComponent::Boron),
+        "nitrogen" => Ok(openbnct_core::DoseComponent::Nitrogen),
+        "hydrogen" => Ok(openbnct_core::DoseComponent::Hydrogen),
+        "photon" => Ok(openbnct_core::DoseComponent::Photon),
         other => Err(PyValueError::new_err(format!(
             "unknown dose component {other:?}"
         ))),
@@ -1315,7 +1315,7 @@ fn dose_component(name: &str) -> PyResult<nctforge_core::DoseComponent> {
 }
 
 /// Lift MCNP meshtal component tallies into a physical dose bundle (same
-/// path as `nctforge import mcnp`). `components` maps each component name to
+/// path as `openbnct import mcnp`). `components` maps each component name to
 /// `(meshtal_path, tally_number)` or `(meshtal_path, tally_number,
 /// energy_bin)`.
 #[pyfunction]
@@ -1338,7 +1338,7 @@ fn import_mcnp_meshtal(
         if fields.len() < 2 || fields.len() > 3 {
             return Err(bad());
         }
-        sources.push(nctforge_mcnp::ComponentSource {
+        sources.push(openbnct_mcnp::ComponentSource {
             component: dose_component(&name)?,
             file: fields[0].extract::<PathBuf>().map_err(|_| bad())?,
             tally: fields[1].extract::<u32>().map_err(|_| bad())?,
@@ -1349,7 +1349,7 @@ fn import_mcnp_meshtal(
             },
         });
     }
-    let document = nctforge_mcnp::interchange_from_meshtals(
+    let document = openbnct_mcnp::interchange_from_meshtals(
         &sources,
         case_id,
         dose_unit(unit)?,
@@ -1362,12 +1362,12 @@ fn import_mcnp_meshtal(
     use sha2::Digest;
     let sha256 = format!("{:x}", sha2::Sha256::digest(&bytes));
     Ok(PyPhysicalDoseBundle {
-        inner: nctforge_core::import_component_dose(&document, &sha256).map_err(reject)?,
+        inner: openbnct_core::import_component_dose(&document, &sha256).map_err(reject)?,
     })
 }
 
 /// Lift PHITS xyz-mesh tally files into a physical dose bundle (same path as
-/// `nctforge import phits`). `components` maps each component name to a file
+/// `openbnct import phits`). `components` maps each component name to a file
 /// path or `(path, energy_index)` tuple; `FILE_err.ext` siblings supply
 /// relative errors when present. `producer_version` is required.
 #[pyfunction]
@@ -1394,13 +1394,13 @@ fn import_phits(
         } else {
             return Err(bad());
         };
-        sources.push(nctforge_phits::ComponentSource {
+        sources.push(openbnct_phits::ComponentSource {
             component: dose_component(&name)?,
             file,
             energy_bin,
         });
     }
-    let document = nctforge_phits::interchange_from_phits(
+    let document = openbnct_phits::interchange_from_phits(
         &sources,
         case_id,
         dose_unit(unit)?,
@@ -1413,12 +1413,12 @@ fn import_phits(
     use sha2::Digest;
     let sha256 = format!("{:x}", sha2::Sha256::digest(&bytes));
     Ok(PyPhysicalDoseBundle {
-        inner: nctforge_core::import_component_dose(&document, &sha256).map_err(reject)?,
+        inner: openbnct_core::import_component_dose(&document, &sha256).map_err(reject)?,
     })
 }
 
 /// Emit an MCNP input deck for a transport case (same path as
-/// `nctforge export mcnp`). The deck scores flux on the case mesh; component
+/// `openbnct export mcnp`). The deck scores flux on the case mesh; component
 /// folding is the external pipeline's declared step before `import_mcnp_meshtal`
 /// re-ingests the meshtal. Returns the deck text; also writes it to `output`.
 #[pyfunction]
@@ -1440,10 +1440,10 @@ fn export_mcnp_deck(
         })
         .transpose()?;
     use sha2::Digest;
-    let deck = nctforge_mcnp::deck::export_mcnp_deck(
+    let deck = openbnct_mcnp::deck::export_mcnp_deck(
         &case_doc,
         assignment_doc.as_ref(),
-        &nctforge_mcnp::deck::McnpDeckOptions {
+        &openbnct_mcnp::deck::McnpDeckOptions {
             xs_suffix,
             seed,
             case_sha256: format!("sha256:{:x}", sha2::Sha256::digest(&case_bytes)),
@@ -1461,10 +1461,10 @@ fn export_mcnp_deck(
     Ok(deck)
 }
 
-/// A validated external-dose bundle (`nctforge.external-dose/0.1.0`).
+/// A validated external-dose bundle (`openbnct.external-dose/0.1.0`).
 #[pyclass(frozen, name = "ExternalDoseBundle")]
 struct PyExternalDoseBundle {
-    inner: nctforge_core::ExternalDoseBundle,
+    inner: openbnct_core::ExternalDoseBundle,
 }
 
 #[pymethods]
@@ -1524,22 +1524,22 @@ impl PyExternalDoseBundle {
     }
 }
 
-/// Import a `nctforge.external-dose/0.1.0` document into a provenance-bound
-/// bundle (same path as `nctforge import dose`).
+/// Import a `openbnct.external-dose/0.1.0` document into a provenance-bound
+/// bundle (same path as `openbnct import dose`).
 #[pyfunction]
 fn import_external_dose(file: PathBuf) -> PyResult<PyExternalDoseBundle> {
     let bytes = fs::read(&file).map_err(reject)?;
-    let document: nctforge_core::ExternalDoseDocument =
+    let document: openbnct_core::ExternalDoseDocument =
         serde_json::from_slice(&bytes).map_err(reject)?;
     use sha2::Digest;
     let sha256 = format!("{:x}", sha2::Sha256::digest(&bytes));
     Ok(PyExternalDoseBundle {
-        inner: nctforge_core::import_external_dose(&document, &sha256).map_err(reject)?,
+        inner: openbnct_core::import_external_dose(&document, &sha256).map_err(reject)?,
     })
 }
 
 /// Load an already-imported external dose bundle (e.g. one written by
-/// `nctforge import dose`).
+/// `openbnct import dose`).
 #[pyfunction]
 fn load_external_dose_bundle(path: PathBuf) -> PyResult<PyExternalDoseBundle> {
     Ok(PyExternalDoseBundle {
@@ -1550,7 +1550,7 @@ fn load_external_dose_bundle(path: PathBuf) -> PyResult<PyExternalDoseBundle> {
 /// A BED or EQD2 field derived from an external dose course.
 #[pyclass(frozen, name = "BedBundle")]
 struct PyBedBundle {
-    inner: nctforge_bio::BedBundle,
+    inner: openbnct_bio::BedBundle,
 }
 
 #[pymethods]
@@ -1622,7 +1622,7 @@ impl PyBedBundle {
     }
 }
 
-/// Load an external BED/EQD2 bundle (e.g. one written by `nctforge bio bed`).
+/// Load an external BED/EQD2 bundle (e.g. one written by `openbnct bio bed`).
 #[pyfunction]
 fn load_bed_bundle(path: PathBuf) -> PyResult<PyBedBundle> {
     Ok(PyBedBundle {
@@ -1631,7 +1631,7 @@ fn load_bed_bundle(path: PathBuf) -> PyResult<PyBedBundle> {
 }
 
 /// Convert an external dose course to a BED or EQD2 field (same path as
-/// `nctforge bio bed`). `region_alpha_beta` maps region names to α/β ratios;
+/// `openbnct bio bed`). `region_alpha_beta` maps region names to α/β ratios;
 /// each region needs a matching `(name, mask_path)` entry in `region_masks`.
 /// `quantity` is `"bed"` or `"eqd2"` (default).
 #[pyfunction]
@@ -1647,8 +1647,8 @@ fn bed_from_external_dose(
     let overrides: BTreeMap<String, f64> =
         region_alpha_beta.unwrap_or_default().into_iter().collect();
     let quantity = match quantity {
-        "bed" => nctforge_bio::BedQuantity::Bed,
-        "eqd2" => nctforge_bio::BedQuantity::Eqd2,
+        "bed" => openbnct_bio::BedQuantity::Bed,
+        "eqd2" => openbnct_bio::BedQuantity::Eqd2,
         other => {
             return Err(PyValueError::new_err(format!(
                 "quantity {other:?} must be bed or eqd2"
@@ -1656,7 +1656,7 @@ fn bed_from_external_dose(
         }
     };
     Ok(PyBedBundle {
-        inner: nctforge_bio::bed_from_external(
+        inner: openbnct_bio::bed_from_external(
             &dose.inner,
             alpha_beta,
             &overrides,
@@ -1670,7 +1670,7 @@ fn bed_from_external_dose(
 /// A combined BNCT + external-course biological evaluation (`eqd2`).
 #[pyclass(frozen, name = "CombinedDoseBundle")]
 struct PyCombinedDoseBundle {
-    inner: nctforge_bio::CombinedDoseBundle,
+    inner: openbnct_bio::CombinedDoseBundle,
 }
 
 #[pymethods]
@@ -1753,7 +1753,7 @@ impl PyCombinedDoseBundle {
 }
 
 /// Add an external EQD2 course to a photon-isoeffective BNCT EQD2 bundle
-/// (same path as `nctforge bio combine`). `resample` is `None` or
+/// (same path as `openbnct bio combine`). `resample` is `None` or
 /// `"trilinear"`; `assumption` is a required operator statement recorded in
 /// the output. Input content references bind the canonical serialization of
 /// the artifacts consumed.
@@ -1775,7 +1775,7 @@ fn combine_biological_doses(
         }
     };
     Ok(PyCombinedDoseBundle {
-        inner: nctforge_bio::combine_biological_doses(
+        inner: openbnct_bio::combine_biological_doses(
             &primary.inner,
             &external.inner,
             content_reference("biological-dose-bundle", &primary.inner)?,
@@ -1791,10 +1791,10 @@ fn combine_biological_doses(
 /// within_sigma_fraction)` row returned by `DoseComparison.quantities`.
 type QuantityComparisonRow = (String, String, f64, f64, f64, f64, Option<f64>);
 
-/// A cross-code dose-comparison record (`nctforge.dose-comparison/0.1.0`).
+/// A cross-code dose-comparison record (`openbnct.dose-comparison/0.1.0`).
 #[pyclass(frozen, name = "DoseComparison")]
 struct PyDoseComparison {
-    inner: nctforge_evidence::DoseComparison,
+    inner: openbnct_evidence::DoseComparison,
 }
 
 #[pymethods]
@@ -1872,7 +1872,7 @@ impl PyDoseComparison {
 }
 
 /// Compare two physical dose bundles on the same frozen case (same path as
-/// `nctforge compare`). Records voxelwise agreement per component and total
+/// `openbnct compare`). Records voxelwise agreement per component and total
 /// under both inputs' content hashes — a research record, never an
 /// equivalence claim.
 #[pyfunction]
@@ -1883,7 +1883,7 @@ fn compare_dose_bundles(
     sigma_level: f64,
 ) -> PyResult<PyDoseComparison> {
     Ok(PyDoseComparison {
-        inner: nctforge_evidence::compare_dose_bundles(
+        inner: openbnct_evidence::compare_dose_bundles(
             &reference.inner,
             &candidate.inner,
             content_reference("reference", &reference.inner)?,
@@ -1918,7 +1918,7 @@ impl PyBiologicalModel {
     }
 }
 
-/// Load and validate a `nctforge.biological-model/0.2.0` artifact.
+/// Load and validate a `openbnct.biological-model/0.2.0` artifact.
 #[pyfunction]
 fn load_biological_model(path: PathBuf) -> PyResult<PyBiologicalModel> {
     let bytes = fs::read(&path).map_err(reject)?;
@@ -1931,7 +1931,7 @@ fn load_biological_model(path: PathBuf) -> PyResult<PyBiologicalModel> {
 }
 
 /// Validate a biological-model document authored in Python (a `dict` matching
-/// the `nctforge.biological-model/0.2.0` schema) into a usable model object —
+/// the `openbnct.biological-model/0.2.0` schema) into a usable model object —
 /// the external-experiment path: researchers supply their own weights and
 /// fractionation without writing a JSON file, and validation, content
 /// hashing, and `apply_model` behavior stay identical to the file path.
@@ -2125,7 +2125,7 @@ fn apply_model(
 /// A deterministic dose-volume histogram over a named voxel mask.
 #[pyclass(frozen, name = "DoseVolumeHistogram")]
 struct PyDoseVolumeHistogram {
-    inner: nctforge_evidence::DoseVolumeHistogram,
+    inner: openbnct_evidence::DoseVolumeHistogram,
 }
 
 #[pymethods]
@@ -2212,12 +2212,12 @@ fn compute_dvh(
     } else {
         return Err(reject(format!("unknown physical quantity {quantity:?}")));
     };
-    let source = nctforge_core::ContentReference {
+    let source = openbnct_core::ContentReference {
         id: bundle.case_id.clone(),
         sha256: sha256_hex_of_json(bundle)?,
     };
     let voxel_volume: f64 = bundle.geometry.spacing_mm.iter().product();
-    let histogram = nctforge_evidence::DoseVolumeHistogram::compute(
+    let histogram = openbnct_evidence::DoseVolumeHistogram::compute(
         &bundle.case_id,
         mask_name,
         quantity,
@@ -2258,12 +2258,12 @@ fn compute_dvh_biological(
     } else {
         return Err(reject(format!("unknown biological quantity {quantity:?}")));
     };
-    let source = nctforge_core::ContentReference {
+    let source = openbnct_core::ContentReference {
         id: inner.case_id.clone(),
         sha256: sha256_hex_of_json(inner)?,
     };
     let voxel_volume: f64 = inner.geometry.spacing_mm.iter().product();
-    let histogram = nctforge_evidence::DoseVolumeHistogram::compute(
+    let histogram = openbnct_evidence::DoseVolumeHistogram::compute(
         &inner.case_id,
         mask_name,
         quantity,
@@ -2280,12 +2280,12 @@ fn compute_dvh_biological(
 
 fn sha256_hex_of_json<T: serde::Serialize>(value: &T) -> PyResult<String> {
     let bytes = serde_json::to_vec_pretty(value).map_err(reject)?;
-    Ok(nctforge_evidence::sha256_hex(&bytes))
+    Ok(openbnct_evidence::sha256_hex(&bytes))
 }
 
 /// Resolve `(values, unit)` for a quantity over a physical bundle.
 fn physical_selection<'a>(
-    bundle: &'a nctforge_core::PhysicalDoseBundle,
+    bundle: &'a openbnct_core::PhysicalDoseBundle,
     quantity: &str,
 ) -> PyResult<(&'a [f64], String)> {
     if let Some(name) = quantity.strip_prefix("component:") {
@@ -2343,7 +2343,7 @@ fn biological_selection<'a>(
 /// Exact dose-volume metrics over a named voxel mask.
 #[pyclass(frozen, name = "RegionDoseMetrics")]
 struct PyRegionDoseMetrics {
-    inner: nctforge_evidence::RegionDoseMetrics,
+    inner: openbnct_evidence::RegionDoseMetrics,
 }
 
 #[pymethods]
@@ -2432,11 +2432,11 @@ fn region_dose_metrics(
     vx: Vec<f64>,
     eud: Vec<f64>,
 ) -> PyResult<PyRegionDoseMetrics> {
-    let source = nctforge_core::ContentReference {
+    let source = openbnct_core::ContentReference {
         id: case_id.to_string(),
         sha256: source_sha256,
     };
-    let metrics = nctforge_evidence::RegionDoseMetrics::compute(
+    let metrics = openbnct_evidence::RegionDoseMetrics::compute(
         case_id,
         mask_name,
         quantity,
@@ -2512,10 +2512,10 @@ fn compute_metrics_biological(
     )
 }
 
-/// A validated `nctforge.endpoint-model/0.1.0` artifact with its source bytes.
+/// A validated `openbnct.endpoint-model/0.1.0` artifact with its source bytes.
 #[pyclass(frozen, name = "EndpointModel")]
 struct PyEndpointModel {
-    inner: nctforge_bio::EndpointModel,
+    inner: openbnct_bio::EndpointModel,
     bytes: Vec<u8>,
 }
 
@@ -2544,11 +2544,11 @@ impl PyEndpointModel {
     }
 }
 
-/// Load and validate an `nctforge.endpoint-model/0.1.0` artifact.
+/// Load and validate an `openbnct.endpoint-model/0.1.0` artifact.
 #[pyfunction]
 fn load_endpoint_model(path: PathBuf) -> PyResult<PyEndpointModel> {
     let bytes = fs::read(&path).map_err(reject)?;
-    let model: nctforge_bio::EndpointModel =
+    let model: openbnct_bio::EndpointModel =
         serde_json::from_slice(&bytes).map_err(reject)?;
     model.validate().map_err(reject)?;
     Ok(PyEndpointModel { inner: model, bytes })
@@ -2557,7 +2557,7 @@ fn load_endpoint_model(path: PathBuf) -> PyResult<PyEndpointModel> {
 /// The scalar dose statistic a volume-collapsed endpoint consumed.
 #[pyclass(frozen, name = "AppliedDoseStatistic")]
 struct PyAppliedDoseStatistic {
-    inner: nctforge_bio::AppliedDoseStatistic,
+    inner: openbnct_bio::AppliedDoseStatistic,
 }
 
 #[pymethods]
@@ -2584,10 +2584,10 @@ impl PyAppliedDoseStatistic {
     }
 }
 
-/// A scored `nctforge.endpoint-evaluation/0.1.0` report.
+/// A scored `openbnct.endpoint-evaluation/0.1.0` report.
 #[pyclass(frozen, name = "EndpointEvaluation")]
 struct PyEndpointEvaluation {
-    inner: nctforge_bio::EndpointEvaluation,
+    inner: openbnct_bio::EndpointEvaluation,
     bytes: Vec<u8>,
 }
 
@@ -2664,7 +2664,7 @@ impl PyEndpointEvaluation {
 #[pyfunction]
 fn load_endpoint_evaluation(path: PathBuf) -> PyResult<PyEndpointEvaluation> {
     let bytes = fs::read(&path).map_err(reject)?;
-    let evaluation: nctforge_bio::EndpointEvaluation =
+    let evaluation: openbnct_bio::EndpointEvaluation =
         serde_json::from_slice(&bytes).map_err(reject)?;
     evaluation.validate().map_err(reject)?;
     Ok(PyEndpointEvaluation {
@@ -2689,11 +2689,11 @@ fn run_endpoint_evaluation(
         name: mask_name.to_string(),
         voxels: mask_voxels.to_vec(),
     };
-    let source = nctforge_core::ContentReference {
+    let source = openbnct_core::ContentReference {
         id: case_id.to_string(),
         sha256: source_sha256,
     };
-    let evaluation = nctforge_bio::evaluate_endpoint(
+    let evaluation = openbnct_bio::evaluate_endpoint(
         &model.inner,
         &model.bytes,
         case_id,
@@ -2771,15 +2771,15 @@ fn combine_utcp(
     combination: &str,
 ) -> PyResult<PyEndpointEvaluation> {
     let combination = match combination {
-        "p_plus" => nctforge_bio::UtcpCombination::PPlus,
-        "difference" => nctforge_bio::UtcpCombination::Difference,
+        "p_plus" => openbnct_bio::UtcpCombination::PPlus,
+        "difference" => openbnct_bio::UtcpCombination::Difference,
         other => {
             return Err(reject(format!(
                 "unknown UTCP combination {other:?}; use p_plus or difference"
             )));
         }
     };
-    let evaluation = nctforge_bio::combine_utcp(
+    let evaluation = openbnct_bio::combine_utcp(
         &tcp.inner,
         &tcp.bytes,
         &ntcp.inner,
@@ -2794,10 +2794,10 @@ fn combine_utcp(
     })
 }
 
-/// A `nctforge.bio-sensitivity-sweep/0.1.0` record.
+/// A `openbnct.bio-sensitivity-sweep/0.1.0` record.
 #[pyclass(name = "SensitivitySweep")]
 struct PySensitivitySweep {
-    inner: nctforge_bio::SensitivitySweep,
+    inner: openbnct_bio::SensitivitySweep,
 }
 
 #[pymethods]
@@ -2894,8 +2894,8 @@ fn sweep_biological_model(
     values: Vec<f64>,
 ) -> PyResult<PySensitivitySweep> {
     let masks = load_named_masks(region_masks)?;
-    let parameter = nctforge_bio::SweepParameter::parse(parameter).map_err(reject)?;
-    let sweep = nctforge_bio::run_sweep(
+    let parameter = openbnct_bio::SweepParameter::parse(parameter).map_err(reject)?;
+    let sweep = openbnct_bio::run_sweep(
         &model.inner,
         &model.bytes,
         &physical.inner,
@@ -2923,7 +2923,7 @@ fn verify_evidence_bundle(root: PathBuf) -> PyResult<(String, usize)> {
 /// dose calculator. Transport actions stay unavailable until the same Rust
 /// capability and evidence gates used by the CLI and GUI pass.
 #[pymodule]
-fn _nctforge(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn _openbnct(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     m.add("NctForgeError", m.py().get_type::<NctForgeError>())?;
     m.add_class::<PyBackend>()?;

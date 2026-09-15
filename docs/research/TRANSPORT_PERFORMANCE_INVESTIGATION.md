@@ -7,7 +7,7 @@ engine decision has been accepted.
 
 ## 1. Purpose
 
-This document specifies how NCTForge will determine:
+This document specifies how OpenBNCT will determine:
 
 1. whether transport materially limits end-to-end time to a scientifically
    acceptable BNCT result;
@@ -18,7 +18,7 @@ This document specifies how NCTForge will determine:
    backend.
 
 The question is not whether OpenMC can be made to run faster in isolation. The
-question is whether the complete NCTForge path meets a predeclared time and
+question is whether the complete OpenBNCT path meets a predeclared time and
 statistical-quality target on declared hardware.
 
 At present, "transport is the bottleneck" is an untested hypothesis. This
@@ -30,7 +30,7 @@ is an ADR supported by measurement artifacts.
 The performance investigation has two distinct scopes that must not be
 conflated.
 
-### 2.1 Authoritative NCTForge measurement
+### 2.1 Authoritative OpenBNCT measurement
 
 The current deterministic OpenMC deck generator:
 
@@ -55,7 +55,7 @@ end-to-end benchmark cannot run until all of the following exist:
 3. a statepoint importer that verifies identities, tally definitions, shapes,
    units, histories, and batch structure.
 
-These are implementation prerequisites for measuring the current NCTForge
+These are implementation prerequisites for measuring the current OpenBNCT
 path. They do not prove that raw OpenMC transport is physically dependent on
 the response-generation blocker.
 
@@ -70,11 +70,11 @@ If such a microbenchmark is useful, it must:
 - use a separate, versioned benchmark profile and manifest;
 - bind the exact geometry, material, source, nuclear data, OpenMC build,
   settings, and active tallies;
-- state prominently that response-weighted tally cost, NCTForge execution, and
+- state prominently that response-weighted tally cost, OpenBNCT execution, and
   statepoint import are absent;
 - never manufacture a placeholder "reviewed" response or weaken production
   validation to pass the generator; and
-- never be reported as end-to-end NCTForge performance.
+- never be reported as end-to-end OpenBNCT performance.
 
 It can validate the timing harness and establish a rough transport scale. It
 cannot justify an engine decision.
@@ -169,7 +169,7 @@ Every measurement artifact records:
 - source, material, response-set, nuclear-data, execution-profile, and tally
   identities;
 - OpenMC version, commit, compiler, build type, and relevant build flags;
-- NCTForge commit and Rust toolchain;
+- OpenBNCT commit and Rust toolchain;
 - OS, kernel, CPU model and topology, memory, thread count, MPI ranks, and
   affinity;
 - whether the host was otherwise idle and any relevant power-management state;
@@ -183,7 +183,7 @@ Every measurement artifact records:
 
 The first development machine has approximately 30 GB of usable memory. A
 previous unrelated process was terminated after allocating approximately
-27 GB. This is a benchmark-environment constraint, not a universal NCTForge
+27 GB. This is a benchmark-environment constraint, not a universal OpenBNCT
 limit.
 
 - Set and record an explicit memory bound.
@@ -220,7 +220,7 @@ uncertainty interval or other predeclared repeat-run comparison.
 ### Phase 1 — Authoritative baseline and wall-clock decomposition
 
 This phase begins only after the prerequisites in section 2.1 pass. It uses the
-unaltered accepted NCTForge case and complete tally ledger.
+unaltered accepted OpenBNCT case and complete tally ledger.
 
 Measure directly:
 
@@ -417,7 +417,7 @@ Add fail-closed tests for:
 
 ## 8. Strategic constraint on a homegrown engine
 
-NCTForge's credibility rests partly on independent verification against a
+OpenBNCT's credibility rests partly on independent verification against a
 widely reviewed transport code. An engine developed inside this project cannot
 serve as its own independent authority.
 
@@ -450,7 +450,7 @@ hypothesis.
 - [ADR 0005: OpenMC 0.16 estimator boundary](../adr/0005-openmc-016-estimator-boundary.md)
 - [ADR 0007: Partial-KERMA response generation](../adr/0007-partial-kerma-response-generation.md)
 - [ADR 0009: Deterministic OpenMC input deck](../adr/0009-deterministic-openmc-input-deck.md)
-- [NCTForge roadmap](../../ROADMAP.md)
+- [OpenBNCT roadmap](../../ROADMAP.md)
 - [OpenMC tally methods and statistics](https://docs.openmc.org/en/stable/methods/tallies.html)
 - [OpenMC variance-reduction guide](https://docs.openmc.org/en/stable/usersguide/variance_reduction.html)
 - [OpenMC 0.16.0 release notes](https://docs.openmc.org/en/stable/releasenotes/0.16.0.html)

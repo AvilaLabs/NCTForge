@@ -1,5 +1,5 @@
 {
-  "schema_version": "nctforge.physical-dose-bundle/0.2.0",
+  "schema_version": "openbnct.physical-dose-bundle/0.2.0",
   "case_id": "conformance-case",
   "frame_of_reference_uid": null,
   "geometry": {

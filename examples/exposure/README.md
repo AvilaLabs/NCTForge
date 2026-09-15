@@ -1,6 +1,6 @@
 # Exposure-plan example: weighted field/fraction accumulation
 
-Demonstrates `nctforge accumulate`: an `nctforge.exposure-plan/0.1.0`
+Demonstrates `openbnct accumulate`: an `openbnct.exposure-plan/0.1.0`
 artifact binds two weighted exposures — a lateral field at weight 1.0 and an
 AP field at weight 0.5 — each pointing at a physical dose bundle by SHA-256.
 
@@ -17,13 +17,13 @@ add in quadrature.
 # recompute its SHA-256 and update the plan — bundle bytes are
 # content-bound.
 cp DOSE-BUNDLE.json examples/exposure/smoke-dose-bundle.json
-nctforge accumulate \
+openbnct accumulate \
   --plan examples/exposure/two-field-plan.json \
   --output accumulated-dose.json
 ```
 
 The accumulated output is an ordinary
-`nctforge.physical-dose-bundle/0.2.0` — it flows through `dvh`,
+`openbnct.physical-dose-bundle/0.2.0` — it flows through `dvh`,
 `bio apply`, and the GUI unchanged, with provenance binding the plan hash
 and the recorded covariance assumption. When exposures bind different
 response sets (for example differing boron loading per field), the output's
@@ -31,14 +31,14 @@ response sets (for example differing boron loading per field), the output's
 
 ## Spreadsheet interchange
 
-`nctforge plan` round-trips the schedule between the JSON contract and
+`openbnct plan` round-trips the schedule between the JSON contract and
 `.csv`/`.xlsx` exposure tables. `schedule.csv` ships the same two-field
 schedule in table form:
 
 ```text
-nctforge plan import --table schedule.csv --output reimported.json
-nctforge plan export --plan two-field-plan.json --output editable.xlsx
-nctforge plan validate --plan two-field-plan.json
+openbnct plan import --table schedule.csv --output reimported.json
+openbnct plan export --plan two-field-plan.json --output editable.xlsx
+openbnct plan validate --plan two-field-plan.json
 ```
 
 Blank `dose_bundle_sha256` cells are filled by hashing the referenced files

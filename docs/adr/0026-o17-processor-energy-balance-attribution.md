@@ -2,7 +2,7 @@
 
 - Status: Accepted; continuation pause superseded by ADR 0031
 - Date: 2026-09-03
-- Decision owners: NCTForge maintainers
+- Decision owners: OpenBNCT maintainers
 - Scope: NF-BNCT-001 JEFF-4.0 O-17 transported-photon KERMA diagnostics
 
 ## Context
@@ -37,7 +37,7 @@ physics independently.
 
 ## Decision
 
-Add `nctforge.njoy-energy-balance-attribution/0.1.0` and two CLI boundaries:
+Add `openbnct.njoy-energy-balance-attribution/0.1.0` and two CLI boundaries:
 
 - `njoy attribute-energy-balance`; and
 - `njoy verify-energy-balance-attribution`.
@@ -113,7 +113,7 @@ profile that addresses those source conditions, or sufficient nuclear-data
 expertise to specify and review the broader O-17 integrator. Generating response
 tables before then would convert unexplained evidence into false progress.
 
-This pauses one R2 evidence path; it does not imply that NCTForge's geometry,
+This pauses one R2 evidence path; it does not imply that OpenBNCT's geometry,
 workflow, or interoperability work is invalid.
 
 ## Consequences

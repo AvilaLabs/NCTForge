@@ -1,7 +1,7 @@
 # Avila Core candidate-comparison gate
 
-This NCTForge workflow is driven through Avila Core without moving NCTForge's
-scientific rules into Core. NCTForge regenerates and verifies the
+This OpenBNCT workflow is driven through Avila Core without moving OpenBNCT's
+scientific rules into Core. OpenBNCT regenerates and verifies the
 baseline-versus-candidate response-treatment comparison. Core binds the exact
 executable and inputs, records a receipt, extracts typed evidence, and
 evaluates explicit research requirements.
@@ -28,20 +28,20 @@ balance and downstream layers are not computable for this candidate.
 
 ## Run the frozen case
 
-From a workspace containing sibling `NCTForge` and `Avila-Core` repositories:
+From a workspace containing sibling `OpenBNCT` and `Avila-Core` repositories:
 
 ```sh
-cd NCTForge
-cargo build -p nctforge-cli --bin nctforge
+cd OpenBNCT
+cargo build -p openbnct-cli --bin openbnct
 
 cd ../Avila-Core
 cargo run -p avila-core-cli -- run \
-  ../NCTForge/integrations/avila-core/njoy-candidate-comparison \
-  --source-root nctforge=../NCTForge \
-  --source-root case=../NCTForge/integrations/avila-core/njoy-candidate-comparison \
-  --capability nctforge-cli=../NCTForge/target/debug/nctforge \
-  --workspace ../NCTForge/runs/avila-core-njoy-candidate-comparison \
-  --log ../NCTForge/runs/avila-core-attempts.jsonl
+  ../OpenBNCT/integrations/avila-core/njoy-candidate-comparison \
+  --source-root openbnct=../OpenBNCT \
+  --source-root case=../OpenBNCT/integrations/avila-core/njoy-candidate-comparison \
+  --capability openbnct-cli=../OpenBNCT/target/debug/openbnct \
+  --workspace ../OpenBNCT/runs/avila-core-njoy-candidate-comparison \
+  --log ../OpenBNCT/runs/avila-core-attempts.jsonl
 ```
 
 The specimen pins the exact local Linux debug binary used to freeze it. If a

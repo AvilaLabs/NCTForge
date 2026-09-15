@@ -1,5 +1,5 @@
 {
-  "schema_version": "nctforge.biological-dose-bundle/0.2.0",
+  "schema_version": "openbnct.biological-dose-bundle/0.2.0",
   "case_id": "bio-conformance",
   "geometry": {
     "shape": [

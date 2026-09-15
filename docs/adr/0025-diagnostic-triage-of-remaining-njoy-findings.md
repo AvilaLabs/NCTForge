@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-09-03
-- Decision owners: NCTForge maintainers
+- Decision owners: OpenBNCT maintainers
 - Scope: NF-BNCT-001 JEFF-4.0 transported-photon KERMA investigation
 
 ## Context
@@ -24,7 +24,7 @@ cause for any finding or weakening the existing rejection.
 
 ## Decision
 
-Add `nctforge.njoy-diagnostic-triage/0.1.0` as a derived, immutable report over
+Add `openbnct.njoy-diagnostic-triage/0.1.0` as a derived, immutable report over
 the exact evidence-aware v0.4 and domain-aware v0.3 reports.
 
 A run is `blocked_by_missing_photon_production_source` only when all of the
@@ -46,7 +46,7 @@ independent queue is zero. This status is separate from the response
 qualification: an empty diagnostic queue cannot turn an already rejected
 response candidate into an acceptable one.
 
-NCTForge also exposes `njoy check-diagnostic-triage`, which re-verifies the
+OpenBNCT also exposes `njoy check-diagnostic-triage`, which re-verifies the
 complete seven-report evidence chain and emits a compact deterministic result
 for external orchestration.
 
@@ -62,7 +62,7 @@ The response remains `transported_photon_kerma_rejected`, and the triage state
 is `independent_reaction_diagnostics_required`.
 
 Avila Core revision `51e2b59` binds the closed response vocabulary and applies
-an explicit categorical requirement. A fresh run over NCTForge revision
+an explicit categorical requirement. A fresh run over OpenBNCT revision
 `0629ba8` verifies all 8 artifacts and 10 evidence records, reproduces the
 three committed claims, and returns:
 

@@ -4,7 +4,7 @@
 
 **Date:** 2026-09-12
 
-**Decision owners:** NCTForge maintainers
+**Decision owners:** OpenBNCT maintainers
 
 ## Context
 

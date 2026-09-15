@@ -23,34 +23,34 @@ except ModuleNotFoundError:
     ) from None
 
 
-REPORT_SCHEMA = "nctforge.openmc-smoke-estimator-comparison/0.1.0"
-COMPARISON_METHOD = "nctforge-openmc-smoke-estimator-comparator/0.1.0"
-INPUT_MANIFEST_SCHEMA = "nctforge.openmc-input-manifest/0.1.0"
-RESPONSE_SET_SCHEMA = "nctforge.neutron-response-set/0.1.0"
-MATERIAL_SCHEMA_PREFIX = "nctforge."
-EXECUTION_PROFILE_SCHEMA = "nctforge.openmc-execution-profile/0.1.0"
-EXECUTION_RECEIPT_SCHEMA = "nctforge.njoy-execution-receipt/0.1.0"
+REPORT_SCHEMA = "openbnct.openmc-smoke-estimator-comparison/0.1.0"
+COMPARISON_METHOD = "openbnct-openmc-smoke-estimator-comparator/0.1.0"
+INPUT_MANIFEST_SCHEMA = "openbnct.openmc-input-manifest/0.1.0"
+RESPONSE_SET_SCHEMA = "openbnct.neutron-response-set/0.1.0"
+MATERIAL_SCHEMA_PREFIX = "openbnct."
+EXECUTION_PROFILE_SCHEMA = "openbnct.openmc-execution-profile/0.1.0"
+EXECUTION_RECEIPT_SCHEMA = "openbnct.njoy-execution-receipt/0.1.0"
 TARGET_OPENMC_VERSION = "0.16.0"
 TARGET_NJOY_VERSION = "2016.78"
 EV_PER_JOULE = 1.0 / 1.602176634e-19
 JOULE_PER_EV = 1.602176634e-19
 COMPONENT_TALLIES = {
-    "boron": "nctforge.component.boron.response",
-    "nitrogen": "nctforge.component.nitrogen.response",
-    "hydrogen": "nctforge.component.hydrogen.response",
+    "boron": "openbnct.component.boron.response",
+    "nitrogen": "openbnct.component.nitrogen.response",
+    "hydrogen": "openbnct.component.hydrogen.response",
 }
 COMPONENT_CURVES = {
     "boron": "boron_gy_cm2",
     "nitrogen": "nitrogen_gy_cm2",
     "hydrogen": "hydrogen_gy_cm2",
 }
-NEUTRON_HEATING_TALLY = "nctforge.audit.neutron_heating"
-PHOTON_HEATING_TALLY = "nctforge.component.photon.heating"
-COUPLED_HEATING_TALLY = "nctforge.physical_total.coupled_heating"
-NEUTRON_FLUENCE_TALLY = "nctforge.diagnostic.neutron_fluence"
+NEUTRON_HEATING_TALLY = "openbnct.audit.neutron_heating"
+PHOTON_HEATING_TALLY = "openbnct.component.photon.heating"
+COUPLED_HEATING_TALLY = "openbnct.physical_total.coupled_heating"
+NEUTRON_FLUENCE_TALLY = "openbnct.diagnostic.neutron_fluence"
 AUDIT_REACTIONS = {
-    "boron": {"tally": "nctforge.audit.b10_mt107", "nuclide": "B10", "xs_mt": 107, "kerma_mt": 407},
-    "nitrogen": {"tally": "nctforge.audit.n14_mt103", "nuclide": "N14", "xs_mt": 103, "kerma_mt": 403},
+    "boron": {"tally": "openbnct.audit.b10_mt107", "nuclide": "B10", "xs_mt": 107, "kerma_mt": 407},
+    "nitrogen": {"tally": "openbnct.audit.n14_mt103", "nuclide": "N14", "xs_mt": 103, "kerma_mt": 403},
 }
 IMPLICIT_EXPONENT = re.compile(r"^(.+?)([+-]\d+)$")
 
@@ -286,7 +286,7 @@ def main() -> None:
                 f"presented artifact {expected!r}"
             )
 
-    root_receipt = execution_root / "nctforge-njoy-execution-receipt.json"
+    root_receipt = execution_root / "openbnct-njoy-execution-receipt.json"
     if root_receipt.resolve(strict=True).read_bytes() != receipt_raw:
         raise ValueError("execution root receipt differs from the external trust anchor")
 

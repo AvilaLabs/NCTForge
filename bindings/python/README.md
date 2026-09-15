@@ -1,6 +1,6 @@
 # Python bindings
 
-`pip install nctforge` is the planned primary entry point for scientific users.
+`pip install openbnct` is the planned primary entry point for scientific users.
 The package uses PyO3 and maturin to wrap the authoritative Rust crates; it
 does not implement a second dose, geometry, evidence, or QA engine (ADR 0015).
 
@@ -11,9 +11,9 @@ bindings/python/
   Cargo.toml                 PyO3 extension crate (outside the workspace)
   pyproject.toml             maturin build and package metadata
   src/lib.rs                 narrow Rust-to-Python boundary
-  python/nctforge/
+  python/openbnct/
     __init__.py              ergonomic public API
-    _nctforge.pyi            checked extension types
+    _openbnct.pyi            checked extension types
     py.typed                 typing marker
   tests/                     cross-language parity suite
 ```

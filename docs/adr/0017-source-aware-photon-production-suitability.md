@@ -27,10 +27,10 @@ that produced the run.
 
 ## Decision
 
-NCTForge retains the immutable log-only schema from ADR 0013 and adds two
+OpenBNCT retains the immutable log-only schema from ADR 0013 and adds two
 source-aware evidence contracts.
 
-`nctforge.endf-photon-production-inventory/0.1.0` parses the exact evaluation
+`openbnct.endf-photon-production-inventory/0.1.0` parses the exact evaluation
 files selected by the content-addressed source manifest. It records every
 MF=6/12/13/14/15 section by MAT, MT, record count, and section hash. It also
 parses:
@@ -46,7 +46,7 @@ File 12/13 representation: angular data in File 14, File 15 for a continuum,
 and orphan File 14/15 sections. Its qualification is always
 `source_inventory_unreviewed`; format pairing is not a physics qualification.
 
-`nctforge.njoy-transported-photon-suitability/0.2.0` binds four already
+`openbnct.njoy-transported-photon-suitability/0.2.0` binds four already
 verifiable artifacts:
 
 1. the ADR 0013 log-only report;

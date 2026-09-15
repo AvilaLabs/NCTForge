@@ -6,7 +6,7 @@
 
 ## Context
 
-The first NCTForge OpenMC path must translate the transport-neutral case into
+The first OpenBNCT OpenMC path must translate the transport-neutral case into
 backend input without weakening the content bindings established for material,
 source, component semantics, neutron responses, and nuclear data. OpenMC's
 `EnergyFunctionFilter` evaluates to zero outside its supplied energy domain, so
@@ -19,7 +19,7 @@ would make two nominally identical runs harder to compare and audit.
 
 ## Decision
 
-NCTForge writes `geometry.xml`, `materials.xml`, `settings.xml`, and
+OpenBNCT writes `geometry.xml`, `materials.xml`, `settings.xml`, and
 `tallies.xml` directly in Rust for OpenMC `0.16.0` at source commit
 `617d35a5063c57796b43428bc401e627d2011046`. The writer uses stable IDs,
 ordering, float formatting, indentation, and terminal newlines. The OpenMC
@@ -34,7 +34,7 @@ against the nuclear-data manifest before emitting XML.
 
 The nuclear-data inspector records the first and last incident-neutron energy
 at every available temperature. For the selected material temperature,
-NCTForge reproduces OpenMC's common transport interval as the maximum lower
+OpenBNCT reproduces OpenMC's common transport interval as the maximum lower
 bound and minimum upper bound across all selected neutron tables. The reviewed
 response set must cover that entire interval. This prevents the zero-outside-
 domain behavior of `EnergyFunctionFilter` from becoming an accepted dose bias.
@@ -66,7 +66,7 @@ The tally ledger is fixed by ID:
 | 9–10 | neutron and photon diagnostic fluence | track length | divide track length by voxel volume |
 | 11–12 | neutron and photon surface current | analog | retain particle current/source |
 
-The generated `nctforge-input-manifest.json` binds all input identities, run
+The generated `openbnct-input-manifest.json` binds all input identities, run
 controls, scoring bounds, voxel volume and mass, tally meanings and collection
 normalizations, and SHA-256 for every OpenMC XML file.
 

@@ -20,7 +20,7 @@ partial KERMA at `reaction MT + 300` and always writes total heating at MT 301.
 ## Decision
 
 The first response-generation method is frozen as
-`nctforge.nf-bnct-001.response-generation.v1`:
+`openbnct.nf-bnct-001.response-generation.v1`:
 
 - NJOY `2016.78`, source commit
   `71a76bc6345fa15f36bacc816ae7900714345d97`;
@@ -94,7 +94,7 @@ response value is qualified until all of the following evidence exists:
 8. a second reviewer approves the derivation before candidate transport runs.
 
 An evaluation that fails these checks is investigated or replaced only by a
-new versioned nuclear-data profile. NCTForge will not clip a negative value,
+new versioned nuclear-data profile. OpenBNCT will not clip a negative value,
 apply an undocumented Q override, or relabel a missing response as zero.
 
 ## Consequences

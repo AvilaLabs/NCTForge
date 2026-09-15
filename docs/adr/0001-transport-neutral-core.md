@@ -5,7 +5,7 @@
 
 ## Decision
 
-NCTForge's case, physical-dose, biological, QA, and evidence models will not
+OpenBNCT's case, physical-dose, biological, QA, and evidence models will not
 depend on OpenMC types or files. OpenMC will be implemented as the first
 end-to-end transport adapter behind the `TransportBackend` contract.
 

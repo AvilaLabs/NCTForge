@@ -23,8 +23,8 @@ identity can establish that it explains this run.
 
 ## Decision
 
-NCTForge adds the immutable
-`nctforge.njoy-law7-implicit-residual-comparison/0.1.0` report. Assessment and
+OpenBNCT adds the immutable
+`openbnct.njoy-law7-implicit-residual-comparison/0.1.0` report. Assessment and
 verification require the exact independent source report, execution receipt,
 and complete execution directory. The comparison verifies the whole execution
 root before reading the H-2 processor report and binds that report by path,

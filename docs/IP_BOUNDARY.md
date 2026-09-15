@@ -2,7 +2,7 @@
 
 **Status:** Provisional; legal review required before public release
 
-NCTForge is intended to be an independently written open-source research and
+OpenBNCT is intended to be an independently written open-source research and
 verification platform. It must not copy OpenPINT source code or other
 reciprocal-licensed implementations. Compatibility may be implemented from
 public file specifications, published methods, and independently created test

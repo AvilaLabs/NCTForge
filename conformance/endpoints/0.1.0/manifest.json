@@ -1,5 +1,5 @@
 {
-  "suite": "nctforge.endpoint-conformance/0.1.0",
+  "suite": "openbnct.endpoint-conformance/0.1.0",
   "description": "Endpoint-model scoring and UTCP combination fixtures. All parameters are analytic stand-ins for conformance testing — not clinical models. Golden evaluations are byte-fixed: each embeds the SHA-256 of its model document, and UTCP goldens embed the SHA-256 of the pretty-printed source evaluations.",
   "cases": [
     {

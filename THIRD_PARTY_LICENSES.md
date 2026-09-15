@@ -1,6 +1,6 @@
 # Third-Party Licenses
 
-NCTForge does not vendor third-party source, transport engines, nuclear data,
+OpenBNCT does not vendor third-party source, transport engines, nuclear data,
 or patient data. Rust packages are resolved from crates.io and locked by the
 committed `Cargo.lock`.
 
@@ -33,13 +33,13 @@ The optional nuclear-data inspection script requires a user-supplied Python,
 NumPy (BSD-3-Clause and compatible notices), h5py (BSD-3-Clause), and HDF5
 (BSD-style) environment. Its Python packages are pinned in a dedicated
 requirements file, and all exact runtime versions are recorded in every
-generated manifest; they are not bundled by NCTForge.
+generated manifest; they are not bundled by OpenBNCT.
 
 This table records direct packages, not a substitute for the complete
 transitive license and notice bundle. CI must generate and review that bundle
 from `Cargo.lock` before the first binary or archival release.
 
-OpenMC is a planned external transport backend and is not part of NCTForge.
-NCTForge's acquisition client does not redistribute OpenMC or nuclear data;
+OpenMC is a planned external transport backend and is not part of OpenBNCT.
+OpenBNCT's acquisition client does not redistribute OpenMC or nuclear data;
 users remain responsible for obtaining and validating the external engine and
 data libraries used by their calculations.

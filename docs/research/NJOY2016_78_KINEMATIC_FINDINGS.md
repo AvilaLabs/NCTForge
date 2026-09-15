@@ -13,7 +13,7 @@ any still-unproven explanation of the exact KERMA values.
 HEATR describes its check as a comparison of energy-balance KERMA factors with
 conservative kinematic limits. In the frozen source, `low` is printed when a
 KERMA value is more than 10% below the computed lower limit and `high` is
-printed when it is more than 10% above the computed upper limit. NCTForge maps
+printed when it is more than 10% above the computed upper limit. OpenBNCT maps
 only markers in the final KERMA table and records the preceding table energy
 and corresponding response MT.
 

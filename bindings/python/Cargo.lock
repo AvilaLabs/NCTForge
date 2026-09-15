@@ -1080,129 +1080,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "743fb55ba31b18fb1ecef6bdc9aa2743314978ac084044301a7eee33fb99a20d"
 
 [[package]]
-name = "nctforge-bio"
-version = "0.1.0"
-dependencies = [
- "nctforge-core",
- "serde",
- "serde_json",
- "sha2",
- "thiserror",
-]
-
-[[package]]
-name = "nctforge-core"
-version = "0.1.0"
-dependencies = [
- "serde",
- "thiserror",
-]
-
-[[package]]
-name = "nctforge-dicom"
-version = "0.1.0"
-dependencies = [
- "dicom-core",
- "dicom-dictionary-std",
- "dicom-object",
- "nctforge-core",
- "nctforge-evidence",
- "serde_json",
- "thiserror",
- "uuid",
-]
-
-[[package]]
-name = "nctforge-evidence"
-version = "0.1.0"
-dependencies = [
- "nctforge-core",
- "serde",
- "serde_json",
- "sha2",
- "thiserror",
-]
-
-[[package]]
-name = "nctforge-mcnp"
-version = "0.1.0"
-dependencies = [
- "nctforge-core",
- "nctforge-transport",
- "serde",
- "serde_json",
- "thiserror",
-]
-
-[[package]]
-name = "nctforge-openmc"
-version = "0.1.0"
-dependencies = [
- "hdf5-pure",
- "md-5",
- "nctforge-core",
- "nctforge-transport",
- "quick-xml 0.42.0",
- "reqwest",
- "serde",
- "serde_json",
- "sha2",
- "thiserror",
-]
-
-[[package]]
-name = "nctforge-phits"
-version = "0.1.0"
-dependencies = [
- "nctforge-core",
- "serde",
- "serde_json",
- "thiserror",
-]
-
-[[package]]
-name = "nctforge-plan"
-version = "0.1.0"
-dependencies = [
- "calamine",
- "csv",
- "nctforge-core",
- "rust_xlsxwriter",
- "serde",
- "serde_json",
- "sha2",
- "thiserror",
-]
-
-[[package]]
-name = "nctforge-python"
-version = "0.1.0"
-dependencies = [
- "nctforge-bio",
- "nctforge-core",
- "nctforge-dicom",
- "nctforge-evidence",
- "nctforge-mcnp",
- "nctforge-openmc",
- "nctforge-phits",
- "nctforge-plan",
- "nctforge-transport",
- "pyo3",
- "serde",
- "serde_json",
- "sha2",
-]
-
-[[package]]
-name = "nctforge-transport"
-version = "0.1.0"
-dependencies = [
- "nctforge-core",
- "serde",
- "thiserror",
-]
-
-[[package]]
 name = "num-traits"
 version = "0.2.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1216,6 +1093,129 @@ name = "once_cell"
 version = "1.21.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
+
+[[package]]
+name = "openbnct-bio"
+version = "0.1.0"
+dependencies = [
+ "openbnct-core",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror",
+]
+
+[[package]]
+name = "openbnct-core"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "openbnct-dicom"
+version = "0.1.0"
+dependencies = [
+ "dicom-core",
+ "dicom-dictionary-std",
+ "dicom-object",
+ "openbnct-core",
+ "openbnct-evidence",
+ "serde_json",
+ "thiserror",
+ "uuid",
+]
+
+[[package]]
+name = "openbnct-evidence"
+version = "0.1.0"
+dependencies = [
+ "openbnct-core",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror",
+]
+
+[[package]]
+name = "openbnct-mcnp"
+version = "0.1.0"
+dependencies = [
+ "openbnct-core",
+ "openbnct-transport",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
+name = "openbnct-openmc"
+version = "0.1.0"
+dependencies = [
+ "hdf5-pure",
+ "md-5",
+ "openbnct-core",
+ "openbnct-transport",
+ "quick-xml 0.42.0",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror",
+]
+
+[[package]]
+name = "openbnct-phits"
+version = "0.1.0"
+dependencies = [
+ "openbnct-core",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
+name = "openbnct-plan"
+version = "0.1.0"
+dependencies = [
+ "calamine",
+ "csv",
+ "openbnct-core",
+ "rust_xlsxwriter",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror",
+]
+
+[[package]]
+name = "openbnct-python"
+version = "0.1.0"
+dependencies = [
+ "openbnct-bio",
+ "openbnct-core",
+ "openbnct-dicom",
+ "openbnct-evidence",
+ "openbnct-mcnp",
+ "openbnct-openmc",
+ "openbnct-phits",
+ "openbnct-plan",
+ "openbnct-transport",
+ "pyo3",
+ "serde",
+ "serde_json",
+ "sha2",
+]
+
+[[package]]
+name = "openbnct-transport"
+version = "0.1.0"
+dependencies = [
+ "openbnct-core",
+ "serde",
+ "thiserror",
+]
 
 [[package]]
 name = "openssl-probe"

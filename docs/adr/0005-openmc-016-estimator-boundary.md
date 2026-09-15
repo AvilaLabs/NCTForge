@@ -6,7 +6,7 @@
 
 ## Context
 
-OpenMC 0.16.0 is the current release selected for NCTForge's first candidate
+OpenMC 0.16.0 is the current release selected for OpenBNCT's first candidate
 transport input. It adds reaction and secondary-particle-production filters,
 enables track-length neutron-heating tallies, and changes how energy from
 photon-induced electrons and positrons is attributed in heating tallies.
@@ -39,7 +39,7 @@ folds for `boron`, `nitrogen`, and `hydrogen`, plus coupled photon heating for
   origin.
 
 The response functions, interpolation policy, dimensional reduction, source
-normalization, and hashes are versioned inputs. NCTForge will retain the
+normalization, and hashes are versioned inputs. OpenBNCT will retain the
 energy-binned neutron flux needed to repeat the fold outside the primary tally
 path.
 
@@ -66,7 +66,7 @@ qualified by this decision.
 
 ## Consequences
 
-- OpenMC 0.16.0 features improve diagnostics without changing NCTForge's
+- OpenMC 0.16.0 features improve diagnostics without changing OpenBNCT's
   transport-neutral component semantics.
 - A convenient reaction-filtered heating tally cannot substitute for the
   independently reviewed response-generation pipeline.

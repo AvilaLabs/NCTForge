@@ -22,10 +22,10 @@ except ModuleNotFoundError:
     ) from None
 
 
-REPORT_SCHEMA = "nctforge.openmc-njoy-heating-comparison/0.1.0"
-COMPARISON_METHOD = "nctforge-openmc-njoy-heating-comparator/0.1.0"
-MANIFEST_SCHEMA = "nctforge.openmc-nuclear-data-manifest/0.3.0"
-EXECUTION_RECEIPT_SCHEMA = "nctforge.njoy-execution-receipt/0.1.0"
+REPORT_SCHEMA = "openbnct.openmc-njoy-heating-comparison/0.1.0"
+COMPARISON_METHOD = "openbnct-openmc-njoy-heating-comparator/0.1.0"
+MANIFEST_SCHEMA = "openbnct.openmc-nuclear-data-manifest/0.3.0"
+EXECUTION_RECEIPT_SCHEMA = "openbnct.njoy-execution-receipt/0.1.0"
 TARGET_OPENMC_VERSION = "0.16.0"
 TARGET_NJOY_VERSION = "2016.78"
 TARGET_RESPONSE_MT = 301
@@ -295,7 +295,7 @@ def main() -> None:
     if receipt.get("case_id") != "nf-bnct-001":
         raise ValueError("comparison requires the NF-BNCT-001 execution receipt")
 
-    root_receipt = execution_root / "nctforge-njoy-execution-receipt.json"
+    root_receipt = execution_root / "openbnct-njoy-execution-receipt.json"
     if root_receipt.resolve(strict=True).read_bytes() != receipt_raw:
         raise ValueError("execution root receipt differs from the external trust anchor")
 

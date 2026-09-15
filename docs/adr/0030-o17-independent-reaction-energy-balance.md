@@ -22,7 +22,7 @@ bounded and uniform: 28 shared File 3/File 6 MTs, all `LCT=3`, every product
 
 ## Decision
 
-Add schema `nctforge.endf-reaction-energy-balance/0.1.0` and two CLI
+Add schema `openbnct.endf-reaction-energy-balance/0.1.0` and two CLI
 boundaries:
 
 - `njoy calculate-reaction-energy-balance`; and

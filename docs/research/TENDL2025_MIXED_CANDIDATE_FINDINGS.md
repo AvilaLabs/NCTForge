@@ -30,7 +30,7 @@ remains unchanged?
   `b6927549d0a95056e411d59725fda4a1dd198b993216ec11431785fbeb488bd1`;
 - source-selection SHA-256:
   `52e6358f3a8e2addb574b1ae1695dc4fa3bed011e41389689d83503c3e6b4f2c`;
-- input-manifest SHA-256 recorded in `njoy/nctforge-njoy-input-manifest.json`
+- input-manifest SHA-256 recorded in `njoy/openbnct-njoy-input-manifest.json`
   (schema `0.2.0`);
 - processor: NJOY2016.78 commit
   `71a76bc6345fa15f36bacc816ae7900714345d97`, executable SHA-256
@@ -94,7 +94,7 @@ was resolved and none was introduced.
   defect appears systematically across the TENDL oxygen evaluations — O-16,
   O-17, and O-18 each carry duplicated grid points in nearly every File 3
   section. NJOY2016.78 tolerates these duplicate boundary points and
-  completes, but NCTForge's strict source parsers correctly refuse them, so
+  completes, but OpenBNCT's strict source parsers correctly refuse them, so
   no independent capture-balance or File 13/15 continuum-moment evidence can
   be generated for any TENDL-selected nuclide. This is a source-format
   finding against the library itself, distinct from the kinematic failures.

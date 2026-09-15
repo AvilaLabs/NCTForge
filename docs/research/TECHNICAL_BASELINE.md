@@ -8,7 +8,7 @@ reference standard.
 
 ## Outcome
 
-NCTForge can begin with OpenMC, but its first scientific deliverable must be a
+OpenBNCT can begin with OpenMC, but its first scientific deliverable must be a
 code-neutral benchmark rather than a patient workflow. The initial benchmark is
 `NF-BNCT-001`, a synthetic DICOM and transport case with exact geometry,
 materials, source, component definitions, provenance requirements, and
@@ -119,7 +119,7 @@ Important limits remain:
 - a successful OpenMC run is not evidence of correct DICOM geometry, response
   construction, source normalization, or component classification.
 
-For these reasons NCTForge must advertise a macroscopic research capability
+For these reasons OpenBNCT must advertise a macroscopic research capability
 only. Microdosimetry is a different solver and validation problem.
 
 ## Nuclear-data baseline
@@ -136,7 +136,7 @@ The first candidate run is pinned to:
 The official processed distribution has now been acquired and its case-scoped
 selection frozen. The ten neutron and five photon tables pass the transport
 capability preflight. A pointwise, no-interpolation comparison of every MT 301
-table against NCTForge's NJOY2016.78 production outputs found corresponding
+table against OpenBNCT's NJOY2016.78 production outputs found corresponding
 grids and a maximum relative difference of `4.892060e-7`. O-17 and O-18 have no
 photon-production reactions and their MT 301 responses are effectively equal to
 local-heating MT 901; therefore this evidence confirms, rather than removes, the
@@ -166,7 +166,7 @@ Every run records:
 
 ## Statistical uncertainty
 
-OpenMC reports statistics from batch realizations. NCTForge will retain the
+OpenMC reports statistics from batch realizations. OpenBNCT will retain the
 component mean and one-sigma absolute standard uncertainty. Relative uncertainty
 is a derived, nullable value and is undefined for a zero mean.
 
@@ -178,7 +178,7 @@ The following are distinct and must not be collapsed into one number:
 4. geometry, material, and source-model uncertainty; and
 5. experimental uncertainty when measurements are added.
 
-Component tallies from the same particle histories are correlated. NCTForge
+Component tallies from the same particle histories are correlated. OpenBNCT
 must not estimate total-dose uncertainty as the root-sum-square of component
 standard deviations unless covariance is available and used. The total needs a
 dedicated estimator, batch-level covariance, or an explicit
@@ -190,7 +190,7 @@ three independent seeds are required for the qualified reference run.
 
 ## Geometry baseline
 
-NCTForge's canonical geometry is the DICOM patient-based right-handed LPS frame
+OpenBNCT's canonical geometry is the DICOM patient-based right-handed LPS frame
 in millimetres. For a biped, positive x is patient-left, positive y is posterior,
 and positive z is toward the head.
 
@@ -221,7 +221,7 @@ mistake from “verifying” each other.
 
 ## Independent evidence ladder
 
-NCTForge will use the following qualification language:
+OpenBNCT will use the following qualification language:
 
 1. **Exact/analytic checks:** units, transforms, source sampling, reaction-rate
    identities, and energy-accounting invariants.
@@ -237,7 +237,7 @@ NCTForge will use the following qualification language:
 Geant4 is suitable for the first openly redistributable comparison harness.
 MCNP remains especially valuable to the field, but its distribution is export
 controlled. PHITS requires an individual use licence. Neither restricted code
-will be bundled with NCTForge.
+will be bundled with OpenBNCT.
 
 OpenMC results remain `synthetic_research_only` until a genuinely independent
 result exists. Cross-code agreement alone remains `cross_code_research_only`.

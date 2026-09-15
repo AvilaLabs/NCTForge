@@ -23,20 +23,20 @@ temperatures. Its exact script SHA-256 is
 On 2026-08-31, NNDC published MD5 `1a6abeac85bd2425df47983752687a93` at the
 same stable archive URI. The current archive remains `343,724,780` bytes but is
 not byte-identical to the object frozen by the OpenMC recipe. Those evaluated
-sources are required for NCTForge's independently generated partial-KERMA
+sources are required for OpenBNCT's independently generated partial-KERMA
 responses even though the processed OpenMC archive is used for transport. The
 observed drift and its qualification boundary are recorded in
 [`ENDFB81_NEUTRON_ARCHIVE_DRIFT.md`](../research/ENDFB81_NEUTRON_ARCHIVE_DRIFT.md).
 
 ## Decision
 
-NCTForge stores reviewed acquisition profiles under `profiles/openmc/` and
+OpenBNCT stores reviewed acquisition profiles under `profiles/openmc/` and
 implements probing and acquisition in Rust. A profile binds the release page,
 source URI, permitted HTTPS redirect-host suffixes, filename, media type,
 observed byte count, current publisher digest when available, known historical
 digests, and the pinned upstream OpenMC generation recipe. Adding the digest
 history is a breaking profile-schema change to
-`nctforge.data-acquisition-profile/0.2.0`. The raw SHA-256 of the frozen
+`openbnct.data-acquisition-profile/0.2.0`. The raw SHA-256 of the frozen
 processed-library profile is
 `237a45d81b7f57dbbb0f1acace641e5dcbda13757e9bfcef686b4daf145ecab7`;
 Git attributes force LF checkout for these raw-byte trust anchors.
@@ -44,8 +44,8 @@ Git attributes force LF checkout for these raw-byte trust anchors.
 The CLI has two explicit operations:
 
 ```text
-nctforge openmc data probe --profile PROFILE
-nctforge openmc data acquire --profile PROFILE \
+openbnct openmc data probe --profile PROFILE
+openbnct openmc data acquire --profile PROFILE \
   --output-directory DIRECTORY --confirm-size-bytes EXACT_BYTES
 ```
 

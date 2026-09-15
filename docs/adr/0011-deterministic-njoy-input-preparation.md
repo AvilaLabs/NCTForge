@@ -19,7 +19,7 @@ while making every byte independently reviewable.
 
 ## Decision
 
-NCTForge generates NJOY inputs in the standalone `nctforge-njoy` Rust crate.
+OpenBNCT generates NJOY inputs in the standalone `openbnct-njoy` Rust crate.
 The preparation path invokes no transport backend or external processor. Before
 writing anything, it verifies:
 
@@ -33,7 +33,7 @@ writing anything, it verifies:
 
 Output is written only to a new directory. The generator emits one byte-stable
 deck per selected nuclide plus
-`nctforge-njoy-input-manifest.json`. The canonical `NF-BNCT-001` bundle is
+`openbnct-njoy-input-manifest.json`. The canonical `NF-BNCT-001` bundle is
 checked in under `benchmarks/synthetic/nf-bnct-001/transport/njoy/`; its
 manifest SHA-256 is
 `d855cce368da9b5683c1895fc8bfc618f4922e76a75efae14ab8b840bf7882ab`.

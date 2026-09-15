@@ -19,9 +19,9 @@ producer and the verifier.
 
 ## Decision
 
-NCTForge adds two fail-closed evidence contracts.
+OpenBNCT adds two fail-closed evidence contracts.
 
-`nctforge.endf-continuum-photon-energy-moment/0.1.0` reads the exact ENDF files
+`openbnct.endf-continuum-photon-energy-moment/0.1.0` reads the exact ENDF files
 bound by the evaluated-source selection and photon-production inventory. For
 each supported single-component File 13 continuum with matching File 15 data,
 it independently calculates at every File 15 incident-energy node:
@@ -39,7 +39,7 @@ point evaluation and histogram or linear-linear interpolation for the outgoing
 spectra integrated in this first evidence set. Unsupported representations are
 rejected rather than approximated.
 
-`nctforge.njoy-continuum-photon-moment-comparison/0.1.0` binds that independent
+`openbnct.njoy-continuum-photon-moment-comparison/0.1.0` binds that independent
 report to an already verified execution receipt and the exact NJOY processor
 report. It parses HEATR's bounded-precision File 13 diagnostic tables and
 compares only incident energies shared with File 15 source nodes within the

@@ -108,7 +108,7 @@ class ComparatorTest(unittest.TestCase):
             hdf5_path = neutron_root / "H1.h5"
             write_hdf5(hdf5_path, energies, values)
             manifest = {
-                "schema_version": "nctforge.openmc-nuclear-data-manifest/0.3.0",
+                "schema_version": "openbnct.openmc-nuclear-data-manifest/0.3.0",
                 "id": "synthetic-openmc-manifest",
                 "openmc_version": "0.16.0",
                 "neutron_tables": [
@@ -130,7 +130,7 @@ class ComparatorTest(unittest.TestCase):
             pendf_path = run_root / "tape23"
             write_pendf(pendf_path, energies, values)
             receipt = {
-                "schema_version": "nctforge.njoy-execution-receipt/0.1.0",
+                "schema_version": "openbnct.njoy-execution-receipt/0.1.0",
                 "id": "synthetic-njoy-execution",
                 "case_id": "nf-bnct-001",
                 "processor": {"tool": {"version": "2016.78"}},
@@ -154,7 +154,7 @@ class ComparatorTest(unittest.TestCase):
                     }
                 ],
             }
-            receipt_path = execution_root / "nctforge-njoy-execution-receipt.json"
+            receipt_path = execution_root / "openbnct-njoy-execution-receipt.json"
             receipt_path.write_text(
                 json.dumps(receipt, indent=2) + "\n", encoding="utf-8", newline="\n"
             )

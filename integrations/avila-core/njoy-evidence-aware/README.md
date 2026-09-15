@@ -1,7 +1,7 @@
 # Avila Core diagnostic-triage gate
 
-This NCTForge workflow is driven through Avila Core without moving NCTForge's
-scientific rules into Core. NCTForge regenerates and verifies the complete
+This OpenBNCT workflow is driven through Avila Core without moving OpenBNCT's
+scientific rules into Core. OpenBNCT regenerates and verifies the complete
 evidence chain plus its diagnostic triage. Core binds the exact executable and
 inputs, records a receipt, extracts typed evidence, and evaluates two explicit
 research requirements.
@@ -23,20 +23,20 @@ admission failure.
 
 ## Run the frozen case
 
-From a workspace containing sibling `NCTForge` and `Avila-Core` repositories:
+From a workspace containing sibling `OpenBNCT` and `Avila-Core` repositories:
 
 ```sh
-cd NCTForge
-cargo build -p nctforge-cli --bin nctforge
+cd OpenBNCT
+cargo build -p openbnct-cli --bin openbnct
 
 cd ../Avila-Core
 cargo run -p avila-core-cli -- run \
-  ../NCTForge/integrations/avila-core/njoy-evidence-aware \
-  --source-root nctforge=../NCTForge \
-  --source-root case=../NCTForge/integrations/avila-core/njoy-evidence-aware \
-  --capability nctforge-cli=../NCTForge/target/debug/nctforge \
-  --workspace ../NCTForge/runs/avila-core-njoy-diagnostic-triage \
-  --log ../NCTForge/runs/avila-core-attempts.jsonl
+  ../OpenBNCT/integrations/avila-core/njoy-evidence-aware \
+  --source-root openbnct=../OpenBNCT \
+  --source-root case=../OpenBNCT/integrations/avila-core/njoy-evidence-aware \
+  --capability openbnct-cli=../OpenBNCT/target/debug/openbnct \
+  --workspace ../OpenBNCT/runs/avila-core-njoy-diagnostic-triage \
+  --log ../OpenBNCT/runs/avila-core-attempts.jsonl
 ```
 
 The specimen pins the exact local Linux debug binary used to freeze it. If a
@@ -48,7 +48,7 @@ bypass the pin.
 
 All seven scientific inputs are declared free. Pass a changed report with
 `--input NAME=PATH`; pass every changed member of the evidence chain in the
-same run. Core then withholds the frozen claims, runs NCTForge over the new
+same run. Core then withholds the frozen claims, runs OpenBNCT over the new
 bytes, binds the result by receipt, and marks replay against the reference case
 as not applicable.
 

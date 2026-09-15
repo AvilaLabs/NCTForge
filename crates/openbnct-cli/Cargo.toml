@@ -1,0 +1,31 @@
+[package]
+name = "openbnct-cli"
+description = "Command-line interface for NCTForge"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "openbnct"
+path = "src/main.rs"
+
+[dependencies]
+clap.workspace = true
+openbnct-bio = { path = "../openbnct-bio" }
+openbnct-boron = { path = "../openbnct-boron" }
+openbnct-core = { path = "../openbnct-core" }
+openbnct-dicom = { path = "../openbnct-dicom" }
+openbnct-evidence = { path = "../openbnct-evidence" }
+openbnct-nifti = { path = "../openbnct-nifti" }
+openbnct-njoy = { path = "../openbnct-njoy" }
+openbnct-openmc = { path = "../openbnct-openmc" }
+openbnct-plan = { path = "../openbnct-plan" }
+openbnct-transport = { path = "../openbnct-transport" }
+serde.workspace = true
+serde_json.workspace = true
+openbnct-mcnp = { path = "../openbnct-mcnp" }
+openbnct-phits = { path = "../openbnct-phits" }

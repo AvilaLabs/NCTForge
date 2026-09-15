@@ -1,6 +1,6 @@
 # Security Policy
 
-NCTForge has no supported release and is not approved for clinical use.
+OpenBNCT has no supported release and is not approved for clinical use.
 
 Do not disclose patient information, credentials, facility secrets, or weapon-
 relevant operational data in a public issue. Security-reporting contact and a

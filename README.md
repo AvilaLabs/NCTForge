@@ -13,8 +13,8 @@ Rust around one idea: a dose result should carry its provenance, uncertainty,
 and qualification with it — and a claim should only be as strong as the
 evidence bound to it.
 
-*(Formerly NCTForge — internal crate names, the `nctforge` CLI/Python package,
-and `nctforge.*` schema identifiers retain the original namespace.)*
+*(Formerly OpenBNCT — internal crate names, the `openbnct` CLI/Python package,
+and `openbnct.*` schema identifiers retain the original namespace.)*
 
 OpenMC is the first transport backend behind a transport-neutral boundary.
 MCNP, PHITS, and other external results import through a published
@@ -32,7 +32,7 @@ bundling those systems.
   contracts, all inputs bound by SHA-256.
 - **OpenMC backend** — deterministic deck generation, controlled execution,
   statepoint collection into versioned physical-dose bundles
-  (`nctforge openmc generate|run|collect|evaluate`).
+  (`openbnct openmc generate|run|collect|evaluate`).
 - **Verified candidate reference** — three frozen-seed OpenMC runs at 600M
   histories each passed every predeclared acceptance gate: ROI precision,
   per-voxel precision (photon median RSE ≈ 2.7%), estimator comparisons
@@ -51,35 +51,35 @@ bundling those systems.
   photon-isoeffective, fractionation), sensitivity sweeps, endpoint models
   (logistic/probit TCP/NTCP, voxel-Poisson, UTCP), BED/EQD2 conversion —
   always a distinct layer from physical dose.
-- **Transport neutrality** — `nctforge.component-dose-interchange/0.1.0`
+- **Transport neutrality** — `openbnct.component-dose-interchange/0.1.0`
   import contract; MCNP meshtal and PHITS output adapters; MCNP input-deck
   export; external-dose import and combined-treatment evaluation; a
-  `nctforge compare` cross-code comparison record.
-- **Facility beam descriptions** — versioned `nctforge.beam-description/0.1.0`
+  `openbnct compare` cross-code comparison record.
+- **Facility beam descriptions** — versioned `openbnct.beam-description/0.1.0`
   documents (spectrum, divergence, aperture, normalization, cited provenance)
-  that bind onto a transport case (`nctforge beam info|list|bind`); the
+  that bind onto a transport case (`openbnct beam info|list|bind`); the
   `beams/` registry ships the FiR 1 K63 literature beam.
-- **Beam quality characterization** — `nctforge beam qa` emits versioned
-  `nctforge.beam-quality/0.1.0` reports: TECDOC-1223-style in-air group
+- **Beam quality characterization** — `openbnct beam qa` emits versioned
+  `openbnct.beam-quality/0.1.0` reports: TECDOC-1223-style in-air group
   fluences and current-to-fluence ratio computed exactly from the declared
   source, optional in-phantom advantage-depth/ratio and peak therapeutic
   ratio from a dose bundle, and per-metric comparison against published
   reference values.
-- **Measurement import** — `nctforge.measurement-record/0.1.0` documents
+- **Measurement import** — `openbnct.measurement-record/0.1.0` documents
   (foil, ion chamber, TLD, TEPC spectra) compare against computed
-  artifacts via `nctforge measurement compare`, emitting a
-  hash-bound `nctforge.measurement-comparison/0.1.0` record with
+  artifacts via `openbnct measurement compare`, emitting a
+  hash-bound `openbnct.measurement-comparison/0.1.0` record with
   sigma-normalized and relative differences.
-- **RT Dose export** — `nctforge dicom export-rtdose` writes any dose
+- **RT Dose export** — `openbnct dicom export-rtdose` writes any dose
   volume as a multi-frame RTDOSE with full grid geometry and CT
   referencing, verified by independent-toolkit round-trip.
-- **Variance reduction** — `nctforge vr resolve` derives OpenMC weight
+- **Variance reduction** — `openbnct vr resolve` derives OpenMC weight
   windows (uniform, explicit, or MAGIC-equivalent forward-flux bounds
   from an analog statepoint) into a content-bound
-  `nctforge.weight-windows/0.1.0` artifact; `openmc generate --vr`
-  binds it into the deck and `nctforge vr validate` certifies the
+  `openbnct.weight-windows/0.1.0` artifact; `openmc generate --vr`
+  binds it into the deck and `openbnct vr validate` certifies the
   reduced-history run against an analog acceptance report.
-- **Three surfaces, one implementation** — CLI (`nctforge`), a native egui
+- **Three surfaces, one implementation** — CLI (`openbnct`), a native egui
   workbench (integrity-gated tri-planar viewer, dose wash, DVH/metrics,
   plan workspace, source positioning), and a bounded Python package —
   all calling the same Rust contracts.
@@ -89,7 +89,7 @@ bundling those systems.
 ```text
 cargo build --workspace                  # CLI + libraries
 cargo test --workspace                   # full suite incl. conformance
-cargo run --bin nctforge-gui             # desktop workbench
+cargo run --bin openbnct-gui             # desktop workbench
 ```
 
 The Python package builds one `abi3` wheel per platform (Python ≥ 3.10):

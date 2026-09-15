@@ -26,7 +26,7 @@ Verify the selected evaluations against both bound acquisitions (the
 `--profile`/`--receipt` arguments pair positionally):
 
 ```sh
-cargo run -p nctforge-cli -- openmc data verify-selection \
+cargo run -p openbnct-cli -- openmc data verify-selection \
   --selection benchmarks/synthetic/nf-bnct-001/transport/candidates/endfb81-tendl2025/evaluated-neutron-source-selection.json \
   --material benchmarks/synthetic/nf-bnct-001/transport/material.json \
   --profile profiles/openmc/endfb81-neutron-evaluations.json \
@@ -40,40 +40,40 @@ With the preserved external execution directory, independently verify the
 processor evidence and regenerate the suitability decisions:
 
 ```sh
-cargo run -p nctforge-cli -- njoy verify-execution \
+cargo run -p openbnct-cli -- njoy verify-execution \
   --receipt benchmarks/synthetic/nf-bnct-001/transport/candidates/endfb81-tendl2025/provenance/njoy2016-78-execution-receipt.json \
   --execution-directory PATH_TO_MIXED_EXECUTION
 
-cargo run -p nctforge-cli -- njoy verify-suitability \
+cargo run -p openbnct-cli -- njoy verify-suitability \
   --receipt benchmarks/synthetic/nf-bnct-001/transport/candidates/endfb81-tendl2025/provenance/njoy2016-78-execution-receipt.json \
   --execution-directory PATH_TO_MIXED_EXECUTION \
   --suitability-report benchmarks/synthetic/nf-bnct-001/transport/candidates/endfb81-tendl2025/provenance/njoy2016-78-transported-photon-suitability.json
 
-cargo run -p nctforge-cli -- njoy verify-photon-inventory \
+cargo run -p openbnct-cli -- njoy verify-photon-inventory \
   --selection benchmarks/synthetic/nf-bnct-001/transport/candidates/endfb81-tendl2025/evaluated-neutron-source-selection.json \
   --evaluations-directory PATH_TO_EXACT_MIXED_SELECTION \
   --inventory benchmarks/synthetic/nf-bnct-001/transport/candidates/endfb81-tendl2025/provenance/endfb81-tendl2025-endf-photon-production-inventory.json
 
-cargo run -p nctforge-cli -- njoy verify-source-aware \
+cargo run -p openbnct-cli -- njoy verify-source-aware \
   --legacy-report benchmarks/synthetic/nf-bnct-001/transport/candidates/endfb81-tendl2025/provenance/njoy2016-78-transported-photon-suitability.json \
   --receipt benchmarks/synthetic/nf-bnct-001/transport/candidates/endfb81-tendl2025/provenance/njoy2016-78-execution-receipt.json \
   --execution-directory PATH_TO_MIXED_EXECUTION \
-  --input-manifest benchmarks/synthetic/nf-bnct-001/transport/candidates/endfb81-tendl2025/njoy/nctforge-njoy-input-manifest.json \
+  --input-manifest benchmarks/synthetic/nf-bnct-001/transport/candidates/endfb81-tendl2025/njoy/openbnct-njoy-input-manifest.json \
   --photon-inventory benchmarks/synthetic/nf-bnct-001/transport/candidates/endfb81-tendl2025/provenance/endfb81-tendl2025-endf-photon-production-inventory.json \
   --source-aware-report benchmarks/synthetic/nf-bnct-001/transport/candidates/endfb81-tendl2025/provenance/njoy2016-78-transported-photon-source-aware-suitability.json
 
-cargo run -p nctforge-cli -- njoy verify-domain-aware \
+cargo run -p openbnct-cli -- njoy verify-domain-aware \
   --source-aware-report benchmarks/synthetic/nf-bnct-001/transport/candidates/endfb81-tendl2025/provenance/njoy2016-78-transported-photon-source-aware-suitability.json \
   --legacy-report benchmarks/synthetic/nf-bnct-001/transport/candidates/endfb81-tendl2025/provenance/njoy2016-78-transported-photon-suitability.json \
   --receipt benchmarks/synthetic/nf-bnct-001/transport/candidates/endfb81-tendl2025/provenance/njoy2016-78-execution-receipt.json \
   --execution-directory PATH_TO_MIXED_EXECUTION \
-  --input-manifest benchmarks/synthetic/nf-bnct-001/transport/candidates/endfb81-tendl2025/njoy/nctforge-njoy-input-manifest.json \
+  --input-manifest benchmarks/synthetic/nf-bnct-001/transport/candidates/endfb81-tendl2025/njoy/openbnct-njoy-input-manifest.json \
   --nuclear-data-manifest benchmarks/synthetic/nf-bnct-001/transport/provenance/openmc-endfb81-processed-data-manifest.json \
   --material benchmarks/synthetic/nf-bnct-001/transport/material.json \
   --transport-domain benchmarks/synthetic/nf-bnct-001/transport/provenance/openmc-neutron-transport-domain.json \
   --domain-aware-report benchmarks/synthetic/nf-bnct-001/transport/candidates/endfb81-tendl2025/provenance/njoy2016-78-transported-photon-domain-aware-suitability.json
 
-cargo run -p nctforge-cli -- njoy verify-energy-balance-attribution \
+cargo run -p openbnct-cli -- njoy verify-energy-balance-attribution \
   --domain-aware-report benchmarks/synthetic/nf-bnct-001/transport/candidates/endfb81-tendl2025/provenance/njoy2016-78-transported-photon-domain-aware-suitability.json \
   --receipt benchmarks/synthetic/nf-bnct-001/transport/candidates/endfb81-tendl2025/provenance/njoy2016-78-execution-receipt.json \
   --execution-directory PATH_TO_MIXED_EXECUTION \
@@ -84,12 +84,12 @@ The checked comparison is self-contained over the two content-addressed
 suitability reports:
 
 ```sh
-cargo run -p nctforge-cli -- njoy verify-comparison \
+cargo run -p openbnct-cli -- njoy verify-comparison \
   --baseline-report benchmarks/synthetic/nf-bnct-001/transport/provenance/njoy2016-78-transported-photon-suitability.json \
   --candidate-report benchmarks/synthetic/nf-bnct-001/transport/candidates/endfb81-tendl2025/provenance/njoy2016-78-transported-photon-suitability.json \
   --comparison-report benchmarks/synthetic/nf-bnct-001/transport/candidates/endfb81-tendl2025/provenance/endfb81-vs-endfb81-tendl2025-response-treatment-comparison.json
 
-cargo run -p nctforge-cli -- njoy check-candidate-comparison \
+cargo run -p openbnct-cli -- njoy check-candidate-comparison \
   --baseline-report benchmarks/synthetic/nf-bnct-001/transport/provenance/njoy2016-78-transported-photon-suitability.json \
   --candidate-report benchmarks/synthetic/nf-bnct-001/transport/candidates/endfb81-tendl2025/provenance/njoy2016-78-transported-photon-suitability.json \
   --comparison-report benchmarks/synthetic/nf-bnct-001/transport/candidates/endfb81-tendl2025/provenance/endfb81-vs-endfb81-tendl2025-response-treatment-comparison.json \

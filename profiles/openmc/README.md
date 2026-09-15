@@ -15,7 +15,7 @@ not redistribute either archive.
 Probe before any transfer:
 
 ```sh
-cargo run -p nctforge-cli -- openmc data probe \
+cargo run -p openbnct-cli -- openmc data probe \
   --profile profiles/openmc/endfb81-neutron-evaluations.json
 ```
 
@@ -24,7 +24,7 @@ output. After selecting the ten `NF-BNCT-001` members, verify all bindings and
 file hashes with:
 
 ```sh
-cargo run -p nctforge-cli -- openmc data verify-selection \
+cargo run -p openbnct-cli -- openmc data verify-selection \
   --selection benchmarks/synthetic/nf-bnct-001/transport/evaluated-neutron-source-selection.json \
   --material benchmarks/synthetic/nf-bnct-001/transport/material.json \
   --profile profiles/openmc/endfb81-neutron-evaluations.json \
@@ -40,7 +40,7 @@ Verify a selectively extracted official processed-data selection against the
 checked case manifest and material contract with:
 
 ```sh
-cargo run -p nctforge-cli -- openmc data verify-manifest \
+cargo run -p openbnct-cli -- openmc data verify-manifest \
   --manifest benchmarks/synthetic/nf-bnct-001/transport/provenance/openmc-endfb81-processed-data-manifest.json \
   --data-root PATH_TO_SELECTED_OPENMC_DATA \
   --material benchmarks/synthetic/nf-bnct-001/transport/material.json
@@ -56,6 +56,6 @@ uv run --with-requirements scripts/requirements-openmc-data-inspector.txt \
   --data-root PATH_TO_SELECTED_OPENMC_DATA \
   --execution-receipt benchmarks/synthetic/nf-bnct-001/transport/provenance/njoy2016-78-execution-receipt.json \
   --execution-root PATH_TO_NJOY_EXECUTION \
-  --report-id nctforge.nf-bnct-001.openmc-endfb81-vs-njoy2016-78-mt301.v1 \
+  --report-id openbnct.nf-bnct-001.openmc-endfb81-vs-njoy2016-78-mt301.v1 \
   --output NEW_REPORT_PATH
 ```

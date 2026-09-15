@@ -30,6 +30,6 @@ are source-controlled.
 Generate and verify its DICOM geometry inputs with:
 
 ```text
-cargo run --bin nctforge -- benchmark generate /tmp/nf-bnct-001
-cargo run --bin nctforge -- benchmark verify /tmp/nf-bnct-001
+cargo run --bin openbnct -- benchmark generate /tmp/nf-bnct-001
+cargo run --bin openbnct -- benchmark verify /tmp/nf-bnct-001
 ```

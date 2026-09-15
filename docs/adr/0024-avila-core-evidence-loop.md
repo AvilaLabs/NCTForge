@@ -6,7 +6,7 @@
 
 ## Context
 
-NCTForge now has an immutable, independently regenerable v0.4 assessment for
+OpenBNCT now has an immutable, independently regenerable v0.4 assessment for
 the JEFF-4.0 transported-photon investigation, but the next work will change
 parts of that evidence chain repeatedly. A useful external loop needs to say
 which bytes and executable were checked, keep scientific rejection distinct
@@ -16,17 +16,17 @@ data rules into an orchestrator.
 Avila Core provides the first pressure test for that boundary. Its declarative
 external-checker adapter can stage hash-bound inputs, invoke an exact binary,
 record and verify a receipt, and extract exact and closed-set categorical
-claims. NCTForge must remain responsible for regenerating and validating the
+claims. OpenBNCT must remain responsible for regenerating and validating the
 domain result.
 
 ## Decision
 
-NCTForge adds `njoy check-evidence-aware`. The command reads the domain-aware
+OpenBNCT adds `njoy check-evidence-aware`. The command reads the domain-aware
 report, both independent reaction reports, both processor-attribution reports,
 and the evidence-aware report. It regenerates the assessment through
 `verify_against_evidence` and refuses any content or binding mismatch. Only
 after that verification does it create, without overwrite, a deterministic
-`nctforge.njoy-evidence-aware-check/0.1.0` result containing:
+`openbnct.njoy-evidence-aware-check/0.1.0` result containing:
 
 - the exact source-report identity;
 - the transport requirement;
@@ -50,7 +50,7 @@ that no unexplained in-domain finding remain.
 
 All six scientific inputs are declared free for subsequent investigations.
 Supplying a changed member makes Core withhold the frozen claims and rerun
-NCTForge; every mutually dependent changed report must be supplied together.
+OpenBNCT; every mutually dependent changed report must be supplied together.
 Replay against the frozen case is then not applicable rather than silently
 treated as a mismatch.
 
@@ -74,11 +74,11 @@ inspection.
 
 ## Consequences
 
-- The follow-on triage uses this integration for real NCTForge evidence and
+- The follow-on triage uses this integration for real OpenBNCT evidence and
   narrows the next independent investigation to O-17.
 - A domain rejection remains a valid, queryable result while process failures
   remain unmistakable failures.
-- NCTForge exposes one narrow stable machine surface instead of asking an
+- OpenBNCT exposes one narrow stable machine surface instead of asking an
   orchestrator to parse the full scientific report.
 - Future integration work should first replace the local executable pin with a
   reproducible release identity, then add qualification evidence only when the

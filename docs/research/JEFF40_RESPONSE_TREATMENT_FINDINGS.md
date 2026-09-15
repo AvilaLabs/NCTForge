@@ -152,7 +152,7 @@ fallback warning but retains 43 in-domain violations. That separates “photon
 records exist” from “the energy-balance response passes.”
 
 The exact MF=6/12/13/14/15 inventory and source-aware interpretation are now
-complete. NCTForge has also independently integrated all eight supported N-15
+complete. OpenBNCT has also independently integrated all eight supported N-15
 File 13/File 15 continuum reactions: both selections produce the same 92
 source-node samples, and 58 shared nodes agree with NJOY's printed diagnostics
 within `4.827186715582159e-5`. This rules out that supported continuum term as

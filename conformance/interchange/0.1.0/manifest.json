@@ -1,7 +1,7 @@
 {
-  "suite": "nctforge.component-dose-interchange-conformance/0.1.0",
+  "suite": "openbnct.component-dose-interchange-conformance/0.1.0",
   "interchange_schema": "nctforge.component-dose-interchange/0.1.0",
-  "bundle_schema": "nctforge.physical-dose-bundle/0.2.0",
+  "bundle_schema": "openbnct.physical-dose-bundle/0.2.0",
   "notes": [
     "Each case names a document under cases/ and the expected outcome.",
     "expect=ok cases must import; expected/ holds the reference bundle.",

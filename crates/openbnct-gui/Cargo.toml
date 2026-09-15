@@ -1,0 +1,32 @@
+[package]
+name = "openbnct-gui"
+description = "egui desktop shell for NCTForge"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "openbnct-gui"
+path = "src/main.rs"
+
+[dependencies]
+base64.workspace = true
+eframe.workspace = true
+image.workspace = true
+openbnct-bio = { path = "../openbnct-bio" }
+openbnct-core = { path = "../openbnct-core" }
+openbnct-dicom = { path = "../openbnct-dicom" }
+openbnct-evidence = { path = "../openbnct-evidence" }
+openbnct-nifti = { path = "../openbnct-nifti" }
+openbnct-openmc = { path = "../openbnct-openmc" }
+openbnct-plan = { path = "../openbnct-plan" }
+openbnct-transport = { path = "../openbnct-transport" }
+openbnct-view = { path = "../openbnct-view" }
+serde_json.workspace = true
+
+[dev-dependencies]
+tempfile = "3"

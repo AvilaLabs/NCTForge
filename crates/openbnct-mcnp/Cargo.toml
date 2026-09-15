@@ -1,0 +1,20 @@
+[package]
+name = "openbnct-mcnp"
+description = "MCNP meshtal import adapter for the component-dose interchange"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+openbnct-core = { path = "../openbnct-core" }
+openbnct-transport = { path = "../openbnct-transport" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+sha2.workspace = true

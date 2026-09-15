@@ -21,13 +21,13 @@ be circular.
 NJOY2016.78 detects the absent residual, prints `one-particle recoil approx.
 used.`, synthesizes a recoil term, and adds a File 6 energy-balance remainder
 to MT 301. The pinned HEATR implementation does not include that remainder in
-the File 6 kinematic upper bound. Before interpreting the warning, NCTForge
+the File 6 kinematic upper bound. Before interpreting the warning, OpenBNCT
 needs evidence independent of NJOY's approximation and its output.
 
 ## Decision
 
-NCTForge adds the immutable
-`nctforge.endf-mf6-law7-implicit-residual/0.1.0` report and corresponding
+OpenBNCT adds the immutable
+`openbnct.endf-mf6-law7-implicit-residual/0.1.0` report and corresponding
 calculate/verify commands. The calculation:
 
 1. verifies the exact evaluated-source selection and photon-production

@@ -7,7 +7,7 @@
 
 [English](README.md) | **日本語**
 
-*（旧称 NCTForge。内部のクレート名・`nctforge` CLI/Python パッケージ・`nctforge.*` スキーマ識別子は従来の名前空間を維持します。）*
+*（旧称 OpenBNCT。内部のクレート名・`openbnct` CLI/Python パッケージ・`openbnct.*` スキーマ識別子は従来の名前空間を維持します。）*
 
 OpenBNCT は、ホウ素中性子捕捉療法（BNCT）の研究および独立検証を目的とした、
 輸送コードに依存しない DICOM ネイティブのオープンソース・ワークベンチです。

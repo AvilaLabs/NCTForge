@@ -20,7 +20,7 @@ and must not be lost when a run is rejected.
 
 ## Decision
 
-The `nctforge-njoy` crate owns a controlled NJOY2016.78 execution boundary. The
+The `openbnct-njoy` crate owns a controlled NJOY2016.78 execution boundary. The
 `njoy execute` command:
 
 - regenerates the expected input bundle from all content-bound source
@@ -101,7 +101,7 @@ byte determinism.
   artifacts are not claimed to be a proof of the complete operating-system
   dependency closure.
 - The current evaluated-data profile must be investigated or replaced through
-  a new versioned profile; NCTForge will not clip values, suppress diagnostics,
+  a new versioned profile; OpenBNCT will not clip values, suppress diagnostics,
   or introduce an undocumented Q-value override.
 - This checkpoint improves reproducibility but does not resolve the existing
   archive-equivalence question or independently review the physical method.

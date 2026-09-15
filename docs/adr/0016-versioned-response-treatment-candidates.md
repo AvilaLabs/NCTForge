@@ -18,8 +18,8 @@ fail-closed interpretation.
 
 ## Decision
 
-NCTForge introduces
-`nctforge.evaluated-neutron-source-selection/0.2.0` for alternate
+OpenBNCT introduces
+`openbnct.evaluated-neutron-source-selection/0.2.0` for alternate
 response-treatment candidates. It is separate from the frozen
 ENDF/B-VIII.1-only `0.1.0` contract and requires:
 
@@ -32,7 +32,7 @@ ENDF/B-VIII.1-only `0.1.0` contract and requires:
 
 The existing controlled preparation, execution, and transported-photon
 suitability gates then apply unchanged. A new deterministic comparison schema,
-`nctforge.response-treatment-candidate-comparison/0.1.0`, binds the baseline
+`openbnct.response-treatment-candidate-comparison/0.1.0`, binds the baseline
 and candidate suitability reports by ID and SHA-256. It records each nuclide's
 status transition and aggregate rejected-run, kinematic-violation, and
 processor-finding counts.
@@ -64,7 +64,7 @@ The candidate is rejected:
 | New rejections introduced | — | 2 |
 
 N-15, O-16, O-17, and O-18 remain rejected. C-13 and H-2 become newly
-rejected. The result is specific to the frozen NCTForge method and is not a
+rejected. The result is specific to the frozen OpenBNCT method and is not a
 general judgment about JEFF-4.0.
 
 ## Consequences

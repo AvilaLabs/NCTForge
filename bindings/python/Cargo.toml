@@ -1,5 +1,5 @@
 [package]
-name = "nctforge-python"
+name = "openbnct-python"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.95"
@@ -9,20 +9,20 @@ license = "Apache-2.0"
 publish = false
 
 [lib]
-name = "_nctforge"
+name = "_openbnct"
 crate-type = ["cdylib"]
 
 [dependencies]
-nctforge-bio = { path = "../../crates/nctforge-bio" }
-nctforge-core = { path = "../../crates/nctforge-core" }
-nctforge-dicom = { path = "../../crates/nctforge-dicom" }
-nctforge-evidence = { path = "../../crates/nctforge-evidence" }
-nctforge-transport = { path = "../../crates/nctforge-transport" }
-nctforge-openmc = { path = "../../crates/nctforge-openmc" }
-nctforge-plan = { path = "../../crates/nctforge-plan" }
+openbnct-bio = { path = "../../crates/openbnct-bio" }
+openbnct-core = { path = "../../crates/openbnct-core" }
+openbnct-dicom = { path = "../../crates/openbnct-dicom" }
+openbnct-evidence = { path = "../../crates/openbnct-evidence" }
+openbnct-transport = { path = "../../crates/openbnct-transport" }
+openbnct-openmc = { path = "../../crates/openbnct-openmc" }
+openbnct-plan = { path = "../../crates/openbnct-plan" }
 pyo3 = { version = "0.29.2", features = ["extension-module", "abi3-py310"] }
 serde = "1"
 serde_json = { version = "1", features = ["float_roundtrip"] }
 sha2 = "0.10"
-nctforge-mcnp = { path = "../../crates/nctforge-mcnp" }
-nctforge-phits = { path = "../../crates/nctforge-phits" }
+openbnct-mcnp = { path = "../../crates/openbnct-mcnp" }
+openbnct-phits = { path = "../../crates/openbnct-phits" }

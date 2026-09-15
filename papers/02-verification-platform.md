@@ -19,7 +19,7 @@ BNCT component doses are not comparable between institutions because component
 definitions, nuclear-data processing, estimator choices, and biological
 weighting all differ and are rarely recorded in a machine-checkable form.
 
-NCTForge normalizes component-resolved physical dose into a backend-neutral,
+OpenBNCT normalizes component-resolved physical dose into a backend-neutral,
 content-bound interchange contract that separates physical transport from
 biological interpretation, retains voxel-level uncertainty without assuming
 independence between component tallies drawn from shared histories, and binds

@@ -107,18 +107,18 @@ def tally_results(bins: int, mean: float, std: float) -> numpy.ndarray:
 # boron 2.0e6 eV per reaction, nitrogen 6.26e5 eV per reaction at density 1.
 TALLY_DEFS = [
     # (tally_id, name, filter_ids, bins, mean, std)
-    (1, "nctforge.component.boron.response", [1, 2, 4], VOXELS, 1.3684e-12, 1.0e-14),
-    (2, "nctforge.component.nitrogen.response", [1, 2, 5], VOXELS, 1.6018e-13, 2.0e-15),
-    (3, "nctforge.component.hydrogen.response", [1, 2, 6], VOXELS, 5.0e-13, 5.0e-15),
-    (4, "nctforge.audit.neutron_heating", [1, 2], VOXELS, 170000.0, 1000.0),
-    (5, "nctforge.component.photon.heating", [1, 3], VOXELS, 20000.0, 400.0),
-    (6, "nctforge.physical_total.coupled_heating", [1], VOXELS, 190000.0, 1100.0),
-    (7, "nctforge.audit.b10_mt107", [1, 2], VOXELS, 0.0042692, 4.0e-5),
-    (8, "nctforge.audit.n14_mt103", [1, 2], VOXELS, 0.0015976, 1.6e-5),
-    (9, "nctforge.diagnostic.neutron_fluence", [1, 2, 7], VOXELS * 4, 0.01, 1.0e-4),
-    (10, "nctforge.diagnostic.photon_fluence", [1, 3, 8], VOXELS * 5, 0.002, 2.0e-5),
-    (11, "nctforge.diagnostic.neutron_surface_current", [9, 2], 6, -0.02, 2.0e-4),
-    (12, "nctforge.diagnostic.photon_surface_current", [9, 3], 6, -0.003, 3.0e-5),
+    (1, "openbnct.component.boron.response", [1, 2, 4], VOXELS, 1.3684e-12, 1.0e-14),
+    (2, "openbnct.component.nitrogen.response", [1, 2, 5], VOXELS, 1.6018e-13, 2.0e-15),
+    (3, "openbnct.component.hydrogen.response", [1, 2, 6], VOXELS, 5.0e-13, 5.0e-15),
+    (4, "openbnct.audit.neutron_heating", [1, 2], VOXELS, 170000.0, 1000.0),
+    (5, "openbnct.component.photon.heating", [1, 3], VOXELS, 20000.0, 400.0),
+    (6, "openbnct.physical_total.coupled_heating", [1], VOXELS, 190000.0, 1100.0),
+    (7, "openbnct.audit.b10_mt107", [1, 2], VOXELS, 0.0042692, 4.0e-5),
+    (8, "openbnct.audit.n14_mt103", [1, 2], VOXELS, 0.0015976, 1.6e-5),
+    (9, "openbnct.diagnostic.neutron_fluence", [1, 2, 7], VOXELS * 4, 0.01, 1.0e-4),
+    (10, "openbnct.diagnostic.photon_fluence", [1, 3, 8], VOXELS * 5, 0.002, 2.0e-5),
+    (11, "openbnct.diagnostic.neutron_surface_current", [9, 2], 6, -0.02, 2.0e-4),
+    (12, "openbnct.diagnostic.photon_surface_current", [9, 3], 6, -0.003, 3.0e-5),
 ]
 
 RESPONSE_ENERGY = [1.0e-5, 1.0, 2.0e7]
@@ -206,7 +206,7 @@ class ComparatorTest(unittest.TestCase):
             )
 
             receipt = {
-                "schema_version": "nctforge.njoy-execution-receipt/0.1.0",
+                "schema_version": "openbnct.njoy-execution-receipt/0.1.0",
                 "id": "synthetic-njoy-execution",
                 "case_id": "nf-bnct-001",
                 "processor": {"tool": {"version": "2016.78"}},
@@ -231,13 +231,13 @@ class ComparatorTest(unittest.TestCase):
                     for nuclide, path in (("B10", b10_path), ("N14", n14_path))
                 ],
             }
-            receipt_path = execution_root / "nctforge-njoy-execution-receipt.json"
+            receipt_path = execution_root / "openbnct-njoy-execution-receipt.json"
             receipt_path.write_text(
                 json.dumps(receipt, indent=2) + "\n", encoding="utf-8", newline="\n"
             )
 
             response_set = {
-                "schema_version": "nctforge.neutron-response-set/0.1.0",
+                "schema_version": "openbnct.neutron-response-set/0.1.0",
                 "id": "synthetic-response-set",
                 "qualification": "independently_reviewed",
                 "energy_ev": RESPONSE_ENERGY,
@@ -257,12 +257,12 @@ class ComparatorTest(unittest.TestCase):
                 ],
             }
             material = {
-                "schema_version": "nctforge.material-definition/0.1.0",
+                "schema_version": "openbnct.material-definition/0.1.0",
                 "id": "synthetic-material",
                 "density_g_cm3": 1.0,
             }
             profile = {
-                "schema_version": "nctforge.openmc-execution-profile/0.1.0",
+                "schema_version": "openbnct.openmc-execution-profile/0.1.0",
                 "id": "synthetic-smoke-profile",
                 "purpose": "smoke_only",
                 "openmc_version": "0.16.0",
@@ -276,7 +276,7 @@ class ComparatorTest(unittest.TestCase):
                 "execution_profile": profile,
             }
             manifest = {
-                "schema_version": "nctforge.openmc-input-manifest/0.1.0",
+                "schema_version": "openbnct.openmc-input-manifest/0.1.0",
                 "case_id": "nf-bnct-001",
                 "backend_id": "openmc",
                 "openmc_version": "0.16.0",
@@ -319,7 +319,7 @@ class ComparatorTest(unittest.TestCase):
                     for tally_id, name, _, _, _, _ in TALLY_DEFS
                 ],
             }
-            manifest_path = deck_root / "nctforge-input-manifest.json"
+            manifest_path = deck_root / "openbnct-input-manifest.json"
             manifest_path.write_text(
                 json.dumps(manifest, indent=2) + "\n", encoding="utf-8", newline="\n"
             )
@@ -366,7 +366,7 @@ class ComparatorTest(unittest.TestCase):
             report = json.loads(output.read_text(encoding="utf-8"))
             self.assertEqual(
                 report["schema_version"],
-                "nctforge.openmc-smoke-estimator-comparison/0.1.0",
+                "openbnct.openmc-smoke-estimator-comparison/0.1.0",
             )
             self.assertTrue(
                 report["tally_contract"]["all_contract_tallies_present"]

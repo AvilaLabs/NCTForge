@@ -7,7 +7,7 @@ blocked by explicit O-17/O-18 photon-data findings
 
 ## Outcome
 
-NCTForge acquired the official OpenMC ENDF/B-VIII.1 processed distribution,
+OpenBNCT acquired the official OpenMC ENDF/B-VIII.1 processed distribution,
 selected the exact data required by `NF-BNCT-001`, and inspected the HDF5
 structures OpenMC 0.16.0 consumes. The case-scoped selection passes the Rust
 artifact, mapping, and material-capability preflight. This establishes a usable
@@ -64,7 +64,7 @@ The result narrows the scientific blocker:
   as the official OpenMC tables;
 - substituting the official processed library does not create missing
   O-17/O-18 secondary-photon information; and
-- NCTForge must define and independently review an explicit response treatment
+- OpenBNCT must define and independently review an explicit response treatment
   before publishing neutron component tables or reference dose arrays.
 
 The comparison report deliberately declares

@@ -27,8 +27,8 @@ must not happen silently is which nuclides came from which archive.
 
 ## Decision
 
-NCTForge introduces
-`nctforge.evaluated-neutron-source-selection/0.3.0` for selections that bind
+OpenBNCT introduces
+`openbnct.evaluated-neutron-source-selection/0.3.0` for selections that bind
 more than one publisher acquisition:
 
 - `acquisition` is replaced by `acquisitions`, a non-empty list of acquisition
@@ -53,7 +53,7 @@ more than one publisher acquisition:
   the suitability chain, and independent review — is unchanged.
 
 `njoy prepare` emits manifest schema
-`nctforge.njoy-input-manifest/0.2.0` for a mixed selection, binding each
+`openbnct.njoy-input-manifest/0.2.0` for a mixed selection, binding each
 acquisition's profile and receipt SHA-256 as a list. Single-acquisition
 selections continue to emit `0.1.0` manifests byte-for-byte, so the frozen
 baseline and JEFF-4.0 reproduction recipes are unaffected.

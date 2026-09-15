@@ -1,4 +1,4 @@
-# Paper 3 — NCTForge software artifact
+# Paper 3 — OpenBNCT software artifact
 
 **Status:** Blocked on packaging, a tagged release, and archival DOI.
 
@@ -25,7 +25,7 @@ Its function is to give the artifact a stable, citable identity.
 - [x] Apache-2.0 license
 - [x] Contribution guidelines
 - [x] Automated tests in CI
-- [ ] `pip install nctforge` providing both the module and the CLI, so the tool
+- [ ] `pip install openbnct` providing both the module and the CLI, so the tool
       is installable without a Rust toolchain
 - [ ] Documentation sufficient for a stranger to install, run, and verify a
       case without assistance

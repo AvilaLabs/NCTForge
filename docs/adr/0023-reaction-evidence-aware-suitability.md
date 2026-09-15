@@ -26,8 +26,8 @@ and transport domain it supports.
 
 ## Decision
 
-NCTForge adds
-`nctforge.njoy-transported-photon-suitability/0.4.0`. Assessment and
+OpenBNCT adds
+`openbnct.njoy-transported-photon-suitability/0.4.0`. Assessment and
 verification require five immutable input reports:
 
 1. the domain-aware v0.3 suitability report;

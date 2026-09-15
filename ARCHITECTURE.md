@@ -17,7 +17,7 @@ invoke the same implementation rather than reproduce scientific logic.
 ## Backend neutrality
 
 The application must not pass OpenMC-specific objects beyond
-`nctforge-openmc`. Transport adapters consume a `TransportCase` and produce a
+`openbnct-openmc`. Transport adapters consume a `TransportCase` and produce a
 `PhysicalDoseBundle`. Backends may prepare and execute a calculation, import an
 external result, or both. Each normalized bundle binds both its component
 semantics and its material- and nuclear-data-specific neutron response set by
@@ -50,8 +50,8 @@ boron model, biological model, and parameter set used to produce it.
 
 ## DICOM geometry boundary
 
-`nctforge-dicom` is the sole DICOM-to-domain boundary. It uses a pinned
-`dicom-rs` release for Part 10 parsing, then applies NCTForge's own fail-closed
+`openbnct-dicom` is the sole DICOM-to-domain boundary. It uses a pinned
+`dicom-rs` release for Part 10 parsing, then applies OpenBNCT's own fail-closed
 semantic checks. CT order comes from projected Image Position (Patient), not
 file order or Instance Number. The core grid uses `[column, row, slice]`, stores
 the first voxel centre as its origin, and retains a right-handed orthonormal LPS
@@ -69,7 +69,7 @@ limited to H-1 elastic scattering when that would leave neutron energy
 unclassified. Physical-total uncertainty must not assume that component tallies
 from shared particle histories are independent.
 
-OpenMC-specific estimator behavior remains inside `nctforge-openmc`. In the
+OpenMC-specific estimator behavior remains inside `openbnct-openmc`. In the
 0.16.0 adapter, reaction-filtered neutron heating is diagnostic only because it
 does not expose reaction-wise KERMA. Reported component definitions and their
 hashed response ledger stay backend-neutral. See
@@ -90,7 +90,7 @@ structure overlays, an LPS cursor readout, and visible transport-capability
 state. Component-dose selection arrives with qualified component data in R2;
 contour editing is explicitly deferred.
 
-Anatomical mapping lives in `nctforge-view`, not egui callbacks. R1 labels views
+Anatomical mapping lives in `openbnct-view`, not egui callbacks. R1 labels views
 as axial, coronal, or sagittal only when grid direction is aligned to canonical
 DICOM LPS axes. The viewer rejects oblique or permuted grids until their
 resampling and labeling conventions have dedicated tests. Screen-edge mappings
@@ -113,7 +113,7 @@ scientific or clinical qualification; see ADR 0010.
 ## Qualification
 
 Every result declares one of the bounded qualification states defined by
-`nctforge-evidence`. The software must never infer clinical fitness from a
+`openbnct-evidence`. The software must never infer clinical fitness from a
 successful calculation or benchmark.
 
 The R1 case manifest binds its coordinate system, grid, DICOM identifiers,
@@ -128,3 +128,23 @@ and `dcentvfy` across the complete CT/RT Structure Set collection. The validator
 snapshot and runner image are pinned, and warnings fail the gate. This is an
 independent mechanical check of DICOM PS3 IOD, encoding, dictionary, and entity
 consistency rules; it is not a certification claim.
+## Contract namespaces and the NCTForge rename
+
+The project was renamed from NCTForge to OpenBNCT after the R6 roadmap
+completed; crates, the CLI binary, and the Python package are now `openbnct`.
+Contract identifiers are versioned protocol strings, not branding: artifacts
+written before the rename carry `nctforge.*` schema ids (and `nctforge-*`
+tool/method ids), and they remain valid.
+
+Readers must normalize the legacy namespace on load —
+`openbnct_core::normalize_contract_id` maps `nctforge.` → `openbnct.` and
+`nctforge-` → `openbnct-` — rather than rejecting old ids or rewriting frozen
+files. Every `schema_version` field applies the normalization through serde, so
+in-memory values are always canonical `openbnct.*`; byte-level evidence such as
+frozen benchmark reports and hash-bound manifests keeps its original ids
+intact, and content hashes of those files therefore remain valid.
+
+Two legacy names are frozen forever, not aliased: the DICOM `2.25.*` UIDs of
+the `nf-bnct-001` synthetic case derive from `nctforge.org` UUIDv5 name strings
+published in the benchmark specification, and changing the seed would invalidate
+every published UID.

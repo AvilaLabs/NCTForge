@@ -2563,207 +2563,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "nctforge-bio"
-version = "0.1.0"
-dependencies = [
- "nctforge-core",
- "serde",
- "serde_json",
- "sha2",
- "tempfile",
- "thiserror 2.0.20",
-]
-
-[[package]]
-name = "nctforge-boron"
-version = "0.1.0"
-dependencies = [
- "nctforge-core",
- "nctforge-transport",
- "serde",
- "serde_json",
- "thiserror 2.0.20",
-]
-
-[[package]]
-name = "nctforge-cli"
-version = "0.1.0"
-dependencies = [
- "clap",
- "nctforge-bio",
- "nctforge-boron",
- "nctforge-core",
- "nctforge-dicom",
- "nctforge-evidence",
- "nctforge-mcnp",
- "nctforge-nifti",
- "nctforge-njoy",
- "nctforge-openmc",
- "nctforge-phits",
- "nctforge-plan",
- "nctforge-transport",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "nctforge-core"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
- "sha2",
- "thiserror 2.0.20",
-]
-
-[[package]]
-name = "nctforge-dicom"
-version = "0.1.0"
-dependencies = [
- "dicom-core",
- "dicom-dictionary-std",
- "dicom-object",
- "nctforge-core",
- "nctforge-evidence",
- "serde_json",
- "tempfile",
- "thiserror 2.0.20",
- "uuid",
-]
-
-[[package]]
-name = "nctforge-evidence"
-version = "0.1.0"
-dependencies = [
- "nctforge-core",
- "serde",
- "serde_json",
- "sha2",
- "tempfile",
- "thiserror 2.0.20",
-]
-
-[[package]]
-name = "nctforge-gui"
-version = "0.1.0"
-dependencies = [
- "base64",
- "eframe",
- "image",
- "nctforge-bio",
- "nctforge-core",
- "nctforge-dicom",
- "nctforge-evidence",
- "nctforge-nifti",
- "nctforge-openmc",
- "nctforge-plan",
- "nctforge-transport",
- "nctforge-view",
- "serde_json",
- "tempfile",
-]
-
-[[package]]
-name = "nctforge-mcnp"
-version = "0.1.0"
-dependencies = [
- "nctforge-core",
- "nctforge-transport",
- "serde",
- "serde_json",
- "sha2",
- "thiserror 2.0.20",
-]
-
-[[package]]
-name = "nctforge-nifti"
-version = "0.1.0"
-dependencies = [
- "flate2",
- "nctforge-core",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.20",
-]
-
-[[package]]
-name = "nctforge-njoy"
-version = "0.1.0"
-dependencies = [
- "nctforge-core",
- "nctforge-openmc",
- "nctforge-transport",
- "serde",
- "serde_json",
- "sha2",
- "tempfile",
- "thiserror 2.0.20",
-]
-
-[[package]]
-name = "nctforge-openmc"
-version = "0.1.0"
-dependencies = [
- "hdf5-pure",
- "md-5",
- "nctforge-core",
- "nctforge-transport",
- "quick-xml 0.42.0",
- "reqwest",
- "serde",
- "serde_json",
- "sha2",
- "tempfile",
- "thiserror 2.0.20",
-]
-
-[[package]]
-name = "nctforge-phits"
-version = "0.1.0"
-dependencies = [
- "nctforge-core",
- "serde",
- "serde_json",
- "sha2",
- "thiserror 2.0.20",
-]
-
-[[package]]
-name = "nctforge-plan"
-version = "0.1.0"
-dependencies = [
- "calamine",
- "csv",
- "nctforge-core",
- "rust_xlsxwriter",
- "serde",
- "serde_json",
- "sha2",
- "tempfile",
- "thiserror 2.0.20",
-]
-
-[[package]]
-name = "nctforge-transport"
-version = "0.1.0"
-dependencies = [
- "nctforge-core",
- "serde",
- "serde_json",
- "sha2",
- "thiserror 2.0.20",
-]
-
-[[package]]
-name = "nctforge-view"
-version = "0.1.0"
-dependencies = [
- "nctforge-core",
- "thiserror 2.0.20",
-]
-
-[[package]]
 name = "ndk"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3152,6 +2951,207 @@ name = "once_cell_polyfill"
 version = "1.70.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "384b8ab6d37215f3c5301a95a4accb5d64aa607f1fcb26a11b5303878451b4fe"
+
+[[package]]
+name = "openbnct-bio"
+version = "0.1.0"
+dependencies = [
+ "openbnct-core",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "openbnct-boron"
+version = "0.1.0"
+dependencies = [
+ "openbnct-core",
+ "openbnct-transport",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "openbnct-cli"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "openbnct-bio",
+ "openbnct-boron",
+ "openbnct-core",
+ "openbnct-dicom",
+ "openbnct-evidence",
+ "openbnct-mcnp",
+ "openbnct-nifti",
+ "openbnct-njoy",
+ "openbnct-openmc",
+ "openbnct-phits",
+ "openbnct-plan",
+ "openbnct-transport",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "openbnct-core"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "openbnct-dicom"
+version = "0.1.0"
+dependencies = [
+ "dicom-core",
+ "dicom-dictionary-std",
+ "dicom-object",
+ "openbnct-core",
+ "openbnct-evidence",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.20",
+ "uuid",
+]
+
+[[package]]
+name = "openbnct-evidence"
+version = "0.1.0"
+dependencies = [
+ "openbnct-core",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "openbnct-gui"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "eframe",
+ "image",
+ "openbnct-bio",
+ "openbnct-core",
+ "openbnct-dicom",
+ "openbnct-evidence",
+ "openbnct-nifti",
+ "openbnct-openmc",
+ "openbnct-plan",
+ "openbnct-transport",
+ "openbnct-view",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
+name = "openbnct-mcnp"
+version = "0.1.0"
+dependencies = [
+ "openbnct-core",
+ "openbnct-transport",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "openbnct-nifti"
+version = "0.1.0"
+dependencies = [
+ "flate2",
+ "openbnct-core",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "openbnct-njoy"
+version = "0.1.0"
+dependencies = [
+ "openbnct-core",
+ "openbnct-openmc",
+ "openbnct-transport",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "openbnct-openmc"
+version = "0.1.0"
+dependencies = [
+ "hdf5-pure",
+ "md-5",
+ "openbnct-core",
+ "openbnct-transport",
+ "quick-xml 0.42.0",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "openbnct-phits"
+version = "0.1.0"
+dependencies = [
+ "openbnct-core",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "openbnct-plan"
+version = "0.1.0"
+dependencies = [
+ "calamine",
+ "csv",
+ "openbnct-core",
+ "rust_xlsxwriter",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "openbnct-transport"
+version = "0.1.0"
+dependencies = [
+ "openbnct-core",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "openbnct-view"
+version = "0.1.0"
+dependencies = [
+ "openbnct-core",
+ "thiserror 2.0.20",
+]
 
 [[package]]
 name = "openssl-probe"

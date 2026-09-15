@@ -6,7 +6,7 @@
 
 ## Context
 
-BNCT research workflows are predominantly assembled in Python, while NCTForge's
+BNCT research workflows are predominantly assembled in Python, while OpenBNCT's
 validation, geometry, evidence, and transport-neutral contracts are implemented
 in Rust. Requiring every scientific user to adopt Rust would unnecessarily limit
 use. Reimplementing those contracts in Python, however, would create two
@@ -20,16 +20,16 @@ environment; and a Rust developer should be able to use Cargo directly.
 
 ## Decision
 
-NCTForge will use one authoritative Rust implementation with three supported
+OpenBNCT will use one authoritative Rust implementation with three supported
 access layers:
 
-1. `pip install nctforge` will be the primary scientific-user entry point once
+1. `pip install openbnct` will be the primary scientific-user entry point once
    the first public Python release passes its gates. A mixed Python/Rust package
    will use PyO3 and maturin. Its compiled private extension will call the same
    Rust crates used by the CLI and GUI, while a thin Python package supplies
    ergonomic names, type information, and notebook-oriented helpers.
 2. Cargo will remain the native developer and source-build path. The CLI package
-   is `nctforge-cli` and installs the `nctforge` executable. Crates.io publication
+   is `openbnct-cli` and installs the `openbnct` executable. Crates.io publication
    remains disabled during the early research phase; a stable Cargo publication
    requires an explicit API, dependency, and license review.
 3. The egui workbench will be distributed as native release artifacts. It may
@@ -52,7 +52,7 @@ The first Python surface should expose mature, bounded capabilities such as
 case verification, geometry inspection, normalized model construction, and
 evidence reading. It must not expose a transport action as available before the
 same Rust backend capability and evidence gates used by the CLI and GUI pass.
-Installing NCTForge will not bundle OpenMC, MCNP, PHITS, nuclear data, or another
+Installing OpenBNCT will not bundle OpenMC, MCNP, PHITS, nuclear data, or another
 external transport system.
 
 ## Release gates
@@ -65,7 +65,7 @@ The first PyPI release requires:
 - TestPyPI installation and benchmark smoke tests before production upload;
 - parity tests showing Python and Rust produce the same validation outcomes and
   artifact identities; and
-- documentation that distinguishes installed NCTForge capabilities from
+- documentation that distinguishes installed OpenBNCT capabilities from
   separately installed transport backends and nuclear data.
 
 The first crates.io release additionally requires removal of the workspace
@@ -80,7 +80,7 @@ published dependency crate has a stable public surface.
 - Native CLI and GUI users do not inherit a Python runtime dependency.
 - Release engineering must produce and test several platform wheels and native
   application artifacts.
-- `pip install nctforge` and crates.io installation are goals, not claims about
+- `pip install openbnct` and crates.io installation are goals, not claims about
   the current unreleased repository.
 
 ## References

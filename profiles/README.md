@@ -1,6 +1,6 @@
 # Acquisition profiles
 
-These reviewed JSON files describe external artifacts that NCTForge may acquire.
+These reviewed JSON files describe external artifacts that OpenBNCT may acquire.
 They pin publication locations, redirect boundaries, observed byte counts, and
 publisher digests when one is available. A profile is an acquisition input, not
 an assertion that the downloaded nuclear data are scientifically qualified.
@@ -8,7 +8,7 @@ an assertion that the downloaded nuclear data are scientifically qualified.
 Probe a profile before transferring its artifact:
 
 ```text
-cargo run --bin nctforge -- openmc data probe \
+cargo run --bin openbnct -- openmc data probe \
   --profile profiles/openmc/openmc-endfb81-official-library.json
 ```
 

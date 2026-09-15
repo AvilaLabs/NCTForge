@@ -25,9 +25,9 @@ photon term without accepting NJOY's self-bounds.
 
 ## Decision
 
-NCTForge adds two fail-closed evidence contracts.
+OpenBNCT adds two fail-closed evidence contracts.
 
-`nctforge.endf-mf6-capture-photon-balance/0.1.0` reads the exact File 3 and
+`openbnct.endf-mf6-capture-photon-balance/0.1.0` reads the exact File 3 and
 File 6 sections from the evaluation bound by the source selection and photon
 inventory. Its initial scope is one MT=102, LCT=3, LAW=1 photon product with
 LANG=1, LEP=1, no angular coefficients, and no explicit recoil product.
@@ -61,7 +61,7 @@ The qualifications are:
 - `capture_photon_energy_balance_rejected`; and
 - `capture_photon_energy_balance_checked_unreviewed`.
 
-`nctforge.njoy-mf6-capture-photon-moment-comparison/0.1.0` then binds the
+`openbnct.njoy-mf6-capture-photon-moment-comparison/0.1.0` then binds the
 independent report to an already verified NJOY execution receipt. It compares
 only shared source/processor nodes and tests raw mean photon energy, photon
 yield, and synthesized photon recoil against NJOY's five-significant-digit

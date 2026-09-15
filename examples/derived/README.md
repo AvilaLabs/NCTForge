@@ -1,6 +1,6 @@
 # Derived-case example: structure-driven material assignment
 
-Demonstrates `nctforge benchmark derive-materials`: ROI masks rasterized from
+Demonstrates `openbnct benchmark derive-materials`: ROI masks rasterized from
 the verified NF-BNCT-001 RT Structure Set become axis-aligned voxel-box
 material regions. Every mapped ROI must equal its bounding box exactly —
 non-box ROIs are rejected rather than approximated.
@@ -16,8 +16,8 @@ case is a physically distinct demonstration — boron dose inside `CORE`
 vanishes while the surrounding phantom keeps the nominal B-10 loading.
 
 ```text
-nctforge benchmark generate /tmp/nf-bnct-001
-nctforge benchmark derive-materials \
+openbnct benchmark generate /tmp/nf-bnct-001
+openbnct benchmark derive-materials \
   --case-root /tmp/nf-bnct-001 \
   --case benchmarks/synthetic/nf-bnct-001/transport/case.json \
   --base-material benchmarks/synthetic/nf-bnct-001/transport/material.json \

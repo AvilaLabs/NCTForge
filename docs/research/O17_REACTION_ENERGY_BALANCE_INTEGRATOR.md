@@ -14,8 +14,8 @@ and does not consume processed heating data.
 
 ## What was built
 
-`nctforge-njoy::reaction_energy_balance` (schema
-`nctforge.endf-reaction-energy-balance/0.1.0`) with two CLI boundaries:
+`openbnct-njoy::reaction_energy_balance` (schema
+`openbnct.endf-reaction-energy-balance/0.1.0`) with two CLI boundaries:
 
 - `njoy calculate-reaction-energy-balance`; and
 - `njoy verify-reaction-energy-balance`.

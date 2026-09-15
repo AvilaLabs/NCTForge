@@ -24,9 +24,9 @@ bound to the exact material used by NJOY.
 
 ## Decision
 
-NCTForge adds two immutable evidence contracts.
+OpenBNCT adds two immutable evidence contracts.
 
-`nctforge.openmc-neutron-transport-domain/0.1.0` derives the intersection of
+`openbnct.openmc-neutron-transport-domain/0.1.0` derives the intersection of
 the selected-temperature incident-neutron intervals for every nuclide in an
 exact OpenMC nuclear-data manifest and material. It binds the input bytes by
 ID and SHA-256 and records the OpenMC version and source commit. For
@@ -38,7 +38,7 @@ The diagnostic interval is closed and conservative. A finding at exactly
 classified out of domain. This boundary policy scopes the evidence review. It
 does not change OpenMC's separate source-energy endpoint rules.
 
-`nctforge.njoy-transported-photon-suitability/0.3.0` binds:
+`openbnct.njoy-transported-photon-suitability/0.3.0` binds:
 
 1. the immutable source-aware v0.2 report;
 2. its immutable log-only v0.1 report;

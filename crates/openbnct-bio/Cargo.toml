@@ -1,0 +1,20 @@
+[package]
+name = "openbnct-bio"
+description = "Separately versioned biological dose interpretation layer for NCTForge"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+openbnct-core = { path = "../openbnct-core" }
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile = "3"

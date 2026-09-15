@@ -6,7 +6,7 @@ the reviewed synthetic benchmark corpus.
 ## `biological/`
 
 - `fixed-component-weights-model-v1.json` — a demonstration
-  `nctforge.biological-model/0.2.0` with fixed per-component effectiveness
+  `openbnct.biological-model/0.2.0` with fixed per-component effectiveness
   weights and a tumor-like boron override inside the `core` region. The
   weights are illustrative research values only; they carry no clinical CBE
   or RBE claim and are not part of the frozen NF-BNCT-001 benchmark outputs.
@@ -33,6 +33,6 @@ histograms" in the repository README.
   (clonogen density, α, α/β, fraction count, source particles per
   fraction) reading a `*_per_source_particle` dose volume directly.
 
-All are `nctforge.endpoint-model/0.1.0` artifacts with illustrative
+All are `openbnct.endpoint-model/0.1.0` artifacts with illustrative
 synthetic parameters; they carry no clinical claim and are not part of the
 frozen NF-BNCT-001 benchmark outputs.

@@ -12,9 +12,9 @@ external reviewer?
 
 ## What was built
 
-`nctforge-njoy::response_tables` (schemas
-`nctforge.njoy-response-table-generation/0.1.0` and
-`nctforge.njoy-response-set-review/0.1.0`) with two CLI boundaries:
+`openbnct-njoy::response_tables` (schemas
+`openbnct.njoy-response-table-generation/0.1.0` and
+`openbnct.njoy-response-set-review/0.1.0`) with two CLI boundaries:
 
 - `njoy generate-response-tables`; and
 - `njoy verify-response-tables`.

@@ -1,5 +1,5 @@
 {
-  "schema_version": "nctforge.physical-dose-bundle/0.2.0",
+  "schema_version": "openbnct.physical-dose-bundle/0.2.0",
   "case_id": "adapter-conformance",
   "frame_of_reference_uid": null,
   "geometry": {
@@ -32,11 +32,11 @@
   },
   "component_profile": {
     "id": "external:phits",
-    "sha256": "6e78304e92275a715fc87da27bad2a39643c68372b1bc123caa0631926efe818"
+    "sha256": "a080e1184d1e6c4d46aefed2530ad64251dd06ae22b085a1c4041ffc626e2073"
   },
   "response_set": {
     "id": "external:phits",
-    "sha256": "6e78304e92275a715fc87da27bad2a39643c68372b1bc123caa0631926efe818"
+    "sha256": "a080e1184d1e6c4d46aefed2530ad64251dd06ae22b085a1c4041ffc626e2073"
   },
   "components": [
     {
@@ -151,5 +151,5 @@
     "absolute_standard_uncertainty": null,
     "uncertainty_method": "unavailable"
   },
-  "provenance_id": "interchange:phits:sha256:6e78304e92275a715fc87da27bad2a39643c68372b1bc123caa0631926efe818"
+  "provenance_id": "interchange:phits:sha256:a080e1184d1e6c4d46aefed2530ad64251dd06ae22b085a1c4041ffc626e2073"
 }

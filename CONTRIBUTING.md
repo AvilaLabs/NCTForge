@@ -1,6 +1,6 @@
 # Contributing
 
-NCTForge is currently an Avila Labs research scaffold. Contributions should be
+OpenBNCT is currently an Avila Labs research scaffold. Contributions should be
 small, reviewable, independently testable, and explicit about scientific and
 licensing provenance.
 

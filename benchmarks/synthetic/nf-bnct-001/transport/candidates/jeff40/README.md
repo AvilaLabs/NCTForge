@@ -29,7 +29,7 @@ evaluations, processor binary, or NJOY output tapes.
 Verify the selected evaluations against the matched publisher acquisition:
 
 ```sh
-cargo run -p nctforge-cli -- openmc data verify-selection \
+cargo run -p openbnct-cli -- openmc data verify-selection \
   --selection benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/evaluated-neutron-source-selection.json \
   --material benchmarks/synthetic/nf-bnct-001/transport/material.json \
   --profile profiles/njoy/jeff40-neutron-evaluations.json \
@@ -41,81 +41,81 @@ With the preserved external execution directory, independently verify the
 processor evidence and regenerate its suitability decision:
 
 ```sh
-cargo run -p nctforge-cli -- njoy verify-execution \
+cargo run -p openbnct-cli -- njoy verify-execution \
   --receipt benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/njoy2016-78-execution-receipt.json \
   --execution-directory PATH_TO_JEFF40_EXECUTION
 
-cargo run -p nctforge-cli -- njoy verify-suitability \
+cargo run -p openbnct-cli -- njoy verify-suitability \
   --receipt benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/njoy2016-78-execution-receipt.json \
   --execution-directory PATH_TO_JEFF40_EXECUTION \
   --suitability-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/njoy2016-78-transported-photon-suitability.json
 
-cargo run -p nctforge-cli -- njoy verify-photon-inventory \
+cargo run -p openbnct-cli -- njoy verify-photon-inventory \
   --selection benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/evaluated-neutron-source-selection.json \
   --evaluations-directory PATH_TO_EXACT_JEFF40_SELECTION \
   --inventory benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-endf-photon-production-inventory.json
 
-cargo run -p nctforge-cli -- njoy verify-source-aware \
+cargo run -p openbnct-cli -- njoy verify-source-aware \
   --legacy-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/njoy2016-78-transported-photon-suitability.json \
   --receipt benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/njoy2016-78-execution-receipt.json \
   --execution-directory PATH_TO_JEFF40_EXECUTION \
-  --input-manifest benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/njoy/nctforge-njoy-input-manifest.json \
+  --input-manifest benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/njoy/openbnct-njoy-input-manifest.json \
   --photon-inventory benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-endf-photon-production-inventory.json \
   --source-aware-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/njoy2016-78-transported-photon-source-aware-suitability.json
 
-cargo run -p nctforge-cli -- njoy verify-photon-moments \
+cargo run -p openbnct-cli -- njoy verify-photon-moments \
   --selection benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/evaluated-neutron-source-selection.json \
   --evaluations-directory PATH_TO_EXACT_JEFF40_SELECTION \
   --photon-inventory benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-endf-photon-production-inventory.json \
   --moment-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-file13-continuum-photon-moments.json
 
-cargo run -p nctforge-cli -- njoy verify-photon-moment-comparison \
+cargo run -p openbnct-cli -- njoy verify-photon-moment-comparison \
   --moment-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-file13-continuum-photon-moments.json \
   --receipt benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/njoy2016-78-execution-receipt.json \
   --execution-directory PATH_TO_JEFF40_EXECUTION \
   --comparison-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-vs-njoy2016-78-continuum-photon-moments.json
 
-cargo run -p nctforge-cli -- njoy verify-capture-photon-balance \
+cargo run -p openbnct-cli -- njoy verify-capture-photon-balance \
   --selection benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/evaluated-neutron-source-selection.json \
   --evaluations-directory PATH_TO_EXACT_JEFF40_SELECTION \
   --photon-inventory benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-endf-photon-production-inventory.json \
   --balance-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-mf6-mt102-capture-photon-balance.json
 
-cargo run -p nctforge-cli -- njoy verify-capture-photon-moment-comparison \
+cargo run -p openbnct-cli -- njoy verify-capture-photon-moment-comparison \
   --balance-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-mf6-mt102-capture-photon-balance.json \
   --receipt benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/njoy2016-78-execution-receipt.json \
   --execution-directory PATH_TO_JEFF40_EXECUTION \
   --comparison-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-vs-njoy2016-78-mf6-capture-photon-moments.json
 
-cargo run -p nctforge-cli -- openmc data verify-transport-domain \
+cargo run -p openbnct-cli -- openmc data verify-transport-domain \
   --manifest benchmarks/synthetic/nf-bnct-001/transport/provenance/openmc-endfb81-processed-data-manifest.json \
   --material benchmarks/synthetic/nf-bnct-001/transport/material.json \
   --transport-domain benchmarks/synthetic/nf-bnct-001/transport/provenance/openmc-neutron-transport-domain.json
 
-cargo run -p nctforge-cli -- njoy verify-domain-aware \
+cargo run -p openbnct-cli -- njoy verify-domain-aware \
   --source-aware-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/njoy2016-78-transported-photon-source-aware-suitability.json \
   --legacy-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/njoy2016-78-transported-photon-suitability.json \
   --receipt benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/njoy2016-78-execution-receipt.json \
   --execution-directory PATH_TO_JEFF40_EXECUTION \
-  --input-manifest benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/njoy/nctforge-njoy-input-manifest.json \
+  --input-manifest benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/njoy/openbnct-njoy-input-manifest.json \
   --nuclear-data-manifest benchmarks/synthetic/nf-bnct-001/transport/provenance/openmc-endfb81-processed-data-manifest.json \
   --material benchmarks/synthetic/nf-bnct-001/transport/material.json \
   --transport-domain benchmarks/synthetic/nf-bnct-001/transport/provenance/openmc-neutron-transport-domain.json \
   --domain-aware-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/njoy2016-78-transported-photon-domain-aware-suitability.json
 
-cargo run -p nctforge-cli -- njoy verify-law7-implicit-residual \
+cargo run -p openbnct-cli -- njoy verify-law7-implicit-residual \
   --selection benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/evaluated-neutron-source-selection.json \
   --evaluations-directory PATH_TO_EXACT_JEFF40_SELECTION \
   --photon-inventory benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-endf-photon-production-inventory.json \
   --residual-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-mf6-mt16-law7-implicit-residual.json
 
-cargo run -p nctforge-cli -- njoy verify-law7-implicit-residual-comparison \
+cargo run -p openbnct-cli -- njoy verify-law7-implicit-residual-comparison \
   --residual-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-mf6-mt16-law7-implicit-residual.json \
   --receipt benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/njoy2016-78-execution-receipt.json \
   --execution-directory PATH_TO_JEFF40_EXECUTION \
   --comparison-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-vs-njoy2016-78-law7-implicit-residual.json
 
-cargo run -p nctforge-cli -- njoy verify-evidence-aware \
+cargo run -p openbnct-cli -- njoy verify-evidence-aware \
   --domain-aware-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/njoy2016-78-transported-photon-domain-aware-suitability.json \
   --law7-residual-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-mf6-mt16-law7-implicit-residual.json \
   --law7-comparison-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-vs-njoy2016-78-law7-implicit-residual.json \
@@ -123,12 +123,12 @@ cargo run -p nctforge-cli -- njoy verify-evidence-aware \
   --capture-comparison-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-vs-njoy2016-78-mf6-capture-photon-moments.json \
   --evidence-aware-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/njoy2016-78-transported-photon-evidence-aware-suitability.json
 
-cargo run -p nctforge-cli -- njoy verify-diagnostic-triage \
+cargo run -p openbnct-cli -- njoy verify-diagnostic-triage \
   --evidence-aware-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/njoy2016-78-transported-photon-evidence-aware-suitability.json \
   --domain-aware-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/njoy2016-78-transported-photon-domain-aware-suitability.json \
   --triage-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/njoy2016-78-diagnostic-triage.json
 
-cargo run -p nctforge-cli -- njoy check-diagnostic-triage \
+cargo run -p openbnct-cli -- njoy check-diagnostic-triage \
   --domain-aware-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/njoy2016-78-transported-photon-domain-aware-suitability.json \
   --law7-residual-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-mf6-mt16-law7-implicit-residual.json \
   --law7-comparison-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-vs-njoy2016-78-law7-implicit-residual.json \
@@ -143,7 +143,7 @@ The checked comparison is self-contained over the two content-addressed
 suitability reports:
 
 ```sh
-cargo run -p nctforge-cli -- njoy verify-comparison \
+cargo run -p openbnct-cli -- njoy verify-comparison \
   --baseline-report benchmarks/synthetic/nf-bnct-001/transport/provenance/njoy2016-78-transported-photon-suitability.json \
   --candidate-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/njoy2016-78-transported-photon-suitability.json \
   --comparison-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/endfb81-vs-jeff40-response-treatment-comparison.json
@@ -153,7 +153,7 @@ The unreviewed independent O-17 reaction energy-balance report regenerates
 from the bound evaluation, execution receipt, and attribution:
 
 ```sh
-cargo run -p nctforge-cli -- njoy verify-reaction-energy-balance \
+cargo run -p openbnct-cli -- njoy verify-reaction-energy-balance \
   --selection benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/evaluated-neutron-source-selection.json \
   --evaluations-directory PATH_TO_EXACT_JEFF40_SELECTION \
   --attribution-report benchmarks/synthetic/nf-bnct-001/transport/candidates/jeff40/provenance/jeff40-o17-njoy-energy-balance-attribution.json \

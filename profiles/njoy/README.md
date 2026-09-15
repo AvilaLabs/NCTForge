@@ -15,7 +15,7 @@ library, a generated KERMA table, or the BNCT dose method.
   explicitly.
 
 Candidate selections use
-`nctforge.evaluated-neutron-source-selection/0.2.0` or, when they bind more
+`openbnct.evaluated-neutron-source-selection/0.2.0` or, when they bind more
 than one publisher acquisition, `0.3.0` (ADR 0028). They must remain
 `response_treatment_candidate_unreviewed` until their controlled NJOY
 execution, transported-photon suitability, and independent review gates pass.

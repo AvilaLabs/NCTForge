@@ -1,8 +1,8 @@
 {
-  "suite": "nctforge.biological-model-conformance/0.2.0",
-  "model_schema": "nctforge.biological-model/0.2.0",
-  "dose_schema": "nctforge.physical-dose-bundle/0.2.0",
-  "bundle_schema": "nctforge.biological-dose-bundle/0.2.0",
+  "suite": "openbnct.biological-model-conformance/0.2.0",
+  "model_schema": "openbnct.biological-model/0.2.0",
+  "dose_schema": "openbnct.physical-dose-bundle/0.2.0",
+  "bundle_schema": "openbnct.biological-dose-bundle/0.2.0",
   "notes": [
     "Each case names a biological model under cases/, a physical dose",
     "bundle, and region masks; expected bundles are byte-fixed because",

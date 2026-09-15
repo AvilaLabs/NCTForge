@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-09-11
-- Decision owners: NCTForge maintainers
+- Decision owners: OpenBNCT maintainers
 - Scope: `bindings/python` PyO3/maturin package under the ADR 0015 boundary
 
 ## Context
@@ -20,8 +20,8 @@ qualification state could diverge from the Rust contracts.
 
 ## Decision
 
-`bindings/python` builds a mixed package named `nctforge` whose compiled
-`_nctforge` extension calls the same crates used by the CLI and GUI. The crate
+`bindings/python` builds a mixed package named `openbnct` whose compiled
+`_openbnct` extension calls the same crates used by the CLI and GUI. The crate
 is excluded from the Cargo workspace so that `cargo test --workspace` and
 `cargo clippy --workspace` do not acquire a Python interpreter requirement;
 it keeps its own lockfile, targets PyO3 `0.29.2` with the `extension-module`
@@ -47,7 +47,7 @@ The first surface is read-oriented and adds no transport capability:
   pretty-printed serialization produced by the Rust evidence path;
 - every rejection surfaces as a single `NctForgeError`.
 
-The package ships `py.typed` and a checked `_nctforge.pyi` stub. Version
+The package ships `py.typed` and a checked `_openbnct.pyi` stub. Version
 `0.1.0` matches the workspace; no PyPI release is claimed.
 
 ## Parity evidence
