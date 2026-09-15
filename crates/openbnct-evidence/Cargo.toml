@@ -1,6 +1,6 @@
 [package]
 name = "openbnct-evidence"
-description = "Content hashes and run manifests for reproducible NCTForge calculations"
+description = "Content hashes and run manifests for reproducible OpenBNCT calculations"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,9 +8,12 @@ authors.workspace = true
 repository.workspace = true
 license.workspace = true
 publish.workspace = true
+readme = "README.md"
+keywords.workspace = true
+categories.workspace = true
 
 [dependencies]
-openbnct-core = { path = "../openbnct-core" }
+openbnct-core = { path = "../openbnct-core", version = "0.1.0" }
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true

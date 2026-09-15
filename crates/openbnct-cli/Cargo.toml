@@ -1,6 +1,6 @@
 [package]
 name = "openbnct-cli"
-description = "Command-line interface for NCTForge"
+description = "Command-line interface for OpenBNCT"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,6 +8,9 @@ authors.workspace = true
 repository.workspace = true
 license.workspace = true
 publish.workspace = true
+readme = "README.md"
+keywords.workspace = true
+categories.workspace = true
 
 [[bin]]
 name = "openbnct"
@@ -15,17 +18,17 @@ path = "src/main.rs"
 
 [dependencies]
 clap.workspace = true
-openbnct-bio = { path = "../openbnct-bio" }
-openbnct-boron = { path = "../openbnct-boron" }
-openbnct-core = { path = "../openbnct-core" }
-openbnct-dicom = { path = "../openbnct-dicom" }
-openbnct-evidence = { path = "../openbnct-evidence" }
-openbnct-nifti = { path = "../openbnct-nifti" }
-openbnct-njoy = { path = "../openbnct-njoy" }
-openbnct-openmc = { path = "../openbnct-openmc" }
-openbnct-plan = { path = "../openbnct-plan" }
-openbnct-transport = { path = "../openbnct-transport" }
+openbnct-bio = { path = "../openbnct-bio", version = "0.1.0" }
+openbnct-boron = { path = "../openbnct-boron", version = "0.1.0" }
+openbnct-core = { path = "../openbnct-core", version = "0.1.0" }
+openbnct-dicom = { path = "../openbnct-dicom", version = "0.1.0" }
+openbnct-evidence = { path = "../openbnct-evidence", version = "0.1.0" }
+openbnct-nifti = { path = "../openbnct-nifti", version = "0.1.0" }
+openbnct-njoy = { path = "../openbnct-njoy", version = "0.1.0" }
+openbnct-openmc = { path = "../openbnct-openmc", version = "0.1.0" }
+openbnct-plan = { path = "../openbnct-plan", version = "0.1.0" }
+openbnct-transport = { path = "../openbnct-transport", version = "0.1.0" }
 serde.workspace = true
 serde_json.workspace = true
-openbnct-mcnp = { path = "../openbnct-mcnp" }
-openbnct-phits = { path = "../openbnct-phits" }
+openbnct-mcnp = { path = "../openbnct-mcnp", version = "0.1.0" }
+openbnct-phits = { path = "../openbnct-phits", version = "0.1.0" }

@@ -1,6 +1,6 @@
 [package]
 name = "openbnct-dicom"
-description = "Strict DICOM geometry and structure-set boundary for NCTForge"
+description = "Strict DICOM geometry and structure-set boundary for OpenBNCT"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,13 +8,16 @@ authors.workspace = true
 repository.workspace = true
 license.workspace = true
 publish.workspace = true
+readme = "README.md"
+keywords.workspace = true
+categories.workspace = true
 
 [dependencies]
 dicom-core.workspace = true
 dicom-dictionary-std.workspace = true
 dicom-object.workspace = true
-openbnct-core = { path = "../openbnct-core" }
-openbnct-evidence = { path = "../openbnct-evidence" }
+openbnct-core = { path = "../openbnct-core", version = "0.1.0" }
+openbnct-evidence = { path = "../openbnct-evidence", version = "0.1.0" }
 serde_json.workspace = true
 thiserror.workspace = true
 uuid.workspace = true

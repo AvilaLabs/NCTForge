@@ -787,6 +787,38 @@ Out of scope for R6 remains the deferred list below — in particular plan
 optimization stays behind the IP boundary and nothing in R6 is a clinical
 claim.
 
+## R7 — Distribution and external validation (draft)
+
+Draft — not yet scheduled. Candidate items for the phase after R6, pending
+review:
+
+- **R7-01 — public distribution.** Publish the `openbnct-*` crates to
+  crates.io in dependency order (`openbnct-core` first, `openbnct-cli` last),
+  publish the `openbnct` wheel to TestPyPI then PyPI, and add a tagged release
+  workflow. Requires a maintainer decision on registry credentials before
+  `publish = false` is lifted. `openbnct-boron` remains unpublished unless
+  that decision changes.
+- **R7-02 — measured-data validation.** Import published BNCT beam
+  measurements through `openbnct.measurement-record` /
+  `openbnct.measurement-comparison`, extend the candidate-data comparison
+  machinery to facility measurements with explicit provenance, and record
+  agreement results as evidence bundles — distinct from the synthetic
+  self-consistency benchmark, which remains the correctness gate.
+- **R7-03 — cross-code comparison depth.** Extend the MCNP meshtal and PHITS
+  xyz-mesh import adapters into documented cross-code comparison workflows
+  against the OpenMC path on the synthetic benchmark, and evaluate import
+  adapters for other BNCT research codes (e.g., OpenPINT outputs) where their
+  formats are documented.
+- **R7-04 — workbench usability.** Bring the egui desktop shell to a
+  documented, reproducible workflow (case load → run → dose overlay →
+  evidence inspection) with packaged artifacts once distribution exists.
+- **R7-05 — transport throughput.** Profile the OpenMC run path (the
+  140M-history R6-09 run is the current baseline) and evaluate
+  parallel-seed orchestration across machines without changing the contract
+  surface.
+
+Nothing in R7 changes the deferred list below or adds any clinical claim.
+
 ## Deferred beyond the research platform
 
 - patient-specific clinical decisions;

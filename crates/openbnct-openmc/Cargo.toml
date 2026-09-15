@@ -1,6 +1,6 @@
 [package]
 name = "openbnct-openmc"
-description = "OpenMC transport adapter for NCTForge"
+description = "OpenMC transport adapter for OpenBNCT"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,12 +8,15 @@ authors.workspace = true
 repository.workspace = true
 license.workspace = true
 publish.workspace = true
+readme = "README.md"
+keywords.workspace = true
+categories.workspace = true
 
 [dependencies]
 hdf5-pure = "=0.44.0"
 md-5.workspace = true
-openbnct-core = { path = "../openbnct-core" }
-openbnct-transport = { path = "../openbnct-transport" }
+openbnct-core = { path = "../openbnct-core", version = "0.1.0" }
+openbnct-transport = { path = "../openbnct-transport", version = "0.1.0" }
 quick-xml.workspace = true
 reqwest.workspace = true
 serde.workspace = true
