@@ -36,3 +36,10 @@ histograms" in the repository README.
 All are `openbnct.endpoint-model/0.1.0` artifacts with illustrative
 synthetic parameters; they carry no clinical claim and are not part of the
 frozen NF-BNCT-001 benchmark outputs.
+
+## `python/`
+
+- `workflow.py` — the Python parity surface end to end: case generate /
+  verify / load, contract-driven source aiming, MCNP deck export, and a
+  DVH / metrics / biological-weighting / bundle-comparison pass on the
+  committed conformance bundle. Runs in CI against the built wheel.
