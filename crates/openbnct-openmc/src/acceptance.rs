@@ -289,8 +289,15 @@ pub fn evaluate_runs(
             // Estimator comparisons per bin. For multi-bin regions only bins
             // at or above 20% of the compared quantity's maximum are gated.
             let dose_of = |tally_name: &str, bin: usize| -> Option<(f64, f64)> {
-                let contract = manifest.tallies.iter().find(|c| c.name == tally_name)?;
-                let tally = run.statepoint.tally(tally_name)?;
+                // Match by normalized contract id: a run directory written
+                // before the rename carries `nctforge.roi.*` tally names in
+                // both manifest and statepoint, while the expected names
+                // below are built with the current `openbnct.roi.*` prefix.
+                let contract = manifest.tallies.iter().find(|c| {
+                    openbnct_core::normalize_contract_id(&c.name)
+                        == openbnct_core::normalize_contract_id(tally_name)
+                })?;
+                let tally = run.statepoint.tally(&contract.name)?;
                 Some(report_value(
                     contract,
                     tally.mean[bin],
@@ -400,11 +407,14 @@ pub fn evaluate_runs(
             let contract = manifest
                 .tallies
                 .iter()
-                .find(|c| c.name == name)
+                .find(|c| {
+                    openbnct_core::normalize_contract_id(&c.name)
+                        == openbnct_core::normalize_contract_id(name)
+                })
                 .ok_or_else(|| OpenMcAcceptanceError::MissingTally(name.to_string()))?;
             let tally = run
                 .statepoint
-                .tally(name)
+                .tally(&contract.name)
                 .ok_or_else(|| OpenMcAcceptanceError::MissingTally(name.to_string()))?;
             let max = tally.mean.iter().copied().fold(f64::MIN, f64::max);
             if max <= 0.0 {
