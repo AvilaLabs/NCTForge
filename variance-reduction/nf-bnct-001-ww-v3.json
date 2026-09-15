@@ -1,0 +1,100 @@
+{
+ "schema_version": "nctforge.variance-reduction/0.1.0",
+ "id": "nctforge.nf-bnct-001.ww.v3",
+ "description": "Weight-window variance reduction for the nf-bnct-001 frozen benchmark: neutron and photon windows on the 40x40x40 scoring mesh, lower bounds derived from each particle's diagnostic fluence tally of a dedicated analog run (MAGIC-equivalent normalization).",
+ "case_id": "nf-bnct-001",
+ "windows": [
+  {
+   "particle": "neutron",
+   "mesh": {
+    "dimensions": [
+     40,
+     40,
+     40
+    ],
+    "lower_left_cm": [
+     -9.75,
+     -9.75,
+     -9.75
+    ],
+    "upper_right_cm": [
+     10.25,
+     10.25,
+     10.25
+    ]
+   },
+   "energy_bounds_ev": [
+    0.0,
+    0.5,
+    1000.0,
+    10000.0,
+    20000000.0
+   ],
+   "parameters": {
+    "survival_ratio": 3.0,
+    "max_split": 50,
+    "weight_cutoff": 1e-38
+   },
+   "bounds": {
+    "kind": "forward_flux",
+    "tally": "nctforge.diagnostic.neutron_fluence",
+    "rel_err_threshold": 0.5
+   }
+  },
+  {
+   "particle": "photon",
+   "mesh": {
+    "dimensions": [
+     40,
+     40,
+     40
+    ],
+    "lower_left_cm": [
+     -9.75,
+     -9.75,
+     -9.75
+    ],
+    "upper_right_cm": [
+     10.25,
+     10.25,
+     10.25
+    ]
+   },
+   "energy_bounds_ev": [
+    0.0,
+    477000.0,
+    479000.0,
+    2223000.0,
+    2225000.0,
+    20000000.0
+   ],
+   "parameters": {
+    "survival_ratio": 3.0,
+    "max_split": 200,
+    "weight_cutoff": 1e-38
+   },
+   "bounds": {
+    "kind": "forward_flux",
+    "tally": "nctforge.diagnostic.photon_fluence",
+    "rel_err_threshold": 0.5
+   },
+   "bound_boosts": [
+    {
+     "lower_left_cm": [
+      -0.75,
+      -0.75,
+      -8.75
+     ],
+     "upper_right_cm": [
+      0.75,
+      0.75,
+      -7.25
+     ],
+     "factor": 0.03333333333333333
+    }
+   ]
+  }
+ ],
+ "provenance_note": "MAGIC-style forward-flux derivation: per energy group the volume-normalized tally mean scaled by 1/(2 * group_max) becomes the lower bound; cells whose tally relative error exceeds 0.5 are disabled. Energy groups match the case's diagnostic fluence grids so no re-binning occurs. v3: forward-flux bounds iterated from the 20M-history VR statepoint; photon window bound_boosts lowers bounds 30x over the WW cells containing the central_axis_2cm precision-gated region to force photon splitting there; max_split raised (photon 200, neutron 50).",
+ "qualification": "variance_reduction_research_only_not_clinical"
+}

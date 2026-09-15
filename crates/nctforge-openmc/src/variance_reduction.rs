@@ -58,8 +58,9 @@ pub fn resolve_weight_windows(
 ) -> Result<ResolvedWeightWindows, VarianceReductionError> {
     let mut windows = Vec::with_capacity(spec.windows.len());
     let mut methods: Vec<&'static str> = Vec::with_capacity(spec.windows.len());
-    for window in &spec.windows {
-        let (lower, upper) = match &window.bounds {
+    let mut boost_notes: Vec<String> = Vec::new();
+    for (index, window) in spec.windows.iter().enumerate() {
+        let (mut lower, mut upper) = match &window.bounds {
             WeightWindowBounds::Uniform { lower_bound } => {
                 methods.push("uniform");
                 let cells = window.energy_groups() * window.mesh.n_bins();
@@ -88,6 +89,18 @@ pub fn resolve_weight_windows(
                 derive_forward_flux(window, sp, tally, *rel_err_threshold, sp_path)?
             }
         };
+        let boosted = window.apply_bound_boosts(&mut lower, &mut upper);
+        if boosted > 0 {
+            let factors: Vec<String> = window
+                .bound_boosts
+                .iter()
+                .map(|b| format!("x{}", b.factor))
+                .collect();
+            boost_notes.push(format!(
+                "window {index}: {boosted} mesh cell(s) scaled ({})",
+                factors.join(", ")
+            ));
+        }
         windows.push(ResolvedWeightWindow {
             particle: window.particle,
             mesh: window.mesh.clone(),
@@ -120,7 +133,7 @@ pub fn resolve_weight_windows(
                     .unwrap_or_else(|| "statepoint".into()),
                 sha256: sha.to_string(),
             }),
-            note: derivation_note(spec),
+            note: derivation_note(spec, &boost_notes),
         },
         qualification: spec.qualification.clone(),
     };
@@ -130,7 +143,7 @@ pub fn resolve_weight_windows(
     Ok(resolved)
 }
 
-fn derivation_note(spec: &VarianceReductionSpec) -> String {
+fn derivation_note(spec: &VarianceReductionSpec, boost_notes: &[String]) -> String {
     let mut parts = Vec::new();
     for (index, window) in spec.windows.iter().enumerate() {
         let detail = match &window.bounds {
@@ -152,6 +165,7 @@ fn derivation_note(spec: &VarianceReductionSpec) -> String {
         };
         parts.push(detail);
     }
+    parts.extend(boost_notes.iter().cloned());
     parts.join("; ")
 }
 
@@ -572,6 +586,7 @@ mod tests {
                 energy_bounds_ev: None,
                 parameters: WeightWindowParameters::default(),
                 bounds,
+                bound_boosts: vec![],
             }],
             provenance_note: "test".into(),
             qualification: "test_only".into(),

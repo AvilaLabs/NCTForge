@@ -66,6 +66,26 @@ pub struct WeightWindowSpec {
     #[serde(default)]
     pub parameters: WeightWindowParameters,
     pub bounds: WeightWindowBounds,
+    /// Post-resolution bound scaling confined to axis-aligned boxes —
+    /// the declarative form of region-targeted window strengthening
+    /// (e.g. forcing extra photon splitting over a gated voxel) without
+    /// authoring ~10^5 explicit bounds by hand.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub bound_boosts: Vec<BoundBoost>,
+}
+
+/// Axis-aligned box in cm (world frame) whose intersecting mesh cells
+/// have both window bounds scaled by `factor`.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct BoundBoost {
+    pub lower_left_cm: [f64; 3],
+    pub upper_right_cm: [f64; 3],
+    /// `factor < 1` lowers the window — particles arrive above the upper
+    /// bound and split harder; `factor > 1` raises it — particles arrive
+    /// below the lower bound and are rouletted harder. Disabled
+    /// (negative-bound) cells stay disabled.
+    pub factor: f64,
 }
 
 /// Regular mesh for weight windows. Coordinates are cm in the case
@@ -221,6 +241,60 @@ impl WeightWindowSpec {
             .as_ref()
             .map_or(1, |bounds| bounds.len() - 1)
     }
+
+    /// Applies `bound_boosts` to a resolved bound pair in place, scaling
+    /// both bounds of every mesh cell that overlaps each boost box.
+    /// Disabled (negative-lower) cells are left alone. Returns the
+    /// number of cell entries scaled per energy group — the same cells
+    /// are scaled in every group.
+    pub fn apply_bound_boosts(&self, lower: &mut [f64], upper: &mut [f64]) -> usize {
+        if self.bound_boosts.is_empty() {
+            return 0;
+        }
+        let [nx, ny, nz] = self.mesh.dimensions;
+        let (nx, ny, nz) = (nx as usize, ny as usize, nz as usize);
+        let mesh_bins = nx * ny * nz;
+        let cell_width = |axis: usize| {
+            (self.mesh.upper_right_cm[axis] - self.mesh.lower_left_cm[axis])
+                / self.mesh.dimensions[axis] as f64
+        };
+        let mut scaled = 0usize;
+        for boost in &self.bound_boosts {
+            for iz in 0..nz {
+                for iy in 0..ny {
+                    for ix in 0..nx {
+                        let index = [ix, iy, iz];
+                        let overlaps = (0..3).all(|axis| {
+                            let lo = self.mesh.lower_left_cm[axis]
+                                + index[axis] as f64 * cell_width(axis);
+                            let hi = lo + cell_width(axis);
+                            hi > boost.lower_left_cm[axis] && lo < boost.upper_right_cm[axis]
+                        });
+                        if !overlaps {
+                            continue;
+                        }
+                        // Row-major mesh bin: x fastest, then y, then z —
+                        // the ordering OpenMC expects inside a bounds row.
+                        let bin = (iz * ny + iy) * nx + ix;
+                        let mut touched = false;
+                        for e in 0..self.energy_groups() {
+                            let i = e * mesh_bins + bin;
+                            if lower[i] < 0.0 {
+                                continue;
+                            }
+                            lower[i] *= boost.factor;
+                            upper[i] *= boost.factor;
+                            touched = true;
+                        }
+                        if touched {
+                            scaled += 1;
+                        }
+                    }
+                }
+            }
+        }
+        scaled
+    }
 }
 
 impl ResolvedWeightWindow {
@@ -279,6 +353,22 @@ impl VarianceReductionSpec {
             validate_energy_bounds(window.energy_bounds_ev.as_deref(), index)?;
             window.parameters.validate(index)?;
             validate_bounds(&window.bounds, window, index)?;
+            for boost in &window.bound_boosts {
+                for axis in 0..3 {
+                    if !strictly_greater(boost.upper_right_cm[axis], boost.lower_left_cm[axis]) {
+                        return Err(VarianceReductionError::Bounds {
+                            index,
+                            reason: format!("boost box axis {axis} is degenerate"),
+                        });
+                    }
+                }
+                if !strictly_greater(boost.factor, 0.0) {
+                    return Err(VarianceReductionError::Bounds {
+                        index,
+                        reason: "boost factor must be finite and > 0".into(),
+                    });
+                }
+            }
         }
         Ok(())
     }
@@ -499,6 +589,7 @@ mod tests {
                 energy_bounds_ev: Some(vec![0.0, 1.0e6, 2.0e7]),
                 parameters: WeightWindowParameters::default(),
                 bounds,
+                bound_boosts: vec![],
             }],
             provenance_note: "unit test".into(),
             qualification: "variance_reduction_research_only".into(),
@@ -601,5 +692,53 @@ mod tests {
             s.validate(),
             Err(VarianceReductionError::Missing("provenance_note"))
         ));
+    }
+
+    #[test]
+    fn bound_boost_scales_overlapping_cells_x_fastest() {
+        // 4x4x4 mesh over [-10,10] cm: 5 cm cells. The box covers cells
+        // ix in {1,2}, iy=2, iz=3 — row-major bins 57 and 58.
+        let mut s = spec(WeightWindowBounds::Uniform { lower_bound: 0.25 });
+        s.windows[0].bound_boosts = vec![BoundBoost {
+            lower_left_cm: [-5.0, 0.01, 5.01],
+            upper_right_cm: [5.0, 5.0, 10.0],
+            factor: 0.1,
+        }];
+        s.validate().unwrap();
+        let cells = 2 * 64;
+        let mut lower = vec![0.25; cells];
+        let mut upper = vec![0.75; cells];
+        // Disable bin 57 inside the boost box in every group; it must
+        // stay disabled.
+        for e in 0..2 {
+            lower[e * 64 + 57] = -1.0;
+            upper[e * 64 + 57] = -1.0;
+        }
+        let scaled = s.windows[0].apply_bound_boosts(&mut lower, &mut upper);
+        assert_eq!(scaled, 1);
+        for e in 0..2 {
+            assert_eq!(lower[e * 64 + 57], -1.0);
+            assert!((lower[e * 64 + 58] - 0.025).abs() < 1e-15);
+            assert!((upper[e * 64 + 58] - 0.075).abs() < 1e-15);
+        }
+        // A cell the box does not touch is untouched.
+        assert_eq!(lower[0], 0.25);
+        assert_eq!(upper[0], 0.75);
+    }
+
+    #[test]
+    fn degenerate_boost_rejected() {
+        let mut s = spec(WeightWindowBounds::Uniform { lower_bound: 0.25 });
+        s.windows[0].bound_boosts = vec![BoundBoost {
+            lower_left_cm: [0.0; 3],
+            upper_right_cm: [0.0, 1.0, 1.0],
+            factor: 0.5,
+        }];
+        s.validate().unwrap_err();
+        s.windows[0].bound_boosts[0].upper_right_cm[0] = 1.0;
+        s.windows[0].bound_boosts[0].factor = 0.0;
+        s.validate().unwrap_err();
+        s.windows[0].bound_boosts[0].factor = f64::NAN;
+        s.validate().unwrap_err();
     }
 }
