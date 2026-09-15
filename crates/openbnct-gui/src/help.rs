@@ -210,6 +210,7 @@ impl GuidedHelp {
         context: &egui::Context,
         workspace: HelpWorkspace,
         case_loaded: bool,
+        theme: crate::Theme,
     ) {
         if !self.center_open || self.active_tour.is_some() {
             return;
@@ -231,7 +232,7 @@ impl GuidedHelp {
                     egui::RichText::new("CONTEXTUAL HELP")
                         .small()
                         .strong()
-                        .color(egui::Color32::from_rgb(139, 229, 235)),
+                        .color(theme.brand),
                 );
                 let (title, body) = workspace_help(workspace);
                 ui.heading(title);
@@ -253,7 +254,7 @@ impl GuidedHelp {
                     ui.small(guide.description());
                     if guide == GuideKind::Geometry && !case_loaded {
                         ui.colored_label(
-                            egui::Color32::from_rgb(244, 188, 95),
+                            theme.warn_text,
                             "Load a verified case to enable this tour.",
                         );
                     }
@@ -310,7 +311,12 @@ impl GuidedHelp {
         }
     }
 
-    pub(crate) fn show_tour(&mut self, context: &egui::Context, targets: &TourTargets) {
+    pub(crate) fn show_tour(
+        &mut self,
+        context: &egui::Context,
+        targets: &TourTargets,
+        theme: crate::Theme,
+    ) {
         let Some(active) = self.active_tour else {
             return;
         };
@@ -346,7 +352,7 @@ impl GuidedHelp {
         painter.rect_stroke(
             spotlight,
             9.0,
-            egui::Stroke::new(3.0, egui::Color32::from_rgb(139, 229, 235)),
+            egui::Stroke::new(3.0, theme.brand),
             egui::StrokeKind::Outside,
         );
 
@@ -360,10 +366,10 @@ impl GuidedHelp {
             .constrain_to(screen)
             .show(context, |ui| {
                 egui::Frame::new()
-                    .fill(egui::Color32::from_rgb(24, 31, 42))
+                    .fill(theme.card_fill)
                     .stroke(egui::Stroke::new(
                         1.0,
-                        egui::Color32::from_rgb(139, 229, 235),
+                        theme.brand,
                     ))
                     .corner_radius(10)
                     .shadow(egui::Shadow {
@@ -380,7 +386,7 @@ impl GuidedHelp {
                                 egui::RichText::new(active.guide.title().to_uppercase())
                                     .small()
                                     .strong()
-                                    .color(egui::Color32::from_rgb(139, 229, 235)),
+                                    .color(theme.brand),
                             );
                             ui.with_layout(
                                 egui::Layout::right_to_left(egui::Align::Center),
@@ -698,7 +704,12 @@ mod tests {
         let mut help = GuidedHelp::default();
         help.toggle_center();
         let mut output = context.run_ui(input(), |_ui| {
-            help.show_center(&context, HelpWorkspace::Overview, false);
+            help.show_center(
+                &context,
+                HelpWorkspace::Overview,
+                false,
+                crate::Theme::resolve(false),
+            );
         });
         output.textures_delta.clear();
 
@@ -712,7 +723,7 @@ mod tests {
             egui::Rect::from_min_size(egui::pos2(20.0, 20.0), egui::vec2(48.0, 48.0)),
         );
         let mut output = context.run_ui(input(), |_ui| {
-            help.show_tour(&context, &targets);
+            help.show_tour(&context, &targets, crate::Theme::resolve(false));
         });
         output.textures_delta.clear();
     }

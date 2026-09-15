@@ -153,6 +153,61 @@ impl GateState {
     }
 }
 
+/// Resolved once per frame from `dark_mode`; every surface and text color
+/// that would otherwise be a hardcoded dark-theme literal routes through here.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct Theme {
+    dark: bool,
+    banner_fill: egui::Color32,
+    nav_fill: egui::Color32,
+    panel_fill: egui::Color32,
+    card_fill: egui::Color32,
+    card_alt_fill: egui::Color32,
+    warn_fill: egui::Color32,
+    brand: egui::Color32,
+    text_dim: egui::Color32,
+    error: egui::Color32,
+    warn_text: egui::Color32,
+}
+
+impl Theme {
+    const fn dark(self) -> bool {
+        self.dark
+    }
+
+    fn resolve(dark: bool) -> Self {
+        if dark {
+            Self {
+                dark,
+                banner_fill: egui::Color32::from_rgb(21, 30, 40),
+                nav_fill: egui::Color32::from_rgb(15, 19, 27),
+                panel_fill: egui::Color32::from_rgb(17, 21, 29),
+                card_fill: egui::Color32::from_rgb(22, 30, 41),
+                card_alt_fill: egui::Color32::from_rgb(36, 26, 46),
+                warn_fill: egui::Color32::from_rgb(41, 32, 22),
+                brand: egui::Color32::from_rgb(139, 229, 235),
+                text_dim: egui::Color32::from_rgb(150, 160, 180),
+                error: egui::Color32::LIGHT_RED,
+                warn_text: egui::Color32::from_rgb(244, 188, 95),
+            }
+        } else {
+            Self {
+                dark,
+                banner_fill: egui::Color32::from_rgb(226, 236, 242),
+                nav_fill: egui::Color32::from_rgb(242, 244, 248),
+                panel_fill: egui::Color32::from_rgb(235, 237, 242),
+                card_fill: egui::Color32::WHITE,
+                card_alt_fill: egui::Color32::from_rgb(243, 236, 250),
+                warn_fill: egui::Color32::from_rgb(252, 241, 215),
+                brand: egui::Color32::from_rgb(8, 102, 112),
+                text_dim: egui::Color32::from_rgb(92, 101, 118),
+                error: egui::Color32::from_rgb(178, 34, 34),
+                warn_text: egui::Color32::from_rgb(146, 84, 6),
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct ReadinessGate {
     title: &'static str,
@@ -1157,12 +1212,13 @@ impl eframe::App for OpenBnctApp {
             self.handle_dropped(&dropped);
         }
 
+        let theme = Theme::resolve(self.dark_mode);
         let mut tour_targets = TourTargets::default();
         let (help_clicked, theme_clicked) = show_app_header(
             ui,
             self.case.as_ref(),
             self.brand_logo.as_ref(),
-            self.dark_mode,
+            theme,
             &mut tour_targets,
         );
         if help_clicked {
@@ -1186,7 +1242,7 @@ impl eframe::App for OpenBnctApp {
             self.load_case();
         }
         if let Some(error) = &self.load_error {
-            ui.colored_label(egui::Color32::LIGHT_RED, format!("Load rejected: {error}"));
+            ui.colored_label(theme.error, format!("Load rejected: {error}"));
         }
         if let Some(status) = &self.template_status {
             ui.label(status);
@@ -1200,10 +1256,11 @@ impl eframe::App for OpenBnctApp {
             &mut self.display,
             &mut self.panels,
             &mut tour_targets,
+            theme,
         );
         self.help
-            .show_center(ui.ctx(), self.workspace.into(), self.case.is_some());
-        self.help.show_tour(ui.ctx(), &tour_targets);
+            .show_center(ui.ctx(), self.workspace.into(), self.case.is_some(), theme);
+        self.help.show_tour(ui.ctx(), &tour_targets, theme);
     }
 }
 
@@ -1233,13 +1290,13 @@ fn show_app_header(
     ui: &mut egui::Ui,
     case: Option<&ViewerCase>,
     brand_logo: Option<&egui::TextureHandle>,
-    dark_mode: bool,
+    theme: Theme,
     tour_targets: &mut TourTargets,
 ) -> (bool, bool) {
     let mut help_clicked = false;
     let mut theme_clicked = false;
     egui::Frame::new()
-        .fill(egui::Color32::from_rgb(21, 30, 40))
+        .fill(theme.banner_fill)
         .corner_radius(8)
         .inner_margin(egui::Margin::symmetric(14, 10))
         .show(ui, |ui| {
@@ -1258,7 +1315,7 @@ fn show_app_header(
                         egui::RichText::new("AVILA LABS")
                             .small()
                             .strong()
-                            .color(egui::Color32::from_rgb(139, 229, 235)),
+                            .color(theme.brand),
                     );
                     tour_targets.set(TourTarget::Brand, response.rect);
                 }
@@ -1267,17 +1324,17 @@ fn show_app_header(
                         egui::RichText::new("OPENBNCT")
                             .size(24.0)
                             .strong()
-                            .color(egui::Color32::from_rgb(139, 229, 235)),
+                            .color(theme.brand),
                     );
                     ui.label(
                         egui::RichText::new("Open BNCT research and verification workbench")
-                            .color(egui::Color32::from_rgb(183, 192, 209)),
+                            .color(theme.text_dim),
                     );
                     ui.label(
                         egui::RichText::new("AN AVILA LABS OPEN-SOURCE PROJECT")
                             .size(9.5)
                             .strong()
-                            .color(egui::Color32::from_rgb(137, 146, 165)),
+                            .color(theme.text_dim),
                     );
                 });
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -1289,13 +1346,13 @@ fn show_app_header(
                         .on_hover_text("Help, common questions, and guided tours (F1)");
                     help_clicked = response.clicked();
                     tour_targets.set(TourTarget::HelpButton, response.rect);
-                    let theme_label = if dark_mode { "☀" } else { "☾" };
+                    let theme_label = if theme.dark() { "☀" } else { "☾" };
                     let theme_response = ui
                         .add_sized(
                             [36.0, 36.0],
                             egui::Button::new(egui::RichText::new(theme_label).size(17.0).strong()),
                         )
-                        .on_hover_text(if dark_mode {
+                        .on_hover_text(if theme.dark() {
                             "Switch to light mode"
                         } else {
                             "Switch to dark mode"
@@ -1310,11 +1367,7 @@ fn show_app_header(
         });
     ui.horizontal_wrapped(|ui| {
         ui.colored_label(
-            if dark_mode {
-                egui::Color32::from_rgb(244, 188, 95)
-            } else {
-                egui::Color32::from_rgb(146, 84, 6)
-            },
+            theme.warn_text,
             egui::RichText::new("NOT FOR CLINICAL DECISION-MAKING").strong(),
         );
         ui.label("No dose, prescription, or treatment-delivery claim is available in this build.");
@@ -1429,13 +1482,14 @@ fn show_workbench(
     display: &mut DisplaySettings,
     panels: &mut WorkbenchPanels,
     tour_targets: &mut TourTargets,
+    theme: Theme,
 ) {
     let navigation = egui::Panel::left("openbnct-workspace-navigation")
         .exact_size(180.0)
         .resizable(false)
         .frame(
             egui::Frame::new()
-                .fill(egui::Color32::from_rgb(15, 19, 27))
+                .fill(theme.nav_fill)
                 .inner_margin(egui::Margin::symmetric(10, 12)),
         )
         .show(ui, |ui| {
@@ -1443,7 +1497,7 @@ fn show_workbench(
                 egui::RichText::new("WORKSPACES")
                     .small()
                     .strong()
-                    .color(egui::Color32::from_rgb(137, 146, 165)),
+                    .color(theme.text_dim),
             );
             for candidate in WorkspaceTab::ALL {
                 let label = format!("{}  {}", candidate.marker(), candidate.label());
@@ -1462,19 +1516,26 @@ fn show_workbench(
         });
     tour_targets.set(TourTarget::WorkspaceNavigation, navigation.response.rect);
     egui::CentralPanel::default()
-        .frame(egui::Frame::new().inner_margin(egui::Margin::symmetric(12, 8)))
+        .frame(
+            egui::Frame::new()
+                .fill(theme.panel_fill)
+                .inner_margin(egui::Margin::symmetric(12, 8)),
+        )
         .show(ui, |ui| {
             egui::ScrollArea::vertical()
                 .id_salt("openbnct-workspace")
                 .auto_shrink([false, false])
                 .show(ui, |ui| match *workspace {
-                    WorkspaceTab::Overview => show_overview(ui, case.as_deref(), tour_targets),
+                    WorkspaceTab::Overview => {
+                        show_overview(ui, case.as_deref(), tour_targets, theme);
+                    }
                     WorkspaceTab::Geometry => {
                         if let Some(case) = case {
-                            show_geometry_workspace(ui, case, display, tour_targets);
+                            show_geometry_workspace(ui, case, display, tour_targets, theme);
                         } else {
                             show_workspace_heading(
                                 ui,
+                                theme,
                                 "Geometry",
                                 "Patient-space DICOM truth before transport.",
                             );
@@ -1486,36 +1547,44 @@ fn show_workbench(
                         case.as_deref(),
                         &mut panels.position,
                         tour_targets,
+                        theme,
                     ),
-                    WorkspaceTab::Plan => show_plan_workspace(ui, &mut panels.plan),
+                    WorkspaceTab::Plan => show_plan_workspace(ui, &mut panels.plan, theme),
                     WorkspaceTab::Dose => {
-                        show_dose_workspace(ui, &mut panels.dose, &mut panels.nifti);
+                        show_dose_workspace(ui, &mut panels.dose, &mut panels.nifti, theme);
                     }
                     WorkspaceTab::Evidence => show_evidence_workspace(
                         ui,
                         case.as_deref(),
                         &mut panels.evidence,
                         tour_targets,
+                        theme,
                     ),
                 });
         });
 }
 
-fn show_workspace_heading(ui: &mut egui::Ui, title: &str, subtitle: &str) {
+fn show_workspace_heading(ui: &mut egui::Ui, theme: Theme, title: &str, subtitle: &str) {
     ui.heading(egui::RichText::new(title).size(23.0));
-    ui.label(egui::RichText::new(subtitle).color(egui::Color32::from_rgb(164, 174, 193)));
+    ui.label(egui::RichText::new(subtitle).color(theme.text_dim));
     ui.add_space(8.0);
 }
 
-fn show_overview(ui: &mut egui::Ui, case: Option<&ViewerCase>, tour_targets: &mut TourTargets) {
+fn show_overview(
+    ui: &mut egui::Ui,
+    case: Option<&ViewerCase>,
+    tour_targets: &mut TourTargets,
+    theme: Theme,
+) {
     show_workspace_heading(
         ui,
+        theme,
         "Research overview",
         "One place to see what is verified, what is frozen, and what still blocks a result.",
     );
 
     egui::Frame::new()
-        .fill(egui::Color32::from_rgb(19, 36, 45))
+        .fill(theme.card_fill)
         .corner_radius(8)
         .inner_margin(egui::Margin::same(14))
         .show(ui, |ui| {
@@ -1525,7 +1594,7 @@ fn show_overview(ui: &mut egui::Ui, case: Option<&ViewerCase>, tour_targets: &mu
                         egui::RichText::new("NF-BNCT-001")
                             .size(20.0)
                             .strong()
-                            .color(egui::Color32::from_rgb(139, 229, 235)),
+                            .color(theme.brand),
                     );
                     ui.label("Synthetic conformance case · macroscopic physical dose");
                 });
@@ -1692,9 +1761,11 @@ fn show_geometry_workspace(
     case: &mut ViewerCase,
     display: &mut DisplaySettings,
     tour_targets: &mut TourTargets,
+    theme: Theme,
 ) {
     show_workspace_heading(
         ui,
+        theme,
         "Geometry",
         "Integrity-gated, linked patient-space views of the frozen synthetic case.",
     );
@@ -1704,7 +1775,7 @@ fn show_geometry_workspace(
             ui.set_max_width(280.0);
             show_case_summary(ui, case);
             ui.separator();
-            if show_display_controls(ui, case, display) {
+            if show_display_controls(ui, case, display, theme) {
                 case.textures_dirty = true;
             }
         });
@@ -1714,10 +1785,7 @@ fn show_geometry_workspace(
             ui.heading("Linked anatomical views");
             ui.label("Click or drag in any view to move the shared voxel crosshair.");
             if let Err(error) = case.refresh_textures(ui.ctx(), display) {
-                ui.colored_label(
-                    egui::Color32::LIGHT_RED,
-                    format!("Render rejected: {error}"),
-                );
+                ui.colored_label(theme.error, format!("Render rejected: {error}"));
                 return;
             }
 
@@ -1751,16 +1819,18 @@ fn show_transport_workspace(
     case: Option<&ViewerCase>,
     panel: &mut PositionPanel,
     tour_targets: &mut TourTargets,
+    theme: Theme,
 ) {
     show_workspace_heading(
         ui,
+        theme,
         "Transport",
         "Backend-neutral preparation with explicit scientific and execution gates.",
     );
     let backend = OpenMcBackend::default().descriptor();
 
     egui::Frame::new()
-        .fill(egui::Color32::from_rgb(22, 30, 41))
+        .fill(theme.card_fill)
         .corner_radius(8)
         .inner_margin(egui::Margin::same(14))
         .show(ui, |ui| {
@@ -1954,10 +2024,7 @@ fn show_transport_workspace(
         });
     }
     if let Some(error) = &panel.error {
-        ui.colored_label(
-            egui::Color32::LIGHT_RED,
-            format!("Positioning rejected: {error}"),
-        );
+        ui.colored_label(theme.error, format!("Positioning rejected: {error}"));
     }
     if let Some(status) = &panel.status {
         ui.colored_label(egui::Color32::LIGHT_GREEN, status);
@@ -1993,9 +2060,10 @@ fn capability_label(ui: &mut egui::Ui, name: &str, enabled: bool) {
     });
 }
 
-fn show_plan_workspace(ui: &mut egui::Ui, panel: &mut PlanPanel) {
+fn show_plan_workspace(ui: &mut egui::Ui, panel: &mut PlanPanel, theme: Theme) {
     show_workspace_heading(
         ui,
+        theme,
         "Exposure plan",
         "Structured multi-exposure schedules; every detected issue is reported, not just the first.",
     );
@@ -2013,17 +2081,14 @@ fn show_plan_workspace(ui: &mut egui::Ui, panel: &mut PlanPanel) {
             }
         });
         if let Some(error) = &panel.error {
-            ui.colored_label(
-                egui::Color32::LIGHT_RED,
-                format!("Plan file rejected: {error}"),
-            );
+            ui.colored_label(theme.error, format!("Plan file rejected: {error}"));
         }
     });
 
     let Some(plan) = &panel.plan else {
         ui.add_space(12.0);
         egui::Frame::new()
-            .fill(egui::Color32::from_rgb(41, 32, 22))
+            .fill(theme.warn_fill)
             .corner_radius(8)
             .inner_margin(egui::Margin::same(14))
             .show(ui, |ui| {
@@ -2040,7 +2105,7 @@ fn show_plan_workspace(ui: &mut egui::Ui, panel: &mut PlanPanel) {
 
     ui.add_space(10.0);
     egui::Frame::new()
-        .fill(egui::Color32::from_rgb(22, 30, 41))
+        .fill(theme.card_fill)
         .corner_radius(8)
         .inner_margin(egui::Margin::same(14))
         .show(ui, |ui| {
@@ -2064,7 +2129,7 @@ fn show_plan_workspace(ui: &mut egui::Ui, panel: &mut PlanPanel) {
             if !panel.issues.is_empty() {
                 ui.add_space(6.0);
                 for issue in &panel.issues {
-                    ui.colored_label(egui::Color32::LIGHT_RED, format!("• {issue}"));
+                    ui.colored_label(theme.error, format!("• {issue}"));
                 }
             }
             ui.add_space(8.0);
@@ -2118,9 +2183,15 @@ fn show_plan_workspace(ui: &mut egui::Ui, panel: &mut PlanPanel) {
     });
 }
 
-fn show_dose_workspace(ui: &mut egui::Ui, panel: &mut DosePanel, nifti: &mut NiftiPanel) {
+fn show_dose_workspace(
+    ui: &mut egui::Ui,
+    panel: &mut DosePanel,
+    nifti: &mut NiftiPanel,
+    theme: Theme,
+) {
     show_workspace_heading(
         ui,
+        theme,
         "Dose components",
         "Physical and biological layers stay separate; only validated bundles render.",
     );
@@ -2146,14 +2217,14 @@ fn show_dose_workspace(ui: &mut egui::Ui, panel: &mut DosePanel, nifti: &mut Nif
             }
         });
         if let Some(error) = &panel.bundle_error {
-            ui.colored_label(egui::Color32::LIGHT_RED, format!("Load rejected: {error}"));
+            ui.colored_label(theme.error, format!("Load rejected: {error}"));
         }
     });
 
     let Some(bundle) = &panel.bundle else {
         ui.add_space(12.0);
         egui::Frame::new()
-            .fill(egui::Color32::from_rgb(41, 32, 22))
+            .fill(theme.warn_fill)
             .corner_radius(8)
             .inner_margin(egui::Margin::same(14))
             .show(ui, |ui| {
@@ -2172,9 +2243,9 @@ fn show_dose_workspace(ui: &mut egui::Ui, panel: &mut DosePanel, nifti: &mut Nif
     let is_biological = matches!(artifact, DoseArtifact::Biological(_));
     egui::Frame::new()
         .fill(if is_biological {
-            egui::Color32::from_rgb(36, 26, 46)
+            theme.card_alt_fill
         } else {
-            egui::Color32::from_rgb(22, 30, 41)
+            theme.card_fill
         })
         .corner_radius(8)
         .inner_margin(egui::Margin::same(14))
@@ -2256,7 +2327,7 @@ fn show_dose_workspace(ui: &mut egui::Ui, panel: &mut DosePanel, nifti: &mut Nif
             }
         });
         if let Some(error) = &panel.histogram_error {
-            ui.colored_label(egui::Color32::LIGHT_RED, format!("DVH rejected: {error}"));
+            ui.colored_label(theme.error, format!("DVH rejected: {error}"));
         }
         if let Some(histogram) = &panel.histogram {
             ui.label(format!(
@@ -2266,7 +2337,7 @@ fn show_dose_workspace(ui: &mut egui::Ui, panel: &mut DosePanel, nifti: &mut Nif
                 histogram.region_volume_mm3,
                 histogram.unit
             ));
-            show_dvh_curve(ui, histogram);
+            show_dvh_curve(ui, histogram, theme);
         }
     });
 
@@ -2298,10 +2369,7 @@ fn show_dose_workspace(ui: &mut egui::Ui, panel: &mut DosePanel, nifti: &mut Nif
             }
         });
         if let Some(error) = &panel.metrics_error {
-            ui.colored_label(
-                egui::Color32::LIGHT_RED,
-                format!("Metrics rejected: {error}"),
-            );
+            ui.colored_label(theme.error, format!("Metrics rejected: {error}"));
         }
         if let Some(metrics) = &panel.metrics {
             ui.monospace(format!(
@@ -2451,7 +2519,7 @@ fn show_dose_workspace(ui: &mut egui::Ui, panel: &mut DosePanel, nifti: &mut Nif
             }
         });
         if let Some(error) = &nifti.error {
-            ui.colored_label(egui::Color32::LIGHT_RED, format!("NIfTI rejected: {error}"));
+            ui.colored_label(theme.error, format!("NIfTI rejected: {error}"));
         }
         if let Some(status) = &nifti.status {
             ui.colored_label(egui::Color32::LIGHT_GREEN, status);
@@ -2460,7 +2528,7 @@ fn show_dose_workspace(ui: &mut egui::Ui, panel: &mut DosePanel, nifti: &mut Nif
 }
 
 /// Draw the cumulative V(d) curve directly — no plotting dependency.
-fn show_dvh_curve(ui: &mut egui::Ui, histogram: &DoseVolumeHistogram) {
+fn show_dvh_curve(ui: &mut egui::Ui, histogram: &DoseVolumeHistogram, theme: Theme) {
     let (response, painter) = ui.allocate_painter(
         egui::vec2(ui.available_width(), 180.0),
         egui::Sense::hover(),
@@ -2479,7 +2547,7 @@ fn show_dvh_curve(ui: &mut egui::Ui, histogram: &DoseVolumeHistogram) {
             egui::Align2::CENTER_CENTER,
             "zero dose in region",
             egui::FontId::monospace(12.0),
-            egui::Color32::from_rgb(151, 158, 178),
+            theme.text_dim,
         );
         return;
     }
@@ -2496,28 +2564,28 @@ fn show_dvh_curve(ui: &mut egui::Ui, histogram: &DoseVolumeHistogram) {
         .collect();
     painter.add(egui::Shape::line(
         points,
-        egui::Stroke::new(2.0, egui::Color32::from_rgb(139, 229, 235)),
+        egui::Stroke::new(2.0, theme.brand),
     ));
     painter.text(
         egui::pos2(rect.left() - 8.0, rect.top()),
         egui::Align2::RIGHT_CENTER,
         "100%",
         egui::FontId::monospace(10.0),
-        egui::Color32::from_rgb(137, 146, 165),
+        theme.text_dim,
     );
     painter.text(
         egui::pos2(rect.left() - 8.0, rect.bottom()),
         egui::Align2::RIGHT_CENTER,
         "0%",
         egui::FontId::monospace(10.0),
-        egui::Color32::from_rgb(137, 146, 165),
+        theme.text_dim,
     );
     painter.text(
         egui::pos2(rect.right(), rect.bottom() + 4.0),
         egui::Align2::RIGHT_TOP,
         format!("{:.3e} {}", max_dose, histogram.unit),
         egui::FontId::monospace(10.0),
-        egui::Color32::from_rgb(137, 146, 165),
+        theme.text_dim,
     );
 }
 
@@ -2526,9 +2594,11 @@ fn show_evidence_workspace(
     case: Option<&ViewerCase>,
     panel: &mut EvidencePanel,
     tour_targets: &mut TourTargets,
+    theme: Theme,
 ) {
     show_workspace_heading(
         ui,
+        theme,
         "Evidence",
         "Qualification is a chain of scoped claims, not one global green check.",
     );
@@ -2611,10 +2681,7 @@ fn show_evidence_workspace(
             }
         });
         if let Some(error) = &panel.error {
-            ui.colored_label(
-                egui::Color32::LIGHT_RED,
-                format!("Verification rejected: {error}"),
-            );
+            ui.colored_label(theme.error, format!("Verification rejected: {error}"));
         }
         if let Some(manifest) = &panel.manifest {
             status_badge(ui, GateState::Verified, "ALL ARTIFACTS VERIFIED");
@@ -2720,6 +2787,7 @@ fn show_display_controls(
     ui: &mut egui::Ui,
     case: &mut ViewerCase,
     display: &mut DisplaySettings,
+    theme: Theme,
 ) -> bool {
     let mut changed = false;
     ui.heading("Display");
@@ -2787,7 +2855,7 @@ fn show_display_controls(
         changed = true;
     }
     if let Some(error) = &case.dose.error {
-        ui.colored_label(egui::Color32::LIGHT_RED, error);
+        ui.colored_label(theme.error, error);
     }
     if let Some(loaded) = &case.dose.loaded {
         let labels: Vec<String> = loaded
@@ -3532,6 +3600,7 @@ mod tests {
                     &mut display,
                     &mut WorkbenchPanels::default(),
                     &mut tour_targets,
+                    Theme::resolve(false),
                 );
             });
             output.textures_delta.clear();
