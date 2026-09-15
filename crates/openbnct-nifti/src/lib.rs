@@ -101,6 +101,9 @@ pub fn read_nifti(bytes: &[u8]) -> Result<NiftiImage, NiftiError> {
     if units_declared_mm && header.xyzt_units != 0b010 {
         return Err(NiftiError::NonMillimeterUnits(header.xyzt_units));
     }
+    if header.dim[1..4].iter().any(|&d| d <= 0) {
+        return Err(NiftiError::BadHeader);
+    }
     let shape: Vec<usize> = header.dim[1..4].iter().map(|&d| d as usize).collect();
     let voxel_count = shape.iter().product::<usize>();
     let start = header.vox_offset as usize;

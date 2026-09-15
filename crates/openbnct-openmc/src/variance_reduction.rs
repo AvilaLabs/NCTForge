@@ -453,9 +453,19 @@ pub fn validate_variance_reduction(
             continue;
         };
         let Some(vr_bins) = vr_group.len().checked_div(n_vr_runs) else {
+            skipped.push(VrSkippedGroup {
+                region: region.clone(),
+                tally: tally.clone(),
+                reason: "vr run count is zero".into(),
+            });
             continue;
         };
         let Some(reference_bins) = reference_group.len().checked_div(n_reference_runs) else {
+            skipped.push(VrSkippedGroup {
+                region: region.clone(),
+                tally: tally.clone(),
+                reason: "reference run count is zero".into(),
+            });
             continue;
         };
         if vr_group.len() % n_vr_runs != 0

@@ -311,6 +311,12 @@ fn batch_statistics(
     bins: usize,
     realizations: u64,
 ) -> Result<(Vec<f64>, Vec<f64>), OpenMcCollectError> {
+    if realizations < 2 {
+        return Err(OpenMcCollectError::InvalidResultsShape {
+            tally: "batch_statistics".to_string(),
+            shape: vec![realizations],
+        });
+    }
     let n = realizations as f64;
     let mut mean = Vec::with_capacity(bins);
     let mut standard_error = Vec::with_capacity(bins);
@@ -655,7 +661,7 @@ fn load_region_corrections(
 ) -> Result<RegionCorrections, OpenMcCollectError> {
     let read_bound =
         |name: &str, declared: &ContentReference| -> Result<Vec<u8>, OpenMcCollectError> {
-            let path = working_directory.join(name);
+            let path = resolve_run_file(working_directory, name);
             let bytes = std::fs::read(&path).map_err(|error| {
                 OpenMcCollectError::Io(path.display().to_string(), error.to_string())
             })?;
@@ -680,6 +686,17 @@ fn load_region_corrections(
         serde_json::from_slice(&assignment_bytes).map_err(|error| {
             OpenMcCollectError::Manifest("material assignment".into(), error.to_string())
         })?;
+    // The hash binding proves provenance, not physical validity — a bound
+    // artifact that declares a non-positive density would silently emit
+    // inf/NaN dose through the per-voxel normalization below.
+    assignment.base_material.validate().map_err(|error| {
+        OpenMcCollectError::Manifest("material assignment".into(), error.to_string())
+    })?;
+    for region in &assignment.regions {
+        region.material.validate().map_err(|error| {
+            OpenMcCollectError::Manifest("material assignment".into(), error.to_string())
+        })?;
+    }
     let profile: ComponentDefinitionProfile =
         serde_json::from_slice(&profile_bytes).map_err(|error| {
             OpenMcCollectError::Manifest("component profile".into(), error.to_string())
@@ -1407,6 +1424,44 @@ mod tests {
         assert!(
             (bundle.physical_total.values[1] - expected_total).abs() / expected_total < 1.0e-12
         );
+    }
+
+    #[test]
+    fn rejects_bound_assignment_with_nonpositive_density() {
+        let directory = tempfile::tempdir().unwrap();
+        write_deck(directory.path(), &tally_defs());
+        let mut bad = assignment_json();
+        bad["regions"][0]["material"]["density_g_cm3"] = serde_json::json!(0.0);
+        let assignment_bytes = serde_json::to_vec_pretty(&bad).unwrap();
+        std::fs::write(
+            directory.path().join("openbnct-material-assignment.json"),
+            &assignment_bytes,
+        )
+        .unwrap();
+        let profile_bytes = serde_json::to_vec_pretty(&component_profile_json()).unwrap();
+        std::fs::write(
+            directory.path().join("openbnct-component-profile.json"),
+            &profile_bytes,
+        )
+        .unwrap();
+        let manifest_path = directory.path().join(OPENMC_INPUT_MANIFEST_FILE);
+        let mut manifest: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&manifest_path).unwrap()).unwrap();
+        manifest["bindings"]["component_profile"]["sha256"] = sha256_hex(&profile_bytes).into();
+        manifest["bindings"]["material_assignment"] = serde_json::json!({
+            "id": "openbnct.material-assignment/0.2.0",
+            "sha256": sha256_hex(&assignment_bytes),
+        });
+        std::fs::write(
+            &manifest_path,
+            serde_json::to_vec_pretty(&manifest).unwrap(),
+        )
+        .unwrap();
+
+        assert!(matches!(
+            collect_statepoint(directory.path()),
+            Err(OpenMcCollectError::Manifest(_, _))
+        ));
     }
 
     #[test]
