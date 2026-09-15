@@ -7,7 +7,7 @@
 
 [English](README.md) | **日本語**
 
-*（旧称 OpenBNCT。内部のクレート名・`openbnct` CLI/Python パッケージ・`openbnct.*` スキーマ識別子は従来の名前空間を維持します。）*
+*（旧称 NCTForge。クレート名・`openbnct` CLI/Python パッケージ・`openbnct.*` スキーマ識別子へ全面改称済みです。凍結済みベンチマーク証跡を含む改名前の `nctforge.*` アーティファクトは、コントラクト名前空間エイリアスにより引き続き読み込み可能です。[ARCHITECTURE.md](ARCHITECTURE.md) を参照。）*
 
 OpenBNCT は、ホウ素中性子捕捉療法（BNCT）の研究および独立検証を目的とした、
 輸送コードに依存しない DICOM ネイティブのオープンソース・ワークベンチです。
@@ -44,6 +44,9 @@ OpenBNCT は、ホウ素中性子捕捉療法（BNCT）の研究および独立�
 - 生物学的解釈（加重モデル・分割照射・TCP/NTCP/UTCP・BED/EQD2）、線量体積
   指標、NIfTI I/O、MCNP/PHITS アダプター、CLI・GUI・Python の3面実装は
   すべて同一の Rust コントラクト上で稼働しています。
+- さらに、施設ビーム記述と `beam qa` 品質評価、測定記録の比較インポート、
+  DICOM RT Dose エクスポート、および OpenMC ウェイトウィンドウによる
+  分散低減（`vr resolve`／`vr validate`）が実装されています。
 
 開発段階と合格条件については [ロードマップ（英語）](ROADMAP.md) を参照してください。
 

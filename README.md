@@ -13,8 +13,10 @@ Rust around one idea: a dose result should carry its provenance, uncertainty,
 and qualification with it — and a claim should only be as strong as the
 evidence bound to it.
 
-*(Formerly OpenBNCT — internal crate names, the `openbnct` CLI/Python package,
-and `openbnct.*` schema identifiers retain the original namespace.)*
+*(Formerly NCTForge — renamed across crates, the `openbnct` CLI/Python
+package, and `openbnct.*` schema identifiers. Pre-rename `nctforge.*`
+artifacts, including frozen benchmark evidence, remain readable through a
+contract-namespace alias; see [ARCHITECTURE.md](ARCHITECTURE.md).)*
 
 OpenMC is the first transport backend behind a transport-neutral boundary.
 MCNP, PHITS, and other external results import through a published
@@ -88,6 +90,7 @@ bundling those systems.
 
 ```text
 cargo build --workspace                  # CLI + libraries
+cargo run --bin openbnct -- --help       # CLI surface
 cargo test --workspace                   # full suite incl. conformance
 cargo run --bin openbnct-gui             # desktop workbench
 ```
