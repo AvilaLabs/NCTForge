@@ -121,6 +121,11 @@ maturin build --manifest-path bindings/python/Cargo.toml
   the case specification it is not promoted to a *reference output* until a
   separately implemented transport path (Geant4, or licensed MCNP/PHITS
   produced by a licensed user) reproduces the frozen case.
+- Variance reduction is verified **unbiased** at a 4.3× history reduction
+  (1134 comparisons, max z = 2.97) and is pending the frozen photon
+  precision gates — the deep photon heating tally is correlation-limited,
+  so weight windows help it less than neutron fluence. See
+  [`openmc-vr-validation-140M.json`](benchmarks/synthetic/nf-bnct-001/transport/openmc-vr-validation-140M.json).
 - The MCNP/PHITS adapters are verified against documented-format fixtures;
   real-engine acceptance remains an open gate.
 - Nothing here claims clinical qualification, clinical equivalence,

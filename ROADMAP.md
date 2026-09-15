@@ -768,8 +768,8 @@ prerequisites for starting external review.
   `openbnct uq apply|info` emits and inspects reports; the dose bundle's
   own σ stays pure Monte Carlo — the systematic layer is additive, never
   relabeled.
-- **R6-09 — variance reduction.** *(implemented)* Weight-window
-  variance reduction for the OpenMC path. A
+- **R6-09 — variance reduction.** *(implemented; benchmark evidence
+  in progress)* Weight-window variance reduction for the OpenMC path. A
   `openbnct.variance-reduction/0.1.0` spec declares per-particle regular
   meshes with uniform, explicit, or forward-flux-derived bounds;
   `vr resolve` turns it into a `openbnct.weight-windows/0.1.0` artifact
@@ -782,6 +782,19 @@ prerequisites for starting external review.
   result and compares shared region/tally means against a reference
   acceptance report under combined uncertainty, recording the achieved
   history-reduction factor in a `openbnct.vr-validation/0.1.0` report.
+
+  Evidence so far: a 140M-history run under region-targeted weight
+  windows (`variance-reduction/nf-bnct-001-ww-v3.json`) validated
+  **unbiased** against the 600M analog reference — all 1134 shared
+  region/tally comparisons within combined uncertainty, max z = 2.97 —
+  at a 4.3× history reduction
+  (`transport/openmc-vr-validation-140M.json`). It narrowly missed two
+  photon-precision gates (`central_axis_2cm` photon heating 1.041% vs
+  the 1.0% limit; per-voxel photon median 3.24% vs 3.0%): the deep
+  photon heating tally is correlation-limited — weight windows give
+  ~10× per-history variance reduction on deep neutron fluence but only
+  ~1.3× on the gated photon tally. A 196M-history run is in progress to
+  clear both gates at a ~3× reduction.
 
 Out of scope for R6 remains the deferred list below — in particular plan
 optimization stays behind the IP boundary and nothing in R6 is a clinical
