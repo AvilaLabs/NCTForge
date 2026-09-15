@@ -43,7 +43,7 @@ fn main() -> eframe::Result {
         "OpenBNCT",
         options,
         Box::new(move |creation_context| {
-            configure_style(&creation_context.egui_ctx);
+            configure_style(&creation_context.egui_ctx, false);
             Ok(Box::new(OpenBnctApp::new(
                 initial_case,
                 &creation_context.egui_ctx,
@@ -1054,6 +1054,8 @@ struct OpenBnctApp {
     case: Option<ViewerCase>,
     display: DisplaySettings,
     workspace: WorkspaceTab,
+    dark_mode: bool,
+    template_status: Option<String>,
     brand_logo: Option<egui::TextureHandle>,
     help: GuidedHelp,
     panels: WorkbenchPanels,
@@ -1074,6 +1076,8 @@ impl OpenBnctApp {
             } else {
                 WorkspaceTab::Overview
             },
+            dark_mode: false,
+            template_status: None,
             brand_logo: brand::load_logo_texture(context).ok(),
             help: GuidedHelp::default(),
             panels: WorkbenchPanels::default(),
@@ -1154,13 +1158,19 @@ impl eframe::App for OpenBnctApp {
         }
 
         let mut tour_targets = TourTargets::default();
-        if show_app_header(
+        let (help_clicked, theme_clicked) = show_app_header(
             ui,
             self.case.as_ref(),
             self.brand_logo.as_ref(),
+            self.dark_mode,
             &mut tour_targets,
-        ) {
+        );
+        if help_clicked {
             self.help.toggle_center();
+        }
+        if theme_clicked {
+            self.dark_mode = !self.dark_mode;
+            configure_style(ui.ctx(), self.dark_mode);
         }
         ui.add_space(8.0);
         let enter_pressed = ui.input(|input| input.key_pressed(egui::Key::Enter));
@@ -1170,12 +1180,16 @@ impl eframe::App for OpenBnctApp {
             self.case.as_ref(),
             enter_pressed,
             &mut tour_targets,
+            &mut self.template_status,
         );
         if load_requested {
             self.load_case();
         }
         if let Some(error) = &self.load_error {
             ui.colored_label(egui::Color32::LIGHT_RED, format!("Load rejected: {error}"));
+        }
+        if let Some(status) = &self.template_status {
+            ui.label(status);
         }
         ui.add_space(8.0);
         ui.separator();
@@ -1193,14 +1207,20 @@ impl eframe::App for OpenBnctApp {
     }
 }
 
-fn configure_style(context: &egui::Context) {
-    let mut visuals = egui::Visuals::dark();
-    visuals.panel_fill = egui::Color32::from_rgb(17, 21, 29);
-    visuals.window_fill = egui::Color32::from_rgb(21, 26, 36);
-    visuals.extreme_bg_color = egui::Color32::from_rgb(10, 13, 19);
-    visuals.faint_bg_color = egui::Color32::from_rgb(27, 33, 44);
-    visuals.selection.bg_fill = egui::Color32::from_rgb(30, 116, 138);
-    visuals.selection.stroke = egui::Stroke::new(1.0, egui::Color32::from_rgb(144, 231, 239));
+fn configure_style(context: &egui::Context, dark_mode: bool) {
+    let mut visuals = if dark_mode {
+        egui::Visuals::dark()
+    } else {
+        egui::Visuals::light()
+    };
+    if dark_mode {
+        visuals.panel_fill = egui::Color32::from_rgb(17, 21, 29);
+        visuals.window_fill = egui::Color32::from_rgb(21, 26, 36);
+        visuals.extreme_bg_color = egui::Color32::from_rgb(10, 13, 19);
+        visuals.faint_bg_color = egui::Color32::from_rgb(27, 33, 44);
+        visuals.selection.bg_fill = egui::Color32::from_rgb(30, 116, 138);
+        visuals.selection.stroke = egui::Stroke::new(1.0, egui::Color32::from_rgb(144, 231, 239));
+    }
     context.set_visuals(visuals);
 
     context.global_style_mut(|style| {
@@ -1213,9 +1233,11 @@ fn show_app_header(
     ui: &mut egui::Ui,
     case: Option<&ViewerCase>,
     brand_logo: Option<&egui::TextureHandle>,
+    dark_mode: bool,
     tour_targets: &mut TourTargets,
-) -> bool {
+) -> (bool, bool) {
     let mut help_clicked = false;
+    let mut theme_clicked = false;
     egui::Frame::new()
         .fill(egui::Color32::from_rgb(21, 30, 40))
         .corner_radius(8)
@@ -1267,6 +1289,18 @@ fn show_app_header(
                         .on_hover_text("Help, common questions, and guided tours (F1)");
                     help_clicked = response.clicked();
                     tour_targets.set(TourTarget::HelpButton, response.rect);
+                    let theme_label = if dark_mode { "☀" } else { "☾" };
+                    let theme_response = ui
+                        .add_sized(
+                            [36.0, 36.0],
+                            egui::Button::new(egui::RichText::new(theme_label).size(17.0).strong()),
+                        )
+                        .on_hover_text(if dark_mode {
+                            "Switch to light mode"
+                        } else {
+                            "Switch to dark mode"
+                        });
+                    theme_clicked = theme_response.clicked();
                     status_badge(ui, GateState::Pending, "RESEARCH ONLY");
                     if case.is_some() {
                         status_badge(ui, GateState::Verified, "CASE VERIFIED");
@@ -1276,12 +1310,60 @@ fn show_app_header(
         });
     ui.horizontal_wrapped(|ui| {
         ui.colored_label(
-            egui::Color32::from_rgb(244, 188, 95),
+            if dark_mode {
+                egui::Color32::from_rgb(244, 188, 95)
+            } else {
+                egui::Color32::from_rgb(146, 84, 6)
+            },
             egui::RichText::new("NOT FOR CLINICAL DECISION-MAKING").strong(),
         );
         ui.label("No dose, prescription, or treatment-delivery claim is available in this build.");
     });
-    help_clicked
+    (help_clicked, theme_clicked)
+}
+
+/// The transport-side authoring contracts, embedded from the benchmark so
+/// "export template" writes real validated structure a user can edit into
+/// their own case. The response set and acceptance contract are provenance
+/// artifacts and stay repo-side.
+const TEMPLATE_FILES: [(&str, &str); 4] = [
+    (
+        "case.json",
+        include_str!("../../../benchmarks/synthetic/nf-bnct-001/transport/case.json"),
+    ),
+    (
+        "source.json",
+        include_str!("../../../benchmarks/synthetic/nf-bnct-001/transport/source.json"),
+    ),
+    (
+        "material.json",
+        include_str!("../../../benchmarks/synthetic/nf-bnct-001/transport/material.json"),
+    ),
+    (
+        "component-profile.json",
+        include_str!("../../../benchmarks/synthetic/nf-bnct-001/transport/component-profile.json"),
+    ),
+];
+
+const TEMPLATE_README: &str = "# OpenBNCT transport-case template\n\
+\n\
+These are the NF-BNCT-001 benchmark contracts verbatim — a validated\n\
+starting point, not your case. Edit `case.json` (geometry, regions),\n\
+`source.json` (beam), `material.json` (composition), and\n\
+`component-profile.json` (folding) to your geometry and data, then feed\n\
+the directory to `openbnct openmc generate`. A `voxel_set` geometry needs\n\
+a real volume source (NIfTI/DICOM), which the GUI does not author.\n";
+
+fn export_case_template(destination: &Path) -> Result<usize, String> {
+    let mut written = 0;
+    for (name, contents) in TEMPLATE_FILES {
+        std::fs::write(destination.join(name), contents)
+            .map_err(|error| format!("{name}: {error}"))?;
+        written += 1;
+    }
+    std::fs::write(destination.join("README.md"), TEMPLATE_README)
+        .map_err(|error| format!("README.md: {error}"))?;
+    Ok(written + 1)
 }
 
 fn show_case_loader(
@@ -1290,6 +1372,7 @@ fn show_case_loader(
     case: Option<&ViewerCase>,
     enter_pressed: bool,
     tour_targets: &mut TourTargets,
+    template_status: &mut Option<String>,
 ) -> bool {
     let mut load_requested = false;
     let response = egui::Frame::group(ui.style()).show(ui, |ui| {
@@ -1307,6 +1390,23 @@ fn show_case_loader(
             {
                 *case_path = dir.display().to_string();
                 load_requested = true;
+            }
+            if ui
+                .button("Export template…")
+                .on_hover_text(
+                    "Write the transport-case JSON contracts (the NF-BNCT-001 \
+                     values) into a directory you can edit into your own case",
+                )
+                .clicked()
+                && let Some(dir) = rfd::FileDialog::new().pick_folder()
+            {
+                *template_status = Some(match export_case_template(&dir) {
+                    Ok(count) => format!(
+                        "template written to {} ({count} files — edit before use)",
+                        dir.display()
+                    ),
+                    Err(error) => format!("template export failed: {error}"),
+                });
             }
             if let Some(case) = case {
                 ui.separator();
@@ -3413,7 +3513,7 @@ mod tests {
     #[test]
     fn every_empty_workspace_renders_at_the_minimum_viewport() {
         let context = egui::Context::default();
-        configure_style(&context);
+        configure_style(&context, false);
         for mut workspace in WorkspaceTab::ALL {
             let input = egui::RawInput {
                 screen_rect: Some(egui::Rect::from_min_size(
