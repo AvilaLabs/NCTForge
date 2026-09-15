@@ -40,11 +40,11 @@ fn main() -> eframe::Result {
         ..Default::default()
     };
     eframe::run_native(
-        "NCTForge",
+        "OpenBNCT",
         options,
         Box::new(move |creation_context| {
             configure_style(&creation_context.egui_ctx);
-            Ok(Box::new(NctForgeApp::new(
+            Ok(Box::new(OpenBnctApp::new(
                 initial_case,
                 &creation_context.egui_ctx,
             )))
@@ -1018,7 +1018,37 @@ struct WorkbenchPanels {
     position: PositionPanel,
 }
 
-struct NctForgeApp {
+/// Where an OS-dragged path lands in the workbench.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DropTarget {
+    Case,
+    DoseBundle,
+    NiftiVolume,
+    Unsupported,
+}
+
+/// Directories are case roots; `.json` files are dose bundles; `.nii` /
+/// `.nii.gz` files are NIfTI volumes. Anything else is reported rather than
+/// guessed.
+fn classify_dropped_path(path: &Path) -> DropTarget {
+    if path.is_dir() {
+        return DropTarget::Case;
+    }
+    let name = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+    if name.ends_with(".nii") || name.ends_with(".nii.gz") {
+        return DropTarget::NiftiVolume;
+    }
+    if name.ends_with(".json") {
+        return DropTarget::DoseBundle;
+    }
+    DropTarget::Unsupported
+}
+
+struct OpenBnctApp {
     case_path: String,
     load_error: Option<String>,
     case: Option<ViewerCase>,
@@ -1029,7 +1059,7 @@ struct NctForgeApp {
     panels: WorkbenchPanels,
 }
 
-impl NctForgeApp {
+impl OpenBnctApp {
     fn new(initial_case: Option<PathBuf>, context: &egui::Context) -> Self {
         let has_initial_case = initial_case.is_some();
         let mut app = Self {
@@ -1071,15 +1101,56 @@ impl NctForgeApp {
             }
         }
     }
+
+    /// Route an OS-dropped path onto the matching workbench surface: a
+    /// directory loads as a case, a `.json` as a dose bundle, and a
+    /// `.nii`/`.nii.gz` as a NIfTI volume.
+    fn handle_dropped(&mut self, paths: &[PathBuf]) {
+        let Some(path) = paths.first() else {
+            return;
+        };
+        match classify_dropped_path(path) {
+            DropTarget::Case => {
+                self.case_path = path.display().to_string();
+                self.load_case();
+                self.workspace = WorkspaceTab::Geometry;
+            }
+            DropTarget::DoseBundle => {
+                self.panels.dose.bundle_path = path.display().to_string();
+                self.panels.dose.load_bundle();
+                self.workspace = WorkspaceTab::Dose;
+            }
+            DropTarget::NiftiVolume => {
+                self.panels.nifti.input_path = path.display().to_string();
+                self.panels.nifti.inspect();
+                self.workspace = WorkspaceTab::Dose;
+            }
+            DropTarget::Unsupported => {
+                self.load_error = Some(format!("unsupported drop {}", path.display()));
+            }
+        }
+    }
 }
 
-impl eframe::App for NctForgeApp {
+impl eframe::App for OpenBnctApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         if ui.input(|input| input.key_pressed(egui::Key::F1)) {
             self.help.toggle_center();
         }
         if let Some(workspace) = self.help.requested_workspace() {
             self.workspace = workspace.into();
+        }
+
+        let dropped: Vec<PathBuf> = ui.input(|input| {
+            input
+                .raw
+                .dropped_files
+                .iter()
+                .map(|file| file.path().to_path_buf())
+                .collect()
+        });
+        if !dropped.is_empty() {
+            self.handle_dropped(&dropped);
         }
 
         let mut tour_targets = TourTargets::default();
@@ -1171,7 +1242,7 @@ fn show_app_header(
                 }
                 ui.vertical(|ui| {
                     ui.label(
-                        egui::RichText::new("NCTFORGE")
+                        egui::RichText::new("OPENBNCT")
                             .size(24.0)
                             .strong()
                             .color(egui::Color32::from_rgb(139, 229, 235)),
@@ -1226,11 +1297,17 @@ fn show_case_loader(
             ui.label(egui::RichText::new("CASE").small().strong());
             let path_response = ui.add(
                 egui::TextEdit::singleline(case_path)
-                    .desired_width(520.0)
-                    .hint_text("/tmp/nf-bnct-001"),
+                    .desired_width(480.0)
+                    .hint_text("/tmp/nf-bnct-001 — or drop a case folder"),
             );
             load_requested = ui.button("Load + verify").clicked()
                 || (path_response.has_focus() && enter_pressed);
+            if ui.button("Browse…").clicked()
+                && let Some(dir) = rfd::FileDialog::new().pick_folder()
+            {
+                *case_path = dir.display().to_string();
+                load_requested = true;
+            }
             if let Some(case) = case {
                 ui.separator();
                 ui.strong(case.verified.report.case_id);
@@ -1953,10 +2030,18 @@ fn show_dose_workspace(ui: &mut egui::Ui, panel: &mut DosePanel, nifti: &mut Nif
             ui.label(egui::RichText::new("DOSE BUNDLE").small().strong());
             ui.add(
                 egui::TextEdit::singleline(&mut panel.bundle_path)
-                    .desired_width(520.0)
-                    .hint_text("/path/to/dose-bundle.json"),
+                    .desired_width(460.0)
+                    .hint_text("/path/to/dose-bundle.json — or drop it here"),
             );
             if ui.button("Load + validate").clicked() {
+                panel.load_bundle();
+            }
+            if ui.button("Browse…").clicked()
+                && let Some(file) = rfd::FileDialog::new()
+                    .add_filter("dose bundle", &["json"])
+                    .pick_file()
+            {
+                panel.bundle_path = file.display().to_string();
                 panel.load_bundle();
             }
         });
@@ -1974,7 +2059,7 @@ fn show_dose_workspace(ui: &mut egui::Ui, panel: &mut DosePanel, nifti: &mut Nif
             .show(ui, |ui| {
                 status_badge(ui, GateState::Pending, "NO RESULT LOADED");
                 ui.label(
-                    "NCTForge does not render placeholder dose values. Load a validated \
+                    "OpenBNCT does not render placeholder dose values. Load a validated \
                      physical or biological dose bundle to inspect components, totals, \
                      and DVHs.",
                 );
@@ -2172,10 +2257,18 @@ fn show_dose_workspace(ui: &mut egui::Ui, panel: &mut DosePanel, nifti: &mut Nif
             ui.label("Volume");
             ui.add(
                 egui::TextEdit::singleline(&mut nifti.input_path)
-                    .desired_width(320.0)
+                    .desired_width(300.0)
                     .hint_text("/path/to/volume.nii[.gz]"),
             );
             if ui.button("Inspect").clicked() {
+                nifti.inspect();
+            }
+            if ui.button("Browse…").clicked()
+                && let Some(file) = rfd::FileDialog::new()
+                    .add_filter("NIfTI", &["nii", "gz"])
+                    .pick_file()
+            {
+                nifti.input_path = file.display().to_string();
                 nifti.inspect();
             }
         });
@@ -2873,6 +2966,32 @@ mod tests {
         let overlay = egui::Color32::from_rgb(210, 120, 60);
         assert_eq!(blend(base, overlay, 0.0), base);
         assert_eq!(blend(base, overlay, 1.0), overlay);
+    }
+
+    #[test]
+    fn dropped_paths_route_to_the_matching_workbench_surface() {
+        let dir = tempfile::tempdir().unwrap();
+        assert_eq!(classify_dropped_path(dir.path()), DropTarget::Case);
+        assert_eq!(
+            classify_dropped_path(Path::new("/tmp/dose-bundle.json")),
+            DropTarget::DoseBundle
+        );
+        assert_eq!(
+            classify_dropped_path(Path::new("/tmp/DOSE.JSON")),
+            DropTarget::DoseBundle
+        );
+        assert_eq!(
+            classify_dropped_path(Path::new("/tmp/ct.nii")),
+            DropTarget::NiftiVolume
+        );
+        assert_eq!(
+            classify_dropped_path(Path::new("/tmp/ct.nii.gz")),
+            DropTarget::NiftiVolume
+        );
+        assert_eq!(
+            classify_dropped_path(Path::new("/tmp/notes.txt")),
+            DropTarget::Unsupported
+        );
     }
 
     #[test]

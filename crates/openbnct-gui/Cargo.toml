@@ -29,6 +29,7 @@ openbnct-openmc = { path = "../openbnct-openmc", version = "0.1.0" }
 openbnct-plan = { path = "../openbnct-plan", version = "0.1.0" }
 openbnct-transport = { path = "../openbnct-transport", version = "0.1.0" }
 openbnct-view = { path = "../openbnct-view", version = "0.1.0" }
+rfd = "0.17.2"
 serde_json.workspace = true
 
 [dev-dependencies]

@@ -96,7 +96,7 @@ const QUICK_START_STEPS: [TourStep; 5] = [
     TourStep {
         target: TourTarget::Brand,
         workspace: None,
-        title: "Welcome to NCTForge",
+        title: "Welcome to OpenBNCT",
         instruction: "This Avila Labs workbench keeps geometry, transport, dose, and evidence in one research interface without presenting unfinished science as a result.",
     },
     TourStep {
@@ -498,7 +498,7 @@ const FAQ: [FaqEntry; 8] = [
     FaqEntry {
         question: "How do I load a case?",
         keywords: &["load", "case", "directory", "dicom", "generate"],
-        answer: "Generate NF-BNCT-001 with the CLI, enter its directory in the CASE field, and press Load + verify. NCTForge rejects modified artifacts or ambiguous DICOM geometry before rendering.",
+        answer: "Generate NF-BNCT-001 with the CLI, enter its directory in the CASE field, and press Load + verify. OpenBNCT rejects modified artifacts or ambiguous DICOM geometry before rendering.",
     },
     FaqEntry {
         question: "Why are the transport buttons disabled?",
@@ -513,14 +513,14 @@ const FAQ: [FaqEntry; 8] = [
         answer: "The controlled transport path is not qualified yet. The O-17/O-18 transported-photon response treatment still requires review, so interactive prepare and execute stay disabled even though the OpenMC adapter advertises those capabilities to the CLI.",
     },
     FaqEntry {
-        question: "Does NCTForge depend completely on OpenMC?",
+        question: "Does OpenBNCT depend completely on OpenMC?",
         keywords: &["depend", "openmc", "backend", "neutral", "mcnp", "phits"],
         answer: "No. OpenMC is the first backend, while case, physical-dose, uncertainty, and evidence contracts remain transport-neutral. Future adapters or imported results can use those contracts without reimplementing the GUI.",
     },
     FaqEntry {
         question: "Where are the dose values and heat maps?",
         keywords: &["dose", "heat", "map", "dvh", "value", "result"],
-        answer: "They appear only after loading a validated physical-dose or biological bundle in the Dose workspace. NCTForge never renders placeholder dose values; biological weights stay a separate layer and are never clinical quantities.",
+        answer: "They appear only after loading a validated physical-dose or biological bundle in the Dose workspace. OpenBNCT never renders placeholder dose values; biological weights stay a separate layer and are never clinical quantities.",
     },
     FaqEntry {
         question: "What do the status labels mean?",
@@ -530,7 +530,7 @@ const FAQ: [FaqEntry; 8] = [
         answer: "Verified means a runtime gate passed; frozen means a checked project artifact exists; blocked names a known unresolved requirement; pending is not yet executed; and input required means the local gate cannot run without a case.",
     },
     FaqEntry {
-        question: "Can I install NCTForge with pip?",
+        question: "Can I install OpenBNCT with pip?",
         keywords: &["pip", "python", "pypi", "install", "maturin", "pyo3"],
         answer: "That is the committed distribution direction, but no PyPI release exists yet. The Python package will use PyO3 and maturin to call the same Rust core; it will not contain a second Python dose engine.",
     },
