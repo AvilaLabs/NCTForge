@@ -114,6 +114,8 @@ maturin build --manifest-path bindings/python/Cargo.toml
 - [`docs/adr/`](docs/adr/) — architecture decision records
 - [`docs/research/TECHNICAL_BASELINE.md`](docs/research/TECHNICAL_BASELINE.md)
   — scientific rationale
+- [`docs/research/CROSS_CODE_REPRODUCTION.md`](docs/research/CROSS_CODE_REPRODUCTION.md)
+  — the licensed-user recipe for the reference-promotion gate
 
 ## Honest status
 
